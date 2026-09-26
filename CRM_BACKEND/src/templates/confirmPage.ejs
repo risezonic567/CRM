@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Confirm Inquiry — <%= agency?.name || 'Travel CRM' %></title>
+  <style>
+    body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#0f172a; }
+    .card { max-width:560px; margin:40px auto; background:#fff; border-radius:10px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
+    h1 { font-size:22px; margin:0 0 8px; }
+    .muted { color:#64748b; font-size:14px; }
+    .total { font-size:22px; font-weight:bold; margin:20px 0; }
+    .row { margin:8px 0; font-size:14px; }
+    label { display:flex; gap:10px; align-items:flex-start; font-size:14px; margin:24px 0; }
+    button { width:100%; border:0; background:#0f172a; color:#fff; padding:14px; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .error { color:#b91c1c; font-size:14px; margin-bottom:12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Confirm your inquiry</h1>
+    <p class="muted"><%= agency?.name || 'Travel CRM' %> · Ref <%= inquiry.inquiryReference %></p>
+
+    <% if (typeof error === 'string' && error) { %>
+      <p class="error"><%= error %></p>
+    <% } %>
+
+    <div class="row"><strong>Route:</strong> <%= inquiry.travel.from %> → <%= inquiry.travel.to %></div>
+    <div class="row"><strong>Departure:</strong> <%= inquiry.travel.departureDate %></div>
+    <div class="row"><strong>Passengers:</strong>
+      <% (inquiry.passengers || []).forEach(function(p, i) { %>
+        <%= p.firstName %> <%= p.lastName %><%= i < inquiry.passengers.length - 1 ? ', ' : '' %>
+      <% }) %>
+    </div>
+
+    <div class="total">
+      Total Amount: <%= inquiry.pricing.currency %> <%= Number(inquiry.pricing.sellingPrice).toFixed(2) %>
+    </div>
+    <p class="muted">Only the grand total is shown. No fare breakup.</p>
+
+    <form method="POST" action="/public/confirm/<%= inquiry._id %>">
+      <input type="hidden" name="token" value="<%= token %>" />
+      <label>
+        <input type="checkbox" name="agreed" id="agreed" value="true" required />
+        <span>I agree to the terms, fare rules, and cancellation policy.</span>
+      </label>
+      <button type="submit" id="confirmBtn" disabled>Confirm Inquiry</button>
+    </form>
+  </div>
+  <script>
+    const box = document.getElementById('agreed');
+    const btn = document.getElementById('confirmBtn');
+    box.addEventListener('change', function () {
+      btn.disabled = !box.checked;
+    });
+  </script>
+</body>
+</html>

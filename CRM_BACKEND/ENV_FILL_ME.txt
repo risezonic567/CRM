@@ -1,0 +1,45 @@
+# FILL THIS — Travel CRM Backend Env
+# File location: CRM_BACKEND/.env  (already created from template)
+# Also see: CRM_BACKEND/.env.example
+
+Open:  CRM_PROJECT/CRM_BACKEND/.env
+
+Replace these carefully:
+
+1) JWT secrets (use long random strings, 32+ chars each)
+   JWT_ACCESS_SECRET=
+   JWT_REFRESH_SECRET=
+   PUBLIC_TOKEN_SECRET=
+
+2) MongoDB
+   MONGO_URI=mongodb://127.0.0.1:27017/travelcrm
+   (or your Atlas URI)
+
+3) Redis — OPTIONAL (off for now)
+   USE_REDIS=false
+   # later: USE_REDIS=true and REDIS_URL=...
+   Rate limits use in-memory store while Redis is off.
+
+4) Duffel
+   DUFFEL_API_KEY=duffel_test_...
+   USE_MOCK_DUFFEL=false     ← set true until key works
+   Currently .env has USE_MOCK_DUFFEL=true for safe local start.
+
+5) SMTP (Gmail app password recommended)
+   SMTP_USER=
+   SMTP_PASS=
+   SMTP_FROM=TravelCRM <no-reply@youragency.com>
+
+6) Seed admin (used by: npm run seed)
+   SEED_ADMIN_EMAIL=admin@travelcrm.local
+   SEED_ADMIN_PASSWORD=ChangeMeAdmin123!
+
+7) URLs
+   CLIENT_URL=http://localhost:5173
+   API_URL=http://localhost:5000
+
+After filling:
+  cd CRM_BACKEND
+  npm install
+  npm run seed
+  npm run dev

@@ -1,0 +1,60 @@
+<%- include('partials/header', { title: 'Flight Inquiry', agency }) %>
+
+      <p>Hello <%= inquiry.customer.firstName %>,</p>
+      <p>Please review your flight inquiry below. Click <strong>Confirm Inquiry</strong> to proceed.</p>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
+      <h3 style="margin:0 0 12px;">Flight details</h3>
+      <% const offer = inquiry.selectedOffer || {}; %>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
+        <tr>
+          <td><strong>Airline</strong></td>
+          <td><%= offer.airline?.name || '—' %> <%= offer.flightNumber ? `(${offer.flightNumber})` : '' %></td>
+        </tr>
+        <tr>
+          <td><strong>From</strong></td>
+          <td><%= inquiry.travel.from %> — <%= offer.departure?.at || inquiry.travel.departureDate %></td>
+        </tr>
+        <tr>
+          <td><strong>To</strong></td>
+          <td><%= inquiry.travel.to %> — <%= offer.arrival?.at || '' %></td>
+        </tr>
+        <tr>
+          <td><strong>Duration</strong></td>
+          <td><%= offer.duration || '—' %></td>
+        </tr>
+      </table>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
+      <h3 style="margin:0 0 12px;">Passengers</h3>
+      <ul style="padding-left:18px;margin:0;">
+        <% (inquiry.passengers || []).forEach(function(p) { %>
+          <li><%= p.firstName %> <%= p.lastName %> (<%= p.type %>)</li>
+        <% }) %>
+      </ul>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
+      <p style="font-size:18px;margin:0;">
+        <strong>Total Amount:</strong>
+        <%= currency %> <%= Number(grandTotal).toFixed(2) %>
+      </p>
+      <p style="font-size:12px;color:#64748b;margin:8px 0 0;">
+        Reference: <%= inquiry.inquiryReference %>
+      </p>
+
+      <div style="margin:28px 0;text-align:center;">
+        <a href="<%= confirmUrl %>"
+           style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:14px 28px;border-radius:6px;font-weight:bold;">
+          Confirm Inquiry
+        </a>
+      </div>
+
+      <p style="font-size:12px;color:#64748b;">
+        You will be asked to agree to fare rules and cancellation policy before confirming.
+        This link expires in 7 days.
+      </p>
+
+<%- include('partials/footer') %>

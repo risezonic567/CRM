@@ -1,0 +1,251 @@
+{
+  "stats": {
+    "totalLeads": 164,
+    "totalLeadsSub": "All customer inquiries logged",
+    "bookingsToday": 24,
+    "bookingsTodaySub": "Paid & ticketed trips today",
+    "marginToday": 54200,
+    "marginTodaySub": "Net agency markup earned",
+    "revenueToday": 384900,
+    "revenueTodaySub": "Gross client checkout volume",
+    "activeQuotations": 38,
+    "conversionRate": "28.4%"
+  },
+  "trendData": [
+    { "name": "Mon", "revenue": 245000, "margin": 32000, "bookings": 16 },
+    { "name": "Tue", "revenue": 310000, "margin": 41500, "bookings": 21 },
+    { "name": "Wed", "revenue": 285000, "margin": 38000, "bookings": 19 },
+    { "name": "Thu", "revenue": 360000, "margin": 49000, "bookings": 23 },
+    { "name": "Fri", "revenue": 420000, "margin": 58500, "bookings": 27 },
+    { "name": "Sat", "revenue": 490000, "margin": 69000, "bookings": 32 },
+    { "name": "Today", "revenue": 384900, "margin": 54200, "bookings": 24 }
+  ],
+  "statusDistribution": [
+    { "name": "New Inquiries", "value": 42, "color": "#94a3b8" },
+    { "name": "Searching", "value": 28, "color": "#0ea5e9" },
+    { "name": "Quoted", "value": 35, "color": "#f59e0b" },
+    { "name": "Payment Pending", "value": 19, "color": "#ea580c" },
+    { "name": "Booked", "value": 40, "color": "#059669" }
+  ],
+  "recentLeads": [
+    {
+      "id": "LD-1049",
+      "customer": {
+        "name": "Amitabh Sharma",
+        "phone": "+91 98112 40912",
+        "email": "amitabh.s@gmail.com"
+      },
+      "travel": {
+        "from": "DEL",
+        "to": "DXB",
+        "date": "2026-10-05",
+        "tripType": "Round Trip",
+        "pax": 2
+      },
+      "status": "quoted",
+      "pricing": {
+        "costPrice": 48000,
+        "sellingPrice": 56500
+      },
+      "assignedTo": "Rohan Gupta",
+      "createdAt": "10 mins ago"
+    },
+    {
+      "id": "LD-1048",
+      "customer": {
+        "name": "Priya Nambiar",
+        "phone": "+91 98450 18234",
+        "email": "priya.nambiar@outlook.com"
+      },
+      "travel": {
+        "from": "BLR",
+        "to": "SIN",
+        "date": "2026-10-12",
+        "tripType": "Family Package",
+        "pax": 4
+      },
+      "status": "payment_pending",
+      "pricing": {
+        "costPrice": 142000,
+        "sellingPrice": 168000
+      },
+      "assignedTo": "Ananya Sen",
+      "createdAt": "25 mins ago"
+    },
+    {
+      "id": "LD-1047",
+      "customer": {
+        "name": "Vikramaditya Roy",
+        "phone": "+91 97170 33812",
+        "email": "vroy@royenterprises.in"
+      },
+      "travel": {
+        "from": "BOM",
+        "to": "LHR",
+        "date": "2026-10-18",
+        "tripType": "Business Class",
+        "pax": 1
+      },
+      "status": "booked",
+      "pricing": {
+        "costPrice": 185000,
+        "sellingPrice": 215000
+      },
+      "assignedTo": "Rohan Gupta",
+      "createdAt": "42 mins ago"
+    },
+    {
+      "id": "LD-1046",
+      "customer": {
+        "name": "Meera Chawla",
+        "phone": "+91 99201 84729",
+        "email": "meera.chawla@gmail.com"
+      },
+      "travel": {
+        "from": "DEL",
+        "to": "GOI",
+        "date": "2026-09-28",
+        "tripType": "Leisure Holiday",
+        "pax": 3
+      },
+      "status": "searching",
+      "pricing": {
+        "costPrice": 32000,
+        "sellingPrice": 38900
+      },
+      "assignedTo": "Karan Mehra",
+      "createdAt": "1 hr ago"
+    },
+    {
+      "id": "LD-1045",
+      "customer": {
+        "name": "Sunil Varma",
+        "phone": "+91 94481 92837",
+        "email": "sunil.varma@techcorp.com"
+      },
+      "travel": {
+        "from": "HYD",
+        "to": "BKK",
+        "date": "2026-11-02",
+        "tripType": "Group Tour",
+        "pax": 6
+      },
+      "status": "new",
+      "pricing": {
+        "costPrice": 190000,
+        "sellingPrice": 224000
+      },
+      "assignedTo": "Unassigned",
+      "createdAt": "1.5 hrs ago"
+    }
+  ],
+  "recentBookings": [
+    {
+      "id": "BK-8821",
+      "bookingReference": "RZ-BK-8821",
+      "pnr": "6E-7819",
+      "customer": {
+        "name": "Vikramaditya Roy"
+      },
+      "travel": {
+        "route": "BOM → LHR",
+        "carrier": "Air India / Virgin",
+        "type": "Flight"
+      },
+      "bookingStatus": "confirmed",
+      "pricing": {
+        "costPrice": 185000,
+        "sellingPrice": 215000,
+        "paidAmount": 215000
+      },
+      "paymentMethod": "Corporate Card",
+      "date": "Today, 12:40 PM"
+    },
+    {
+      "id": "BK-8820",
+      "bookingReference": "RZ-BK-8820",
+      "pnr": "AI-9024",
+      "customer": {
+        "name": "Dr. Sameer Joshi"
+      },
+      "travel": {
+        "route": "DEL → JFK",
+        "carrier": "Air India",
+        "type": "Flight"
+      },
+      "bookingStatus": "ticketed",
+      "pricing": {
+        "costPrice": 88000,
+        "sellingPrice": 99500,
+        "paidAmount": 99500
+      },
+      "paymentMethod": "UPI / Netbanking",
+      "date": "Today, 11:15 AM"
+    },
+    {
+      "id": "BK-8819",
+      "bookingReference": "RZ-BK-8819",
+      "pnr": "HT-4412",
+      "customer": {
+        "name": "Alia Fernandes"
+      },
+      "travel": {
+        "route": "Dubai Marina 5★ Resort",
+        "carrier": "Atlantis The Palm (4N)",
+        "type": "Hotel"
+      },
+      "bookingStatus": "paid",
+      "pricing": {
+        "costPrice": 125000,
+        "sellingPrice": 142000,
+        "paidAmount": 142000
+      },
+      "paymentMethod": "Debit Card",
+      "date": "Today, 10:02 AM"
+    },
+    {
+      "id": "BK-8818",
+      "bookingReference": "RZ-BK-8818",
+      "pnr": "QP-3019",
+      "customer": {
+        "name": "Rajesh Bansal"
+      },
+      "travel": {
+        "route": "CCU → BKK",
+        "carrier": "Akasa Air",
+        "type": "Flight"
+      },
+      "bookingStatus": "pending",
+      "pricing": {
+        "costPrice": 36000,
+        "sellingPrice": 42000,
+        "paidAmount": 20000
+      },
+      "paymentMethod": "Partial Advance",
+      "date": "Today, 09:30 AM"
+    },
+    {
+      "id": "BK-8817",
+      "bookingReference": "RZ-BK-8817",
+      "pnr": "SG-1822",
+      "customer": {
+        "name": "Neha Narang"
+      },
+      "travel": {
+        "from": "DEL",
+        "to": "SXR",
+        "route": "DEL → SXR",
+        "carrier": "SpiceJet",
+        "type": "Flight"
+      },
+      "bookingStatus": "confirmed",
+      "pricing": {
+        "costPrice": 22000,
+        "sellingPrice": 26800,
+        "paidAmount": 26800
+      },
+      "paymentMethod": "UPI Transfer",
+      "date": "Yesterday"
+    }
+  ]
+}
