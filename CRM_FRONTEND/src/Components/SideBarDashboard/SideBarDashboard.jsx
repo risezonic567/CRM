@@ -222,7 +222,8 @@ const SideBarDashboard = () => {
             {isExpanded ? (
               <div className="flex items-center gap-2.5 w-full">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400 border border-sky-400/30">
-                  <Plane className="w-5 h-5 text-sky-300" strokeWidth={2} />
+                  {/* <Plane className="w-5 h-5 text-sky-300" strokeWidth={2} /> */}
+                  <img src="/fav.png" alt="logo" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex flex-col overflow-hidden">
                   <span className="font-bold text-white text-base tracking-wide whitespace-nowrap">
@@ -235,7 +236,8 @@ const SideBarDashboard = () => {
               </div>
             ) : (
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400 border border-sky-400/30">
-                <Plane className="w-5 h-5 text-sky-300" strokeWidth={2} />
+                {/* <Plane className="w-5 h-5 text-sky-300" strokeWidth={2} /> */}
+                <img src="/fav.png" alt="logo" className="w-full h-full object-contain" />
               </div>
             )}
           </div>
