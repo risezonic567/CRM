@@ -1,7 +1,7 @@
 import React from 'react';
 import { Phone, PhoneOff, Plus, Loader2 } from 'lucide-react';
 import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
-import { isViewer } from '../../roles';
+import Can from '../../shared/Can';
 
 const labelFor = (value) =>
   CALL_DISPOSITIONS.find((d) => d.value === value)?.label || value;
@@ -74,16 +74,18 @@ const CallsTable = ({ items = [], isLoading, onOpenCreate, footer = null }) => {
           <p className="text-xs text-slate-500 max-w-xs">
             No logged calls match your active filter or search criteria.
           </p>
-          {!isViewer() && onOpenCreate && (
-            <button
-              type="button"
-              onClick={onOpenCreate}
-              className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-900 transition-colors shadow-sm cursor-pointer mt-2"
-            >
-              <Plus className="w-4 h-4" strokeWidth={2.2} />
-              Log First Call
-            </button>
-          )}
+          <Can do="call.create">
+            {onOpenCreate ? (
+              <button
+                type="button"
+                onClick={onOpenCreate}
+                className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-900 transition-colors shadow-sm cursor-pointer mt-2"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2.2} />
+                Log First Call
+              </button>
+            ) : null}
+          </Can>
         </div>
       </div>
     );

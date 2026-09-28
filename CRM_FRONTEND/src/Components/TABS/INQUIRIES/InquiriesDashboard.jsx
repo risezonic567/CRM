@@ -22,7 +22,8 @@ import {
   useDeleteInquiryMutation,
 } from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
 import { CLOSE_SOURCES } from '../../../constants/dispositions';
-import { isViewer } from '../../roles';
+import { can } from '../../roles';
+import Can from '../../shared/Can';
 import { getErrorMessage } from '../../../utils/getErrorMessage';
 import StatusBadge from '../../shared/StatusBadge';
 import PaginationBar from '../../shared/PaginationBar';
@@ -177,7 +178,21 @@ const InquiryViewModal = ({ inquiryId, onClose }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] text-slate-500 font-medium">Total Selling Price</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Base Fare</span>
+                    <span className="text-xs font-semibold text-slate-900">
+                      {inq.pricing?.currency || 'USD'}{' '}
+                      {Number(inq.pricing?.costPrice || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] text-slate-500 font-medium">Agency Fee</span>
+                    <span className="text-xs font-semibold text-emerald-700">
+                      {inq.pricing?.currency || 'USD'}{' '}
+                      {Number(inq.pricing?.markup || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 col-span-2 pt-1 border-t border-slate-200">
+                    <span className="text-[11px] text-slate-500 font-medium">Grand Total (customer)</span>
                     <span className="text-sm font-bold text-slate-900">
                       {inq.pricing?.currency || 'USD'}{' '}
                       {Number(inq.pricing?.sellingPrice || 0).toFixed(2)}
@@ -290,7 +305,7 @@ const InquiriesDashboard = () => {
   };
 
   const handleDelete = async (inq) => {
-    if (isViewer()) {
+    if (!can('inquiry.delete')) {
       toast.error('Viewers cannot delete inquiries');
       return;
     }
@@ -380,6 +395,7 @@ const InquiriesDashboard = () => {
                       <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Customer</th>
                       <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Route</th>
                       <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Status</th>
+                      <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Agency Fee</th>
                       <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Selling Price</th>
                       <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap text-right">Actions</th>
                     </tr>
@@ -424,6 +440,13 @@ const InquiriesDashboard = () => {
                           </td>
 
                           <td className="py-3 px-4">
+                            <div className="font-bold text-xs text-emerald-700">
+                              <span className="text-[11px] font-semibold text-slate-500 mr-1">{inq.pricing?.currency || 'USD'}</span>
+                              {Number(inq.pricing?.markup || 0).toFixed(2)}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4">
                             <div className="font-bold text-xs text-slate-900">
                               <span className="text-[11px] font-semibold text-slate-500 mr-1">{inq.pricing?.currency || 'USD'}</span>
                               {Number(inq.pricing?.sellingPrice || 0).toFixed(2)}
@@ -457,7 +480,7 @@ const InquiriesDashboard = () => {
                               >
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
-                              {!isViewer() && (
+                              <Can do="inquiry.delete">
                                 <button
                                   type="button"
                                   title={`Delete ${inq.inquiryReference}`}
@@ -468,7 +491,7 @@ const InquiriesDashboard = () => {
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
-                              )}
+                              </Can>
                             </div>
                           </td>
                         </tr>

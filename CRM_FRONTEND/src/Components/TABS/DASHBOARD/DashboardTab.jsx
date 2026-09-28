@@ -12,7 +12,7 @@ import {
   PhoneCall,
   FileText,
   CheckCircle2,
-  Zap,
+  Wallet,
   Plus,
   ArrowUpRight,
   TrendingUp,
@@ -20,10 +20,14 @@ import {
   Settings2,
 } from 'lucide-react';
 import CallDispositionModal from '../CALLS/CallDispositionModal';
-import { isViewer, CURRENT_USER, isAdmin } from '../../roles';
+import { CURRENT_USER } from '../../roles';
+import Can from '../../shared/Can';
 import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
 import { useListCallsQuery } from '../../../REDUX_FEATURES/REDUX_SLICES/Call_api/callApi';
-import { useListInquiriesQuery } from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
+import {
+  useListInquiriesQuery,
+  useGetInquiryMarginStatsQuery,
+} from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
 
 const OUTCOME_COLORS = [
   '#0284c7',
@@ -45,6 +49,7 @@ const DashboardTab = ({ onSwitchTab }) => {
   // Live queries — max page size for outcomes/confirmations snapshot
   const { data: callsData } = useListCallsQuery({ page: 1, limit: 100 });
   const { data: inquiriesData } = useListInquiriesQuery({ page: 1, limit: 100 });
+  const { data: marginRes } = useGetInquiryMarginStatsQuery();
 
   const callItems = callsData?.data || [];
   const inquiryItems = inquiriesData?.data || [];
@@ -56,6 +61,11 @@ const DashboardTab = ({ onSwitchTab }) => {
   ).length;
   const confirmationRate =
     totalInquiries > 0 ? Math.round((confirmedCount / totalInquiries) * 100) : 0;
+
+  const marginStats = marginRes?.data;
+  const marginCurrency = marginStats?.currency || 'USD';
+  const totalMargin = Number(marginStats?.totalMargin ?? 0);
+  const marginConfirmedCount = Number(marginStats?.confirmedCount ?? 0);
 
   const todayStr = useMemo(() => {
     return new Intl.DateTimeFormat('en-US', {
@@ -113,7 +123,7 @@ const DashboardTab = ({ onSwitchTab }) => {
         </div>
 
         <div className="flex items-center gap-2.5">
-          {!isViewer() && (
+          <Can do="call.create">
             <button
               type="button"
               onClick={() => setOpen(true)}
@@ -122,7 +132,7 @@ const DashboardTab = ({ onSwitchTab }) => {
               <Plus className="w-4 h-4" strokeWidth={2.2} />
               Log Call
             </button>
-          )}
+          </Can>
           {onSwitchTab && (
             <button
               type="button"
@@ -190,17 +200,18 @@ const DashboardTab = ({ onSwitchTab }) => {
 
         <div className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-xs hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">System State</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Margin Collected</span>
             <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600">
-              <Zap className="w-4 h-4" strokeWidth={1.8} />
+              <Wallet className="w-4 h-4" strokeWidth={1.8} />
             </div>
           </div>
-          <div className="text-xl font-bold text-slate-900 tracking-tight leading-none">
-            {import.meta.env.VITE_ENVIRONMENT}
+          <div className="text-2xl font-bold text-slate-900 tracking-tight leading-none">
+            <span className="text-sm font-semibold text-slate-500 mr-1">{marginCurrency}</span>
+            {totalMargin.toFixed(2)}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <span className="font-semibold text-sky-600">Phase 1</span>
-            <span>telephony capture</span>
+            <span className="font-semibold text-emerald-600">{marginConfirmedCount} confirmed</span>
+            <span>agency fee total</span>
           </div>
         </div>
       </div>
@@ -316,7 +327,7 @@ const DashboardTab = ({ onSwitchTab }) => {
 
       {/* Quick Navigation Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {!isViewer() && (
+        <Can do="call.create">
           <div
             className="bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 rounded-xl p-4 cursor-pointer transition-all shadow-xs hover:shadow-sm flex items-start gap-3.5 text-left group"
             role="button"
@@ -337,7 +348,7 @@ const DashboardTab = ({ onSwitchTab }) => {
               </p>
             </div>
           </div>
-        )}
+        </Can>
 
         {onSwitchTab && (
           <div
@@ -362,28 +373,30 @@ const DashboardTab = ({ onSwitchTab }) => {
           </div>
         )}
 
-        {isAdmin() && onSwitchTab && (
-          <div
-            className="bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 rounded-xl p-4 cursor-pointer transition-all shadow-xs hover:shadow-sm flex items-start gap-3.5 text-left group"
-            role="button"
-            tabIndex={0}
-            onClick={() => onSwitchTab('settings')}
-            onKeyDown={(e) => e.key === 'Enter' && onSwitchTab('settings')}
-          >
-            <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-900 shrink-0 group-hover:border-slate-300">
-              <Settings2 className="w-4 h-4 text-slate-800" />
+        <Can do="settings.open">
+          {onSwitchTab ? (
+            <div
+              className="bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 rounded-xl p-4 cursor-pointer transition-all shadow-xs hover:shadow-sm flex items-start gap-3.5 text-left group"
+              role="button"
+              tabIndex={0}
+              onClick={() => onSwitchTab('settings')}
+              onKeyDown={(e) => e.key === 'Enter' && onSwitchTab('settings')}
+            >
+              <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-900 shrink-0 group-hover:border-slate-300">
+                <Settings2 className="w-4 h-4 text-slate-800" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-slate-900 flex items-center justify-between">
+                  <span>Agency Settings</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Manage base currency, airfare markup defaults, and agent access roles.
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-slate-900 flex items-center justify-between">
-                <span>Agency Settings</span>
-                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-              </h3>
-              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                Manage base currency, airfare markup defaults, and agent access roles.
-              </p>
-            </div>
-          </div>
-        )}
+          ) : null}
+        </Can>
       </div>
 
       {/* Disposition Modal */}

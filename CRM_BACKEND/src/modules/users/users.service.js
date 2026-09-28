@@ -73,6 +73,24 @@ export async function updateUser(agencyId, userId, payload) {
   return user.toSafeJSON();
 }
 
+/**
+ * Permanent delete — agent/viewer only (admin accounts blocked).
+ */
+export async function deleteUser(agencyId, userId, requesterId) {
+  if (String(userId) === String(requesterId)) {
+    throw new AppError('Cannot delete your own account', 400);
+  }
+
+  const user = await User.findOne({ _id: userId, agencyId });
+  if (!user) throw new AppError('User not found', 404);
+  if (user.role === ROLES.ADMIN) {
+    throw new AppError('Cannot delete admin via this endpoint', 403);
+  }
+
+  await User.deleteOne({ _id: user._id });
+  return user.toSafeJSON();
+}
+
 export async function getUser(agencyId, userId) {
   const user = await User.findOne({ _id: userId, agencyId });
   if (!user) throw new AppError('User not found', 404);

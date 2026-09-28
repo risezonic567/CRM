@@ -1,8 +1,10 @@
-import React from 'react';
-import { AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { ROLES, ROLE_LABELS } from '../../../roles';
 
 const UserFormBody = ({ values, onChange, errors = {}, mode = 'add' }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   const set = (field) => (e) =>
     onChange({
       ...values,
@@ -66,13 +68,27 @@ const UserFormBody = ({ values, onChange, errors = {}, mode = 'add' }) => {
             <span className="text-rose-500">*</span>
           )}
         </label>
-        <input
-          type="password"
-          className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-600 transition-colors"
-          value={values.password || ''}
-          onChange={set('password')}
-          placeholder={mode === 'edit' ? '••••••••' : 'Initial password'}
-        />
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            className="w-full px-3 py-1.5 pr-9 text-xs border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-600 transition-colors"
+            value={values.password || ''}
+            onChange={set('password')}
+            placeholder={mode === 'edit' ? '••••••••' : 'Initial password'}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? (
+              <EyeOff className="w-3.5 h-3.5" strokeWidth={1.8} />
+            ) : (
+              <Eye className="w-3.5 h-3.5" strokeWidth={1.8} />
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-1">

@@ -11,7 +11,7 @@ import {
   resetCallFilters,
 } from '../../../REDUX_FEATURES/REDUX_SLICES/Call_api/callSlice';
 import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
-import { isViewer } from '../../roles';
+import Can from '../../shared/Can';
 
 const PAGE_SIZE = 10;
 
@@ -66,16 +66,16 @@ const CallsDashboard = () => {
           </p>
         </div>
 
-        {!isViewer() && (
+        <Can do="call.create">
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={() => setOpen  (true)}
             className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-semibold border border-slate-900 transition-colors shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" strokeWidth={2.2} />
             Log Call
           </button>
-        )}
+        </Can>
       </div>
 
       {/* Filter toolbar */}

@@ -6,7 +6,7 @@ import { PhoneCall, X, Loader2 } from 'lucide-react';
 import CallDispositionFormBody from './CallDispositionFormBody';
 import { useCreateCallMutation } from '../../../REDUX_FEATURES/REDUX_SLICES/Call_api/callApi';
 import { startWizard } from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
-import { isViewer } from '../../roles';
+import { can } from '../../roles';
 import { getErrorMessage } from '../../../utils/getErrorMessage';
 
 const empty = {
@@ -41,7 +41,7 @@ const CallDispositionModal = ({ open, onClose }) => {
   };
 
   const handleSave = async () => {
-    if (isViewer()) {
+    if (!can('call.create')) {
       toast.error('Viewers cannot create calls');
       return;
     }

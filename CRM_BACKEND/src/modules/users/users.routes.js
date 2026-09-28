@@ -18,5 +18,6 @@ router.get('/company', usersController.getCompany);
 router.patch('/company', validate(updateAgencySchema), usersController.updateCompany);
 router.get('/:id', usersController.getById);
 router.patch('/:id', validate(updateUserSchema), usersController.update);
+router.delete('/:id', usersController.remove);
 
 export default router;

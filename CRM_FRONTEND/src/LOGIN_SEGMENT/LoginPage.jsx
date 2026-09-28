@@ -67,6 +67,36 @@ const LoginPage = () => {
         .crm-fade-1 { opacity: 0; animation: crmFadeUp 0.6s ease-out 0.1s forwards; }
         .crm-fade-2 { opacity: 0; animation: crmFadeUp 0.6s ease-out 0.25s forwards; }
         .crm-fade-3 { opacity: 0; animation: crmFadeUp 0.6s ease-out 0.4s forwards; }
+
+        .crm-floating-input:-webkit-autofill,
+        .crm-floating-input:-webkit-autofill:hover,
+        .crm-floating-input:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px white inset !important;
+          -webkit-text-fill-color: #0f172a !important;
+          transition: background-color 5000s ease-in-out 0s;
+        }
+
+        .crm-floating-label {
+          left: 44px;
+          top: 50%;
+          transform: translateY(-50%);
+          z-index: 1;
+          line-height: 1;
+          transition: all 0.18s ease;
+        }
+
+        .crm-floating-input:focus ~ .crm-floating-label,
+        .crm-floating-input:not(:placeholder-shown) ~ .crm-floating-label,
+        .crm-floating-input:-webkit-autofill ~ .crm-floating-label {
+          top: 0;
+          left: 12px;
+          transform: translateY(-50%);
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: #2563eb;
+          background: rgba(255, 255, 255, 0.96);
+          padding: 0 6px;
+        }
       `}</style>
 
       {/* Hero panel — brand side with wide clip path */}
@@ -214,21 +244,6 @@ const LoginPage = () => {
       {/* Form panel */}
       <div className="flex w-full flex-1 items-center justify-center px-8 py-12 lg:w-[42%]">
         <div className="w-full max-w-md">
-          {/* Mobile Header Logo */}
-          <div className="mb-10 flex items-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 border border-blue-600/20">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M21 16.5v-1.8L13 9.3V4.5a1.5 1.5 0 00-3 0v4.8l-8 5.4v1.8l8-2.5v5l-2.2 1.6v1.3L12 21l4.2 1.1v-1.3L14 18.9v-5l7 2.6z"
-                  fill="#2563EB"
-                />
-              </svg>
-            </div>
-            <span className="text-lg font-bold tracking-tight text-slate-900">
-              TravelCRM
-            </span>
-          </div>
-
           <div className="mb-4 flex flex-col items-center">
             <img src={rImg} alt="" className="h-20 w-auto object-contain" />
             <span className="mt-2 text-lg font-bold tracking-tight text-slate-900">
@@ -252,7 +267,7 @@ const LoginPage = () => {
                 id="login-email"
                 type="email"
                 required
-                className="peer w-full rounded-xl border border-slate-300 bg-transparent py-4 pl-12 pr-4 text-sm font-medium text-slate-900 placeholder-transparent transition-all focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+                className="crm-floating-input peer w-full rounded-xl border border-slate-300 bg-transparent py-4 pl-12 pr-4 text-sm font-medium text-slate-900 placeholder-transparent transition-all focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="username"
@@ -276,7 +291,7 @@ const LoginPage = () => {
               </span>
               <label
                 htmlFor="login-email"
-                className="pointer-events-none absolute left-11 top-0 -translate-y-1/2 bg-white px-2 text-xs font-semibold text-slate-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-placeholder-shown:text-slate-400 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:font-semibold peer-focus:text-blue-600"
+                className="crm-floating-label pointer-events-none absolute bg-white px-2 text-xs font-semibold text-slate-500 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-placeholder-shown:text-slate-400"
               >
                 Email Address
               </label>
@@ -288,7 +303,7 @@ const LoginPage = () => {
                 id="login-password"
                 type={showPassword ? 'text' : 'password'}
                 required
-                className="peer w-full rounded-xl border border-slate-300 bg-transparent py-4 pl-12 pr-12 text-sm font-medium text-slate-900 placeholder-transparent transition-all focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+                className="crm-floating-input peer w-full rounded-xl border border-slate-300 bg-transparent py-4 pl-12 pr-12 text-sm font-medium text-slate-900 placeholder-transparent transition-all focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
@@ -314,7 +329,7 @@ const LoginPage = () => {
               </span>
               <label
                 htmlFor="login-password"
-                className="pointer-events-none absolute left-11 top-0 -translate-y-1/2 bg-white px-2 text-xs font-semibold text-slate-500 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-placeholder-shown:text-slate-400 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:font-semibold peer-focus:text-blue-600"
+                className="crm-floating-label pointer-events-none absolute bg-white px-2 text-xs font-semibold text-slate-500 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-placeholder-shown:text-slate-400"
               >
                 Password
               </label>
@@ -386,7 +401,7 @@ const LoginPage = () => {
           </form>
 
           <p className="mt-10 text-center text-xs font-mono text-slate-400">
-            © 2026 TravelCRM Inc. Powered by premium cloud matrix security.
+          © {new Date().getFullYear()} TravelCRM LLP.
           </p>
         </div>
       </div>

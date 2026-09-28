@@ -37,7 +37,7 @@
     <div class="total">
       Total Amount: <%= inquiry.pricing.currency %> <%= Number(inquiry.pricing.sellingPrice).toFixed(2) %>
     </div>
-    <p class="muted">Only the grand total is shown. No fare breakup.</p>
+
 
     <form method="POST" action="/public/confirm/<%= inquiry._id %>">
       <input type="hidden" name="token" value="<%= token %>" />

@@ -47,6 +47,19 @@ export async function update(req, res, next) {
   }
 }
 
+export async function remove(req, res, next) {
+  try {
+    const user = await usersService.deleteUser(
+      req.user.agencyId,
+      req.params.id,
+      req.user._id
+    );
+    return success(res, { message: 'User deleted', data: { user } });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 export async function getCompany(req, res, next) {
   try {
     const agency = await usersService.getAgency(req.user.agencyId);

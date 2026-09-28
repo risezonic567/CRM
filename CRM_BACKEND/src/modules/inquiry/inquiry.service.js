@@ -92,6 +92,54 @@ export async function listInquiries(user, query) {
   };
 }
 
+/**
+ * Confirmed inquiries only — sum real pricing.markup (agency fee / margin).
+ * Does not include merchant fee estimates.
+ */
+export async function getMarginStats(user) {
+  const match = buildInquiryScopeFilter(user, {
+    status: INQUIRY_STATUSES.CUSTOMER_CONFIRMED,
+  });
+
+  const rows = await Inquiry.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: { $ifNull: ['$pricing.currency', 'USD'] },
+        totalMargin: { $sum: { $ifNull: ['$pricing.markup', 0] } },
+        totalSelling: { $sum: { $ifNull: ['$pricing.sellingPrice', 0] } },
+        confirmedCount: { $sum: 1 },
+      },
+    },
+    { $sort: { confirmedCount: -1 } },
+  ]);
+
+  if (!rows.length) {
+    return {
+      totalMargin: 0,
+      totalSelling: 0,
+      confirmedCount: 0,
+      currency: 'USD',
+      byCurrency: [],
+    };
+  }
+
+  // Primary row = most confirmed currency (typical agency is single-currency)
+  const primary = rows[0];
+  return {
+    totalMargin: primary.totalMargin,
+    totalSelling: primary.totalSelling,
+    confirmedCount: primary.confirmedCount,
+    currency: primary._id || 'USD',
+    byCurrency: rows.map((r) => ({
+      currency: r._id || 'USD',
+      totalMargin: r.totalMargin,
+      totalSelling: r.totalSelling,
+      confirmedCount: r.confirmedCount,
+    })),
+  };
+}
+
 export async function getInquiry(user, inquiryId) {
   const inquiry = await Inquiry.findOne(
     buildInquiryScopeFilter(user, { _id: inquiryId })

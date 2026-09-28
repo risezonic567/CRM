@@ -1,0 +1,6 @@
+# Local agent skills (e.g. archify) — keep off remote
+.agents/
+skills-lock.json
+
+# Archify diagrams / generated HTML under docs
+docs/archify/

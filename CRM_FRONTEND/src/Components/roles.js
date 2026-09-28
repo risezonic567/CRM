@@ -23,6 +23,13 @@ export const SUB_TAB_PERMISSIONS = {
   'settings.company': [ROLES.ADMIN],
 };
 
+/** Action → roles allowed to see/use that UI capability */
+export const ACTION_PERMISSIONS = {
+  'call.create': [ROLES.ADMIN, ROLES.AGENT],
+  'inquiry.delete': [ROLES.ADMIN,],
+  'settings.open': [ROLES.ADMIN],
+};
+
 export const CURRENT_USER = {
   role: ROLES.ADMIN,
   name: 'Admin User',
@@ -50,6 +57,14 @@ export const canViewSubTab = (parentTabId, subTabId) => {
 export const filterSubItemsByRole = (parentTabId, subItems) => {
   if (!subItems || !Array.isArray(subItems)) return [];
   return subItems.filter((subItem) => canViewSubTab(parentTabId, subItem.id));
+};
+
+/** True if current user may perform `action` (see ACTION_PERMISSIONS). */
+export const can = (action) => {
+  const allowed = ACTION_PERMISSIONS[action];
+  if (!allowed) return false;
+  const role = CURRENT_USER.role || ROLES.ADMIN;
+  return allowed.includes(role);
 };
 
 export const isViewer = () => CURRENT_USER.role === ROLES.VIEWER;

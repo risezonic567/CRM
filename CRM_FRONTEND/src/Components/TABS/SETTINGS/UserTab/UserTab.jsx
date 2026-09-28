@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { UserPlus, Edit3, Users, Loader2 } from 'lucide-react';
-import { useListUsersQuery } from '../../../../REDUX_FEATURES/REDUX_SLICES/User_api/userApi';
+import toast from 'react-hot-toast';
+import { UserPlus, Edit3, Trash2, Users, Loader2 } from 'lucide-react';
+import {
+  useListUsersQuery,
+  useDeleteUserMutation,
+} from '../../../../REDUX_FEATURES/REDUX_SLICES/User_api/userApi';
 import { ROLE_LABELS, ROLES } from '../../../roles';
+import { getErrorMessage } from '../../../../utils/getErrorMessage';
 import UserAddForm from './UserAddForm';
 import UserEditForm from './UserEditForm';
 
@@ -24,9 +29,26 @@ const getRoleBadgeConfig = (role) => {
 
 const UserTab = () => {
   const { data, isFetching } = useListUsersQuery({ page: 1, limit: 50 });
+  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
   const [addOpen, setAddOpen] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const users = data?.data || [];
+
+  const handleDelete = async (u) => {
+    const id = u.id || u._id;
+    const name = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email;
+    const ok = window.confirm(
+      `Delete ${name}? This permanently removes the account and cannot be undone.`
+    );
+    if (!ok) return;
+    try {
+      await deleteUser(id).unwrap();
+      toast.success('User deleted');
+      if ((editUser?.id || editUser?._id) === id) setEditUser(null);
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to delete user'));
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -104,14 +126,26 @@ const UserTab = () => {
                       </td>
 
                       <td className="py-3 px-4 text-right">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded text-xs font-medium transition-colors cursor-pointer shadow-xs"
-                          onClick={() => setEditUser(u)}
-                        >
-                          <Edit3 className="w-3 h-3 text-slate-500" />
-                          Edit
-                        </button>
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded text-xs font-medium transition-colors cursor-pointer shadow-xs"
+                            onClick={() => setEditUser(u)}
+                          >
+                            <Edit3 className="w-3 h-3 text-slate-500" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            title={`Delete ${fullName}`}
+                            aria-label={`Delete ${fullName}`}
+                            disabled={isDeleting}
+                            className="w-7 h-7 rounded border border-rose-200 hover:border-rose-300 bg-white hover:bg-rose-50 text-rose-600 flex items-center justify-center transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => handleDelete(u)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

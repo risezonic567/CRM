@@ -8,7 +8,7 @@ export const loginSchema = Joi.object({
 
 export const createUserSchema = Joi.object({
   firstName: Joi.string().trim().min(1).required(),
-  lastName: Joi.string().trim().min(1).required(),
+  lastName: Joi.string().trim().allow('').default(''),
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
   role: Joi.string().valid(ROLES.AGENT, ROLES.VIEWER).required(),
@@ -16,7 +16,7 @@ export const createUserSchema = Joi.object({
 
 export const updateUserSchema = Joi.object({
   firstName: Joi.string().trim().min(1),
-  lastName: Joi.string().trim().min(1),
+  lastName: Joi.string().trim().allow('').default(''),
   email: Joi.string().email(),
   password: Joi.string().min(8),
   role: Joi.string().valid(ROLES.AGENT, ROLES.VIEWER),

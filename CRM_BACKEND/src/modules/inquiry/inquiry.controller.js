@@ -19,6 +19,15 @@ export async function lookup(req, res, next) {
   }
 }
 
+export async function marginStats(req, res, next) {
+  try {
+    const stats = await inquiryService.getMarginStats(req.user);
+    return success(res, { data: stats });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 export async function getById(req, res, next) {
   try {
     const inquiry = await inquiryService.getInquiry(req.user, req.params.id);

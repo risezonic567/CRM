@@ -30,6 +30,13 @@ export const userApi = createApi({
       }),
       invalidatesTags: ['Users'],
     }),
+    deleteUser: builder.mutation({
+      query: (id) => ({
+        url: `/users/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Users'],
+    }),
     getCompany: builder.query({
       query: () => ({
         url: '/users/company',
@@ -52,6 +59,7 @@ export const {
   useListUsersQuery,
   useCreateUserMutation,
   useUpdateUserMutation,
+  useDeleteUserMutation,
   useGetCompanyQuery,
   useUpdateCompanyMutation,
 } = userApi;

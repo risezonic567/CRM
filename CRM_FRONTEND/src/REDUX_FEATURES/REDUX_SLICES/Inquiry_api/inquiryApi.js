@@ -5,7 +5,7 @@ import { callApi } from '../Call_api/callApi';
 export const inquiryApi = createApi({
   reducerPath: 'inquiryApi',
   baseQuery: axiosBaseQuery(),
-  tagTypes: ['Inquiries', 'Inquiry'],
+  tagTypes: ['Inquiries', 'Inquiry', 'InquiryMargin'],
   endpoints: (builder) => ({
     listInquiries: builder.query({
       query: (params) => ({
@@ -21,6 +21,13 @@ export const inquiryApi = createApi({
         method: 'GET',
         params: { q },
       }),
+    }),
+    getInquiryMarginStats: builder.query({
+      query: () => ({
+        url: '/inquiries/stats/margin',
+        method: 'GET',
+      }),
+      providesTags: ['InquiryMargin'],
     }),
     getInquiry: builder.query({
       query: (id) => ({
@@ -52,7 +59,7 @@ export const inquiryApi = createApi({
         method: 'POST',
         data: body,
       }),
-      invalidatesTags: ['Inquiries', 'Inquiry'],
+      invalidatesTags: ['Inquiries', 'Inquiry', 'InquiryMargin'],
       async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
@@ -68,14 +75,14 @@ export const inquiryApi = createApi({
         method: 'POST',
         data: body,
       }),
-      invalidatesTags: ['Inquiries', 'Inquiry'],
+      invalidatesTags: ['Inquiries', 'Inquiry', 'InquiryMargin'],
     }),
     deleteInquiry: builder.mutation({
       query: (id) => ({
         url: `/inquiries/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Inquiries', 'Inquiry'],
+      invalidatesTags: ['Inquiries', 'Inquiry', 'InquiryMargin'],
     }),
   }),
 });
@@ -84,6 +91,7 @@ export const {
   useListInquiriesQuery,
   useLookupInquiriesQuery,
   useLazyLookupInquiriesQuery,
+  useGetInquiryMarginStatsQuery,
   useGetInquiryQuery,
   useSaveDraftMutation,
   useSendInquiryMutation,
