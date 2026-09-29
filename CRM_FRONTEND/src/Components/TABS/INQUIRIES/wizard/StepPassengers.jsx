@@ -46,12 +46,14 @@ const StepPassengers = () => {
               placeholder="First *"
               value={p.firstName}
               onChange={(e) => setField(idx, 'firstName', e.target.value)}
+              type="text"
             />
             <input
               className="rounded border px-2 py-1.5 text-sm"
               placeholder="Middle"
               value={p.middleName}
               onChange={(e) => setField(idx, 'middleName', e.target.value)}
+              type="text"
             />
             <input
               className="rounded border px-2 py-1.5 text-sm"
@@ -70,12 +72,14 @@ const StepPassengers = () => {
               placeholder="Email"
               value={p.email}
               onChange={(e) => setField(idx, 'email', e.target.value)}
+              type="email"
             />
             <input
               className="rounded border px-2 py-1.5 text-sm"
               placeholder="Calling phone *"
               value={p.phone}
               onChange={(e) => setField(idx, 'phone', e.target.value)}
+              type="tel"
             />
             <select
               className="rounded border px-2 py-1.5 text-sm"

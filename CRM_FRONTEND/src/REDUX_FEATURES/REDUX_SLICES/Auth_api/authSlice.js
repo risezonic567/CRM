@@ -56,6 +56,12 @@ const authSlice = createSlice({
         state.sessionStatus = 'ready';
       })
       .addMatcher(authApi.endpoints.refresh.matchRejected, (state) => {
+        // Stale bootstrap refresh can 401 after a successful login.
+        // Never wipe an already-established session (Axios interceptor uses logout()).
+        if (state.isAuthenticated && state.accessToken) {
+          state.sessionStatus = 'ready';
+          return;
+        }
         state.accessToken = null;
         state.user = null;
         state.isAuthenticated = false;

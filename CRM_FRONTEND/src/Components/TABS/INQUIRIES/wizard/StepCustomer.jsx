@@ -27,24 +27,28 @@ const StepCustomer = () => {
           placeholder="First Name *"
           value={c.firstName}
           onChange={set('firstName')}
+          type="text"
         />
         <input
           className="rounded-md border px-3 py-2 text-sm"
           placeholder="Last Name *"
           value={c.lastName}
           onChange={set('lastName')}
+          type="text"
         />
         <input
           className="rounded-md border px-3 py-2 text-sm"
           placeholder="Phone *"
           value={c.phone}
           onChange={set('phone')}
+          type="tel"
         />
         <input
           className="rounded-md border px-3 py-2 text-sm"
           placeholder="Email *"
           value={c.email}
           onChange={set('email')}
+          type="email"
         />
       </div>
       <button

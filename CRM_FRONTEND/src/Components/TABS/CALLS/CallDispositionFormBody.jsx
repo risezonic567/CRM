@@ -24,6 +24,7 @@ const CallDispositionFormBody = ({ values, onChange }) => {
             value={values.callerName}
             onChange={set('callerName')}
             placeholder="e.g. John Doe"
+            type="text"
           />
         </div>
 
@@ -37,6 +38,7 @@ const CallDispositionFormBody = ({ values, onChange }) => {
             value={values.phoneNumber}
             onChange={set('phoneNumber')}
             placeholder="+1 555-0199"
+            type="tel"
           />
         </div>
       </div>

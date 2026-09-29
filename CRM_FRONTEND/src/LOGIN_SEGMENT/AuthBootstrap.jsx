@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRefreshMutation } from '../REDUX_FEATURES/REDUX_SLICES/Auth_api/authApi';
 import {
@@ -10,33 +10,44 @@ import { syncCurrentUserFromAuth } from '../Components/roles';
 
 /**
  * On app load: if no access token in memory, try refresh cookie once.
- * Keeps user logged in across tab refresh without using Socket.IO.
+ * Aborts in-flight refresh on unmount / when accessToken appears so a late
+ * 401 cannot wipe a successful login (Strict Mode / slow network race).
  */
 const AuthBootstrap = ({ children }) => {
   const dispatch = useDispatch();
   const accessToken = useSelector(selectAccessToken);
   const sessionStatus = useSelector(selectSessionStatus);
   const [refresh] = useRefreshMutation();
-  const started = useRef(false);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-
     if (accessToken) {
       dispatch(setSessionStatus('ready'));
-      return;
+      return undefined;
     }
 
+    let cancelled = false;
     dispatch(setSessionStatus('restoring'));
-    refresh()
+    const req = refresh();
+
+    req
       .unwrap()
       .then((res) => {
+        if (cancelled) return;
         syncCurrentUserFromAuth(res?.data?.user);
       })
       .catch(() => {
-        // No valid refresh cookie — stay logged out
+        // No valid refresh cookie / aborted — stay logged out
+      })
+      .finally(() => {
+        if (!cancelled) {
+          dispatch(setSessionStatus('ready'));
+        }
       });
+
+    return () => {
+      cancelled = true;
+      req.abort();
+    };
   }, [accessToken, dispatch, refresh]);
 
   if (sessionStatus === 'idle' || sessionStatus === 'restoring') {

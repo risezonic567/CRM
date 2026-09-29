@@ -23,30 +23,35 @@ const StepBilling = () => {
           placeholder="Billing phone"
           value={b.phone}
           onChange={set('phone')}
+          type="tel"
         />
         <input
           className="rounded-md border px-3 py-2 text-sm sm:col-span-2"
           placeholder="Billing address"
           value={b.address}
           onChange={set('address')}
+          type="text"
         />
         <input
           className="rounded-md border px-3 py-2 text-sm"
           placeholder="State"
           value={b.state}
           onChange={set('state')}
+          type="text"
         />
         <input
           className="rounded-md border px-3 py-2 text-sm"
           placeholder="Zip"
           value={b.zip}
           onChange={set('zip')}
+          type="text"
         />
         <input
           className="rounded-md border px-3 py-2 text-sm"
           placeholder="Country"
           value={b.country}
           onChange={set('country')}
+          type="text"
         />
       </div>
       <div className="flex gap-2">

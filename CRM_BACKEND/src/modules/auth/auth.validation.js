@@ -20,5 +20,5 @@ export const updateUserSchema = Joi.object({
   email: Joi.string().email(),
   password: Joi.string().min(8),
   role: Joi.string().valid(ROLES.AGENT, ROLES.VIEWER),
-  isActive: Joi.boolean(),
+  isActive: Joi.boolean(),    
 }).min(1);
