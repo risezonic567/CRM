@@ -29,12 +29,18 @@ const StepResults = () => {
         <h3 className="font-medium text-slate-800">Results</h3>
         {source && (
           <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${source === 'duffel'
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              source === 'duffel' || source === 'flightmcp'
                 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                 : 'bg-amber-50 text-amber-800 border border-amber-200'
-              }`}
+            }`}
           >
-            Source: {source === 'duffel' ? 'Duffel (live)' : 'Mock'}
+            Source:{' '}
+            {source === 'duffel'
+              ? 'Duffel (live)'
+              : source === 'flightmcp'
+                ? 'Flight MCP'
+                : 'Mock'}
             {typeof meta?.offerCount === 'number'
               ? ` · ${meta.offerCount} offer(s)`
               : ''}

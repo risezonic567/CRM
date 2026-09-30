@@ -62,6 +62,25 @@ const config = {
     useMock: process.env.USE_MOCK_DUFFEL === 'true',
   },
 
+  /**
+   * Active flight search backend: duffel | flightmcp | mock
+   * Default duffel keeps existing deployments unchanged.
+   */
+  flightProvider: (process.env.FLIGHT_PROVIDER || 'duffel').toLowerCase(),
+
+  flightmcp: {
+    apiKey: process.env.FLIGHT_MCP_API_KEY || '',
+    url:
+      process.env.FLIGHT_MCP_URL ||
+      'https://flight-mcp.com/v1/flights/search',
+    currency: process.env.FLIGHT_MCP_CURRENCY || '',
+    locale: process.env.FLIGHT_MCP_LOCALE || 'en-US',
+    pointOfSaleCountry: process.env.FLIGHT_MCP_POS_COUNTRY || 'US',
+    maxResults: Number(process.env.FLIGHT_MCP_MAX_RESULTS) || 20,
+    cacheTtlSeconds: Number(process.env.FLIGHT_MCP_CACHE_TTL) || 300,
+    timeoutMs: Number(process.env.FLIGHT_MCP_TIMEOUT_MS) || 30_000,
+  },
+
   pricing: {
     defaultMarkup: Number(process.env.DEFAULT_MARKUP),
     // Empty MERCHANT_FEE_PERCENT → Number('') === 0; treat as unset and fall back to 2

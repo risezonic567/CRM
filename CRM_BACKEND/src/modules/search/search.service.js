@@ -1,4 +1,4 @@
-import { searchFlights, toDateOnly } from '../../integrations/duffel/duffel.flights.js';
+import { searchFlights, toDateOnly } from '../../integrations/flightProvider.js';
 import { suggestPlaces } from '../../integrations/duffel/duffel.places.js';
 import { Agency } from '../../models/index.js';
 import config from '../../config/index.js';
@@ -21,6 +21,7 @@ export async function search(user, payload) {
     returnDate,
     passengers: payload.passengers,
     cabinClass: payload.cabinClass,
+    currency: agency?.currency || config.pricing.defaultCurrency,
   });
 
   const defaultMarkup =
