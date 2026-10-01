@@ -63,7 +63,7 @@ const config = {
   },
 
   /**
-   * Active flight search backend: duffel | flightmcp | mock
+   * Active flight search backend: duffel | flightmcp | serpapi | mock
    * Default duffel keeps existing deployments unchanged.
    */
   flightProvider: (process.env.FLIGHT_PROVIDER || 'duffel').toLowerCase(),
@@ -79,6 +79,17 @@ const config = {
     maxResults: Number(process.env.FLIGHT_MCP_MAX_RESULTS) || 20,
     cacheTtlSeconds: Number(process.env.FLIGHT_MCP_CACHE_TTL) || 300,
     timeoutMs: Number(process.env.FLIGHT_MCP_TIMEOUT_MS) || 30_000,
+  },
+
+  /** SerpApi Google Flights — quote/compare only (US CRM defaults). */
+  serpapi: {
+    apiKey: process.env.SERPAPI_API_KEY || '',
+    baseUrl: process.env.SERPAPI_BASE_URL || 'https://serpapi.com/search',
+    gl: process.env.SERPAPI_GL || 'us',
+    hl: process.env.SERPAPI_HL || 'en',
+    currency: process.env.SERPAPI_CURRENCY || 'USD',
+    deepSearch: process.env.SERPAPI_DEEP_SEARCH === 'true',
+    timeoutMs: Number(process.env.SERPAPI_TIMEOUT_MS) || 45_000,
   },
 
   pricing: {

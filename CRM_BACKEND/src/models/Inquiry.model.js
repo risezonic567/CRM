@@ -61,6 +61,10 @@ const inquirySchema = new mongoose.Schema(
       departureDate: { type: Date },
       returnDate: { type: Date },
       passengers: { type: Number, default: 1, min: 1, max: 9 },
+      adults: { type: Number, default: 1, min: 0, max: 9 },
+      children: { type: Number, default: 0, min: 0, max: 8 },
+      infantsInSeat: { type: Number, default: 0, min: 0, max: 8 },
+      infantsOnLap: { type: Number, default: 0, min: 0, max: 8 },
       cabinClass: {
         type: String,
         enum: CABIN_CLASSES,

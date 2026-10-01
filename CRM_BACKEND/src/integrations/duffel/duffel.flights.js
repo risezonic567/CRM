@@ -1,6 +1,10 @@
 import { getDuffelClient } from './duffel.client.js';
 import { normalizeOfferList } from './duffel.normalizer.js';
 import { getMockFlights } from '../mock/mockFlights.js';
+import {
+  resolvePassengerCounts,
+  duffelPassengersFromCounts,
+} from '../passengerCounts.js';
 import config from '../../config/index.js';
 import { AppError } from '../../utils/apiResponse.js';
 import logger from '../../utils/logger.js';
@@ -36,10 +40,21 @@ export async function searchFlights({
   departureDate,
   returnDate,
   passengers,
+  adults,
+  children,
+  infantsInSeat,
+  infantsOnLap,
   cabinClass = 'economy',
 }) {
   const dep = toDateOnly(departureDate);
   const ret = toDateOnly(returnDate);
+  const counts = resolvePassengerCounts({
+    passengers,
+    adults,
+    children,
+    infantsInSeat,
+    infantsOnLap,
+  });
 
   if (!dep) {
     throw new AppError('Invalid departure date', 400);
@@ -51,7 +66,7 @@ export async function searchFlights({
       from,
       to,
       departureDate: dep,
-      passengers,
+      passengers: counts.total,
       cabinClass,
     });
   }
@@ -61,10 +76,7 @@ export async function searchFlights({
   }
 
   const client = getDuffelClient();
-
-  const passengersPayload = Array.from({ length: passengers }, () => ({
-    type: 'adult',
-  }));
+  const passengersPayload = duffelPassengersFromCounts(counts);
 
   const slices = [
     {
@@ -98,6 +110,8 @@ export async function searchFlights({
       from,
       to,
       departureDate: dep,
+      adults: counts.adults,
+      children: counts.children,
     });
 
     return {
@@ -109,7 +123,11 @@ export async function searchFlights({
         to: String(to).toUpperCase(),
         departureDate: dep,
         returnDate: ret,
-        passengers,
+        passengers: counts.total,
+        adults: counts.adults,
+        children: counts.children,
+        infantsInSeat: counts.infantsInSeat,
+        infantsOnLap: counts.infantsOnLap,
         cabinClass,
         offerCount: offers.length,
       },

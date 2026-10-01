@@ -35,6 +35,10 @@ export const sendInquirySchema = Joi.object({
     departureDate: Joi.date().iso().required(),
     returnDate: Joi.date().iso().allow(null),
     passengers: Joi.number().integer().min(1).max(9).required(),
+    adults: Joi.number().integer().min(0).max(9),
+    children: Joi.number().integer().min(0).max(8),
+    infantsInSeat: Joi.number().integer().min(0).max(8),
+    infantsOnLap: Joi.number().integer().min(0).max(8),
     cabinClass: Joi.string()
       .valid(...CABIN_CLASSES)
       .default('economy'),
@@ -78,6 +82,10 @@ export const saveDraftSchema = Joi.object({
     departureDate: Joi.date().iso().allow(null, ''),
     returnDate: Joi.date().iso().allow(null, ''),
     passengers: Joi.number().integer().min(1).max(9),
+    adults: Joi.number().integer().min(0).max(9),
+    children: Joi.number().integer().min(0).max(8),
+    infantsInSeat: Joi.number().integer().min(0).max(8),
+    infantsOnLap: Joi.number().integer().min(0).max(8),
     cabinClass: Joi.string()
       .valid(...CABIN_CLASSES)
       .default('economy'),

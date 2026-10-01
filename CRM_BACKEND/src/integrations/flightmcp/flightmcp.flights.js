@@ -1,12 +1,15 @@
 import { postFlightSearch } from './flightmcp.client.js';
 import { normalizeOfferList } from './flightmcp.normalizer.js';
 import { toDateOnly } from '../duffel/duffel.flights.js';
+import { resolvePassengerCounts } from '../passengerCounts.js';
 import config from '../../config/index.js';
 import { AppError } from '../../utils/apiResponse.js';
 import logger from '../../utils/logger.js';
 
 /**
- * Search via Flight MCP — returns same shape as Duffel searchFlights.
+ * Search via Flight MCP — same shape as Duffel searchFlights.
+ * Pax: sends adults count (total seating pax). Extra child/infant breakdown
+ * logged when present — MCP may not support full Google-style split.
  */
 export async function searchFlights({
   from,
@@ -14,6 +17,10 @@ export async function searchFlights({
   departureDate,
   returnDate,
   passengers,
+  adults,
+  children,
+  infantsInSeat,
+  infantsOnLap,
   cabinClass = 'economy',
   currency,
 }) {
@@ -24,7 +31,25 @@ export async function searchFlights({
     throw new AppError('Invalid departure date', 400);
   }
 
-  const adults = Math.min(Math.max(Number(passengers) || 1, 1), 9);
+  const counts = resolvePassengerCounts({
+    passengers,
+    adults,
+    children,
+    infantsInSeat,
+    infantsOnLap,
+  });
+  const seatingAdults = Math.max(
+    1,
+    counts.adults + counts.children + counts.infantsInSeat
+  );
+
+  if (counts.children || counts.infantsInSeat || counts.infantsOnLap) {
+    logger.warn(
+      'Flight MCP: child/infant breakdown collapsed into adults seating count',
+      counts
+    );
+  }
+
   const mcp = config.flightmcp;
   const requestCurrency = (
     currency ||
@@ -37,7 +62,7 @@ export async function searchFlights({
     origin: String(from).toUpperCase(),
     destination: String(to).toUpperCase(),
     departureDate: dep,
-    adults,
+    adults: seatingAdults,
     cabinClass: cabinClass || 'economy',
     currency: requestCurrency,
     locale: mcp.locale,
@@ -72,7 +97,11 @@ export async function searchFlights({
       to: body.destination,
       departureDate: dep,
       returnDate: ret,
-      passengers: adults,
+      passengers: counts.total,
+      adults: counts.adults,
+      children: counts.children,
+      infantsInSeat: counts.infantsInSeat,
+      infantsOnLap: counts.infantsOnLap,
       cabinClass: body.cabinClass,
       offerCount: offers.length,
       cached: Boolean(data?.meta?.cached),

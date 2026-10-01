@@ -11,6 +11,8 @@
     .muted { color:#64748b; font-size:14px; }
     .total { font-size:22px; font-weight:bold; margin:20px 0; }
     .row { margin:8px 0; font-size:14px; }
+    .leg { margin:16px 0; padding:12px; background:#f8fafc; border-radius:8px; font-size:14px; }
+    .leg h3 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
     label { display:flex; gap:10px; align-items:flex-start; font-size:14px; margin:24px 0; }
     button { width:100%; border:0; background:#0f172a; color:#fff; padding:14px; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; }
     button:disabled { opacity:.45; cursor:not-allowed; }
@@ -18,6 +20,52 @@
   </style>
 </head>
 <body>
+  <%
+    function fmtDateOnly(value) {
+      if (!value) return '—';
+      var d = new Date(value);
+      if (isNaN(d.getTime())) {
+        var m = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+        return m ? m[1] : String(value);
+      }
+      return d.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+        timeZone: 'UTC'
+      });
+    }
+    function fmtWhen(at) {
+      if (!at) return '';
+      var s = String(at);
+      var m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+      if (m) {
+        var d = new Date(m[1] + 'T' + m[2] + ':00');
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleString('en-US', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: false
+          });
+        }
+        return m[1] + ' · ' + m[2];
+      }
+      return s;
+    }
+    function fmtDuration(value) {
+      if (!value) return '';
+      var s = String(value).trim();
+      if (/^\d+h(?:\s+\d+m)?$/.test(s) || /^\d+m$/.test(s)) return s;
+      var m = s.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/i);
+      if (!m) return s;
+      var hours = Number(m[1] || 0) * 24 + Number(m[2] || 0);
+      var mins = Math.round(Number(m[3] || 0));
+      if (!hours && !mins) return '';
+      if (hours && mins) return hours + 'h ' + mins + 'm';
+      if (hours) return hours + 'h';
+      return mins + 'm';
+    }
+    var offer = inquiry.selectedOffer || {};
+    var outbound = offer.outbound || offer;
+    var inbound = offer.inbound || null;
+  %>
   <div class="card">
     <h1>Confirm your inquiry</h1>
     <p class="muted"><%= agency?.name || 'Travel CRM' %> · Ref <%= inquiry.inquiryReference %></p>
@@ -26,8 +74,32 @@
       <p class="error"><%= error %></p>
     <% } %>
 
-    <div class="row"><strong>Route:</strong> <%= inquiry.travel.from %> → <%= inquiry.travel.to %></div>
-    <div class="row"><strong>Departure:</strong> <%= inquiry.travel.departureDate %></div>
+    <div class="row"><strong>Route:</strong> <%= inquiry.travel.from %> → <%= inquiry.travel.to %><%= inquiry.travel.returnDate ? ' (round trip)' : '' %></div>
+    <div class="row"><strong>Departure date:</strong> <%= fmtDateOnly(inquiry.travel.departureDate) %></div>
+    <% if (inquiry.travel.returnDate) { %>
+      <div class="row"><strong>Return date:</strong> <%= fmtDateOnly(inquiry.travel.returnDate) %></div>
+    <% } %>
+
+    <div class="leg">
+      <h3><%= inbound ? 'Departing flight' : 'Flight' %></h3>
+      <div><%= outbound.airline?.name || offer.airline?.name || '—' %> <%= outbound.flightNumber || offer.flightNumber || '' %></div>
+      <div><%= inquiry.travel.from %> <%= fmtWhen(outbound.departure?.at || offer.departure?.at) %> → <%= inquiry.travel.to %> <%= fmtWhen(outbound.arrival?.at || offer.arrival?.at) %></div>
+      <% var outDur = fmtDuration(outbound.duration || offer.duration); if (outDur) { %>
+        <div class="muted"><%= outDur %></div>
+      <% } %>
+    </div>
+
+    <% if (inbound) { %>
+    <div class="leg">
+      <h3>Returning flight</h3>
+      <div><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber || '' %></div>
+      <div><%= inquiry.travel.to %> <%= fmtWhen(inbound.departure?.at) %> → <%= inquiry.travel.from %> <%= fmtWhen(inbound.arrival?.at) %></div>
+      <% var inDur = fmtDuration(inbound.duration); if (inDur) { %>
+        <div class="muted"><%= inDur %></div>
+      <% } %>
+    </div>
+    <% } %>
+
     <div class="row"><strong>Passengers:</strong>
       <% (inquiry.passengers || []).forEach(function(p, i) { %>
         <%= p.firstName %> <%= p.lastName %><%= i < inquiry.passengers.length - 1 ? ', ' : '' %>
@@ -37,7 +109,6 @@
     <div class="total">
       Total Amount: <%= inquiry.pricing.currency %> <%= Number(inquiry.pricing.sellingPrice).toFixed(2) %>
     </div>
-
 
     <form method="POST" action="/public/confirm/<%= inquiry._id %>">
       <input type="hidden" name="token" value="<%= token %>" />

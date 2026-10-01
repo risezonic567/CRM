@@ -1,6 +1,6 @@
 /**
  * Flight search provider switchboard.
- * FLIGHT_PROVIDER=duffel | flightmcp | mock
+ * FLIGHT_PROVIDER=duffel | flightmcp | serpapi | mock
  *
  * Airport suggest stays on Duffel/mock (places API) — unchanged.
  */
@@ -10,6 +10,7 @@ import {
   toDateOnly,
 } from './duffel/duffel.flights.js';
 import { searchFlights as searchFlightsFlightMcp } from './flightmcp/flightmcp.flights.js';
+import { searchFlights as searchFlightsSerpApi } from './serpapi/serpapi.flights.js';
 import { getMockFlights } from './mock/mockFlights.js';
 import { AppError } from '../utils/apiResponse.js';
 
@@ -33,12 +34,16 @@ export async function searchFlights(params) {
     return searchFlightsFlightMcp(params);
   }
 
+  if (provider === 'serpapi') {
+    return searchFlightsSerpApi(params);
+  }
+
   if (provider === 'duffel') {
     return searchFlightsDuffel(params);
   }
 
   throw new AppError(
-    `Unknown FLIGHT_PROVIDER "${provider}". Use duffel, flightmcp, or mock.`,
+    `Unknown FLIGHT_PROVIDER "${provider}". Use duffel, flightmcp, serpapi, or mock.`,
     500
   );
 }

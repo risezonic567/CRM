@@ -20,13 +20,17 @@ export async function search(user, payload) {
     departureDate,
     returnDate,
     passengers: payload.passengers,
+    adults: payload.adults,
+    children: payload.children,
+    infantsInSeat: payload.infantsInSeat,
+    infantsOnLap: payload.infantsOnLap,
     cabinClass: payload.cabinClass,
     currency: agency?.currency || config.pricing.defaultCurrency,
+    departureToken: payload.departureToken || null,
   });
 
   const defaultMarkup =
     agency?.defaultMarkup ?? config.pricing.defaultMarkup;
-  // Merchant % always from env (config) — amount is computed per booking
   const merchantFeePercent = config.pricing.merchantFeePercent;
 
   return {

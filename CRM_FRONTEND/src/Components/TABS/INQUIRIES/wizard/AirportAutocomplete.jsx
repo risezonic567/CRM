@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { MapPin } from 'lucide-react';
 import { useLazySuggestAirportsQuery } from '../../../../REDUX_FEATURES/REDUX_SLICES/Search_api/searchApi';
 import { useDebounce } from '../../../../hooks/useDebounce';
 
@@ -12,6 +13,8 @@ const AirportAutocomplete = ({
   placeholder = 'City or airport',
   valueIata = '',
   valueLabel = '',
+  inputClassName,
+  showPin = false,
   onSelect,
   onClear,
 }) => {
@@ -31,7 +34,6 @@ const AirportAutocomplete = ({
 
   useEffect(() => {
     if (debounced.length < 2) return;
-    // Don't re-fetch if user already selected and input matches selected label
     if (valueIata && (input === valueLabel || input === valueIata)) return;
     trigger(debounced);
     setOpen(true);
@@ -67,28 +69,38 @@ const AirportAutocomplete = ({
   return (
     <div className="relative" ref={wrapRef}>
       {label && (
-        <span className="mb-1 block text-xs text-slate-600">{label}</span>
+        <span className="mb-1 block text-xs font-medium text-slate-600">
+          {label}
+        </span>
       )}
-      <input
-        id={id}
-        type="text"
-        autoComplete="off"
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-600"
-        placeholder={placeholder}
-        value={input}
-        onChange={handleChange}
-        onFocus={() => {
-          if (places.length) setOpen(true);
-        }}
-      />
+      <div className="relative">
+        {showPin && (
+          <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        )}
+        <input
+          id={id}
+          type="text"
+          autoComplete="off"
+          className={
+            inputClassName ||
+            'w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-600'
+          }
+          placeholder={placeholder}
+          value={input}
+          onChange={handleChange}
+          onFocus={() => {
+            if (places.length) setOpen(true);
+          }}
+        />
+      </div>
       {valueIata && (
-        <span className="mt-0.5 block text-[11px] font-medium text-slate-500">
-          Selected: {valueIata}
+        <span className="mt-0.5 block text-[11px] font-medium text-blue-600/80">
+          {valueIata}
         </span>
       )}
 
       {open && debounced.length >= 2 && (
-        <ul className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+        <ul className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
           {isFetching && (
             <li className="px-3 py-2 text-xs text-slate-500">Searching…</li>
           )}
