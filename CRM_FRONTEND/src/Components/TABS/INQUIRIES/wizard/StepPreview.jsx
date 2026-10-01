@@ -70,6 +70,10 @@ const StepPreview = ({ onDone }) => {
       toast.error('Missing inquiry or offer');
       return;
     }
+    if (!wizard.travel?.from || !wizard.travel?.to) {
+      toast.error('Route From/To missing — go back to Flight Search and fill airports');
+      return;
+    }
     try {
       const body = {
         customer: wizard.customer,
@@ -106,8 +110,41 @@ const StepPreview = ({ onDone }) => {
           {wizard.customer.lastName} · {wizard.customer.email}
         </p>
         <p>
-          <strong>Route:</strong> {wizard.travel.from} → {wizard.travel.to}
+          <strong>Route:</strong>{' '}
+          {wizard.travel.from && wizard.travel.to
+            ? `${wizard.travel.from} → ${wizard.travel.to}`
+            : '— (set From/To on Flight Search)'}
+          {wizard.travel.departureDate
+            ? ` · ${wizard.travel.departureDate}`
+            : ''}
+          {wizard.travel.returnDate ? ` → ${wizard.travel.returnDate}` : ''}
         </p>
+        {wizard.selectedOffer && (
+          <div className="flex items-center gap-2 text-slate-700">
+            {(wizard.selectedOffer.airline?.logoSymbolUrl ||
+              wizard.selectedOffer.airline?.logoLockupUrl) && (
+              <img
+                src={
+                  wizard.selectedOffer.airline.logoSymbolUrl ||
+                  wizard.selectedOffer.airline.logoLockupUrl
+                }
+                alt=""
+                className="h-7 w-7 object-contain rounded border border-slate-100"
+              />
+            )}
+            <span>
+              <strong>Flight:</strong>{' '}
+              {wizard.selectedOffer.airline?.name || '—'}{' '}
+              {wizard.selectedOffer.flightNumber || ''}
+              {wizard.selectedOffer.departure?.at
+                ? ` · ${wizard.selectedOffer.departure.airport || ''} ${wizard.selectedOffer.departure.at}`
+                : ''}
+              {wizard.selectedOffer.arrival?.at
+                ? ` → ${wizard.selectedOffer.arrival.airport || ''} ${wizard.selectedOffer.arrival.at}`
+                : ''}
+            </span>
+          </div>
+        )}
         <p>
           <strong>Passengers:</strong>{' '}
           {(wizard.passengers || [])

@@ -12,6 +12,9 @@ import { CABIN_CLASSES } from '../../../../constants/dispositions';
 import { getErrorMessage } from '../../../../utils/getErrorMessage';
 import AirportAutocomplete from './AirportAutocomplete';
 
+const KIWI_EXT_ENABLED =
+  String(import.meta.env.VITE_ENABLE_KIWI_EXT || '').toLowerCase() === 'true';
+
 /** Today as YYYY-MM-DD in local calendar (no UTC shift) */
 function todayLocalISO() {
   const n = new Date();
@@ -72,6 +75,27 @@ const StepSearch = () => {
     } catch (err) {
       toast.error(getErrorMessage(err, 'Search failed'));
     }
+  };
+
+  const openKiwi = () => {
+    let url = 'https://www.kiwi.com/en/';
+    if (t.from && t.to && t.departureDate) {
+      url = `https://www.kiwi.com/en/search/results/${encodeURIComponent(
+        t.from.toLowerCase()
+      )}/${encodeURIComponent(t.to.toLowerCase())}/${t.departureDate}/${
+        t.returnDate || t.departureDate
+      }`;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const openGoogleFlights = () => {
+    // Staff searches on Google Flights; Send to CRM fills wizard (same bridge as Kiwi).
+    window.open(
+      'https://www.google.com/travel/flights?gl=IN&hl=en',
+      '_blank',
+      'noopener,noreferrer'
+    );
   };
 
   return (
@@ -153,7 +177,7 @@ const StepSearch = () => {
           </select>
         </label>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           className="rounded-md border px-4 py-2 text-sm"
@@ -167,8 +191,28 @@ const StepSearch = () => {
           className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-60"
           onClick={handleSearch}
         >
-          {isLoading ? 'Searching Duffel…' : 'Search Flights'}
+          {isLoading ? 'Searching…' : 'Search Flights'}
         </button>
+        {KIWI_EXT_ENABLED && (
+          <>
+            <button
+              type="button"
+              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-800 hover:bg-slate-50"
+              onClick={openKiwi}
+              title="Opens Kiwi.com — search there, then Send to CRM"
+            >
+              Open Kiwi (extension)
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-800 hover:bg-slate-50"
+              onClick={openGoogleFlights}
+              title="Opens Google Flights — search there, then Send to CRM"
+            >
+              Open Google Flights
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

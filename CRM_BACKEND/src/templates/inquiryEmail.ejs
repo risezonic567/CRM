@@ -24,6 +24,21 @@
           <td><strong>Duration</strong></td>
           <td><%= offer.duration || '—' %></td>
         </tr>
+        <% if (inquiry.travel.departureDate) { %>
+        <tr>
+          <td><strong>Travel date</strong></td>
+          <td>
+            <%= (typeof inquiry.travel.departureDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(inquiry.travel.departureDate))
+              ? inquiry.travel.departureDate.slice(0, 10)
+              : inquiry.travel.departureDate %>
+            <% if (inquiry.travel.returnDate) { %>
+              → <%= (typeof inquiry.travel.returnDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(String(inquiry.travel.returnDate)))
+                ? String(inquiry.travel.returnDate).slice(0, 10)
+                : inquiry.travel.returnDate %>
+            <% } %>
+          </td>
+        </tr>
+        <% } %>
       </table>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />

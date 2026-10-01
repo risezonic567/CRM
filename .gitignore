@@ -4,3 +4,6 @@ skills-lock.json
 
 # Archify diagrams / generated HTML under docs
 docs/archify/
+
+# Local educational Chrome extension (optional — not required on remote)
+# kiwi-extension/

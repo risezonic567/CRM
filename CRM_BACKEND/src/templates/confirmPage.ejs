@@ -18,6 +18,19 @@
   </style>
 </head>
 <body>
+  <% 
+    function fmtDate(d) {
+      if (!d) return '—';
+      if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d)) return d.slice(0, 10);
+      const dt = new Date(d);
+      if (Number.isNaN(dt.getTime())) return String(d);
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    }
+    const offer = inquiry.selectedOffer || {};
+  %>
   <div class="card">
     <h1>Confirm your inquiry</h1>
     <p class="muted"><%= agency?.name || 'Travel CRM' %> · Ref <%= inquiry.inquiryReference %></p>
@@ -27,7 +40,19 @@
     <% } %>
 
     <div class="row"><strong>Route:</strong> <%= inquiry.travel.from %> → <%= inquiry.travel.to %></div>
-    <div class="row"><strong>Departure:</strong> <%= inquiry.travel.departureDate %></div>
+    <div class="row"><strong>Departure:</strong> <%= fmtDate(inquiry.travel.departureDate) %></div>
+    <% if (inquiry.travel.returnDate) { %>
+      <div class="row"><strong>Return:</strong> <%= fmtDate(inquiry.travel.returnDate) %></div>
+    <% } %>
+    <% if (offer.airline && offer.airline.name) { %>
+      <div class="row"><strong>Flight:</strong> <%= offer.airline.name %> <%= offer.flightNumber || '' %>
+        <% if (offer.departure && offer.departure.at) { %> · <%= offer.departure.airport || '' %> <%= offer.departure.at %><% } %>
+        <% if (offer.arrival && offer.arrival.at) { %> → <%= offer.arrival.airport || '' %> <%= offer.arrival.at %><% } %>
+      </div>
+    <% } %>
+    <% if (offer.duration) { %>
+      <div class="row"><strong>Duration:</strong> <%= offer.duration %></div>
+    <% } %>
     <div class="row"><strong>Passengers:</strong>
       <% (inquiry.passengers || []).forEach(function(p, i) { %>
         <%= p.firstName %> <%= p.lastName %><%= i < inquiry.passengers.length - 1 ? ', ' : '' %>

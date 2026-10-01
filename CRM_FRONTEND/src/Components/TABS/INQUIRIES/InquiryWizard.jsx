@@ -19,6 +19,7 @@ import StepResults from './wizard/StepResults';
 import StepPassengers from './wizard/StepPassengers';
 import StepBilling from './wizard/StepBilling';
 import StepPreview from './wizard/StepPreview';
+import { useKiwiCaptureInWizard } from '../../../hooks/useKiwiCaptureInWizard';
 
 const STEPS = [
   'Customer Details',
@@ -35,6 +36,9 @@ const InquiryWizard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const hydratedId = useRef(null);
   const skipNextSave = useRef(false);
+
+  // Educational Kiwi extension: listen while wizard is open (any step)
+  useKiwiCaptureInWizard();
 
   const inquiryId = searchParams.get('inquiryId') || wizard.inquiryId;
 
