@@ -9,8 +9,8 @@ import {
 } from '../REDUX_FEATURES/REDUX_SLICES/Auth_api/authSlice';
 import { syncCurrentUserFromAuth } from '../Components/roles';
 import { getErrorMessage } from '../utils/getErrorMessage';
-import mapBg from '../assets/map.png';
-import rImg from '../assets/r.png';
+// import mapBg from '../assets/map.png';
+// import rImg from '../assets/r.png';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -106,7 +106,7 @@ const LoginPage = () => {
       >
         {/* World Map Overlay */}
         <img
-          src={mapBg}
+          src="https://res.cloudinary.com/l8fq5qyb/image/upload/v1791022862/map.png"
           alt=""
           className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.14]"
         />
@@ -245,7 +245,7 @@ const LoginPage = () => {
       <div className="flex w-full flex-1 items-center justify-center px-8 py-12 lg:w-[42%]">
         <div className="w-full max-w-md">
           <div className="mb-4 flex flex-col items-center">
-            <img src={rImg} alt="" className="h-20 w-auto object-contain" />
+            <img src="https://res.cloudinary.com/l8fq5qyb/image/upload/v1791022720/r.png" alt="" className="h-20 w-auto object-contain" />
             <span className="mt-2 text-lg font-bold tracking-tight text-slate-900">
               Smart Travel Business
             </span>
