@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.0.26:5000';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const axiosInstance = axios.create({
   baseURL: `${API_URL}/api`,
@@ -15,10 +14,12 @@ let accessTokenGetter = () => null;
 let accessTokenSetter = () => {};
 let onUnauthorized = () => {};
 
+console.log("API_URL", API_URL);
+
 export function bindAuthTokenHandlers({ getToken, setToken, onAuthFailure }) {
   accessTokenGetter = getToken;
   accessTokenSetter = setToken;
-  onUnauthorized = onAuthFailure;
+  onUnauthorized = onAuthFailure; 
 }
 
 axiosInstance.interceptors.request.use((config) => {
