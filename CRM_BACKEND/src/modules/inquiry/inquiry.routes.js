@@ -21,10 +21,12 @@ router.use(blockViewerWrites);
 router.get('/', validate(listInquiriesQuerySchema, 'query'), inquiryController.list);
 router.get('/lookup', validate(lookupQuerySchema, 'query'), inquiryController.lookup);
 router.get('/stats/margin', inquiryController.marginStats);
+router.get('/:id/confirmation-receipt', inquiryController.downloadConfirmationReceipt);
 router.get('/:id', inquiryController.getById);
 router.patch('/:id/draft', validate(saveDraftSchema), inquiryController.saveDraft);
 router.post('/:id/send', validate(sendInquirySchema), inquiryController.send);
 router.post('/:id/close', validate(closeInquirySchema), inquiryController.close);
+router.post('/:id/resend-confirmation', inquiryController.resendConfirmation);
 router.delete('/:id', inquiryController.remove);
 
 export default router;

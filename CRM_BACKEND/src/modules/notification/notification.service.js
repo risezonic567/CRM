@@ -56,3 +56,47 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
     throw err;
   }
 }
+
+/**
+ * Confirmation receipt email — sent after customer confirms (and on agent resend).
+ */
+export async function sendConfirmationEmail({ inquiry, agency }) {
+  const to = inquiry.customer.email;
+  const subject = `Confirmed — ${inquiry.inquiryReference} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
+
+  try {
+    const html = await renderTemplate('confirmationEmail.ejs', {
+      agency,
+      inquiry,
+      grandTotal: inquiry.pricing.sellingPrice,
+      currency: inquiry.pricing.currency,
+    });
+
+    const info = await sendMail({ to, subject, html });
+
+    await NotificationLog.create({
+      type: 'email',
+      to,
+      subject,
+      status: 'sent',
+      relatedTo: { model: 'Inquiry', id: inquiry._id },
+      messageId: info.messageId || '',
+      agencyId: inquiry.agencyId,
+    });
+  } catch (err) {
+    logger.error('Failed to send confirmation email', {
+      message: err.message,
+      to,
+    });
+    await NotificationLog.create({
+      type: 'email',
+      to,
+      subject,
+      status: 'failed',
+      relatedTo: { model: 'Inquiry', id: inquiry._id },
+      error: err.message,
+      agencyId: inquiry.agencyId,
+    });
+    throw err;
+  }
+}
