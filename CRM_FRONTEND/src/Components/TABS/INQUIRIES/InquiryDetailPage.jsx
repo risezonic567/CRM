@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   ArrowLeft,
   Plane,
@@ -10,10 +11,19 @@ import {
   MapPin,
   FileText,
   Loader2,
+  Mail,
+  Download,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import { useGetInquiryQuery } from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
+import axiosInstance from '../../../SERVICES/AxiosInstance';
+import {
+  useGetInquiryQuery,
+  useResendConfirmationMutation,
+} from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
 import { CLOSE_SOURCES } from '../../../constants/dispositions';
 import StatusBadge from '../../shared/StatusBadge';
+import { getErrorMessage } from '../../../utils/getErrorMessage';
 
 const CLOSE_SOURCE_LABELS = {
   [CLOSE_SOURCES.WAITING_MODAL]: 'Waiting modal',
@@ -88,11 +98,54 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
   const { data, isFetching, isError } = useGetInquiryQuery(inquiryId, {
     skip: !inquiryId,
   });
+  const [resendConfirmation, { isLoading: isResending }] =
+    useResendConfirmationMutation();
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [showRawUserAgent, setShowRawUserAgent] = useState(false);
   const inq = data?.data?.inquiry;
   const offer = inq?.selectedOffer || {};
   const outbound = offer.outbound || offer;
   const inbound = offer.inbound || null;
   const currency = inq?.pricing?.currency || 'USD';
+  const isConfirmed = inq?.status === 'customer_confirmed';
+
+  const handleResendConfirmation = async () => {
+    if (!inquiryId) return;
+    try {
+      const res = await resendConfirmation(inquiryId).unwrap();
+      toast.success(res?.message || 'Confirmation email resent');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to resend confirmation email'));
+    }
+  };
+
+  const handleDownloadConfirmation = async () => {
+    if (!inquiryId) return;
+    setIsDownloading(true);
+    try {
+      const res = await axiosInstance.get(
+        `/inquiries/${inquiryId}/confirmation-receipt`,
+        { responseType: 'blob' }
+      );
+      const ref = inq?.inquiryReference || inquiryId;
+      const blob = new Blob([res.data], {
+        type: 'text/html;charset=utf-8',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Confirmed-${ref}.html`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Confirmation downloaded');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to download confirmation'));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4 text-slate-900">
@@ -121,6 +174,36 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
             Full record for this flight inquiry
           </p>
         </div>
+        {isConfirmed && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadConfirmation}
+              disabled={isDownloading}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Download confirmation
+            </button>
+            <button
+              type="button"
+              onClick={handleResendConfirmation}
+              disabled={isResending}
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-medium text-emerald-800 shadow-sm transition hover:bg-emerald-100 disabled:opacity-60"
+            >
+              {isResending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+              Resend confirmation email
+            </button>
+          </div>
+        )}
       </div>
 
       {isFetching && !inq && (
@@ -352,7 +435,10 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
             </div>
           </Section>
 
-          {(inq.emailSentAt || inq.confirmedAt || inq.notes) && (
+          {(inq.emailSentAt ||
+            inq.confirmedAt ||
+            inq.agreement?.agreedAt ||
+            inq.notes) && (
             <Section icon={Clock} title="Timeline & notes">
               <div className="grid gap-3 sm:grid-cols-2">
                 {inq.emailSentAt && (
@@ -373,6 +459,97 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                     <p className="text-sm font-semibold text-emerald-600">
                       {formatDate(inq.confirmedAt)}
                     </p>
+                  </div>
+                )}
+                {(inq.agreement?.agreedAt ||
+                  inq.agreement?.agreedIp ||
+                  inq.agreement?.browser ||
+                  inq.agreement?.os ||
+                  inq.agreement?.deviceType ||
+                  inq.agreement?.agreedUserAgent) && (
+                  <div className="sm:col-span-2 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                      Agreement proof
+                    </p>
+                    {inq.agreement?.clientSummary && (
+                      <p className="mt-2 text-sm font-semibold text-slate-900">
+                        {inq.agreement.clientSummary}
+                      </p>
+                    )}
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {inq.agreement?.agreedAt && (
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-500">
+                            Agreed at
+                          </p>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {formatDate(inq.agreement.agreedAt)}
+                          </p>
+                        </div>
+                      )}
+                      {inq.agreement?.agreedIp && (
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-500">
+                            IP address
+                          </p>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {inq.agreement.agreedIp}
+                          </p>
+                        </div>
+                      )}
+                      {inq.agreement?.browser && (
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-500">
+                            Browser
+                          </p>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {inq.agreement.browser}
+                          </p>
+                        </div>
+                      )}
+                      {inq.agreement?.os && (
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-500">
+                            OS
+                          </p>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {inq.agreement.os}
+                          </p>
+                        </div>
+                      )}
+                      {inq.agreement?.deviceType &&
+                        inq.agreement.deviceType !== 'unknown' && (
+                          <div>
+                            <p className="text-[11px] font-medium text-slate-500">
+                              Device
+                            </p>
+                            <p className="text-sm font-semibold capitalize text-slate-900">
+                              {inq.agreement.deviceType}
+                            </p>
+                          </div>
+                        )}
+                    </div>
+                    {inq.agreement?.agreedUserAgent && (
+                      <div className="mt-3 border-t border-emerald-100 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowRawUserAgent((v) => !v)}
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 hover:text-slate-900"
+                        >
+                          {showRawUserAgent ? (
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          )}
+                          Raw user-agent (audit)
+                        </button>
+                        {showRawUserAgent && (
+                          <p className="mt-1 break-all text-xs text-slate-500">
+                            {inq.agreement.agreedUserAgent}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
                 {inq.notes && (

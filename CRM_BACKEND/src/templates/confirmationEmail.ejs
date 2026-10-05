@@ -1,0 +1,142 @@
+<%- include('partials/header', { title: 'Inquiry Confirmed', agency }) %>
+
+      <%
+        function fmtWhen(at, fallbackDate) {
+          if (at) {
+            var s = String(at);
+            var m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+            if (m) {
+              var d = new Date(m[1] + 'T' + m[2] + ':00');
+              if (!isNaN(d.getTime())) {
+                return d.toLocaleString('en-US', {
+                  weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+                  hour: '2-digit', minute: '2-digit', hour12: false
+                });
+              }
+              return m[1] + ' · ' + m[2];
+            }
+          }
+          if (fallbackDate) {
+            var fd = new Date(fallbackDate);
+            if (!isNaN(fd.getTime())) {
+              return fd.toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+              });
+            }
+          }
+          return '—';
+        }
+        function fmtDuration(value) {
+          if (!value) return '—';
+          var s = String(value).trim();
+          if (/^\d+h(?:\s+\d+m)?$/.test(s) || /^\d+m$/.test(s)) return s;
+          var m = s.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/i);
+          if (!m) return s;
+          var hours = Number(m[1] || 0) * 24 + Number(m[2] || 0);
+          var mins = Math.round(Number(m[3] || 0));
+          if (!hours && !mins) return '—';
+          if (hours && mins) return hours + 'h ' + mins + 'm';
+          if (hours) return hours + 'h';
+          return mins + 'm';
+        }
+        function fmtConfirmedAt(value) {
+          if (!value) return '—';
+          var d = new Date(value);
+          if (isNaN(d.getTime())) return '—';
+          return d.toLocaleString('en-US', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: false
+          });
+        }
+        var offer = inquiry.selectedOffer || {};
+        var outbound = offer.outbound || offer;
+        var inbound = offer.inbound || null;
+      %>
+
+      <p>Hello <%= inquiry.customer.firstName %>,</p>
+      <p>
+        Your flight inquiry has been <strong>confirmed</strong>.
+        Please keep this email as your confirmation record.
+      </p>
+
+      <p style="margin:16px 0;padding:12px 14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:6px;color:#065f46;font-size:14px;">
+        Confirmed at: <strong><%= fmtConfirmedAt(inquiry.confirmedAt || inquiry.agreement?.agreedAt) %></strong><br />
+        Reference: <strong><%= inquiry.inquiryReference %></strong>
+      </p>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
+      <h3 style="margin:0 0 12px;">Flight details</h3>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
+        <tr>
+          <td colspan="2" style="padding-top:8px;color:#64748b;font-size:12px;text-transform:uppercase;">
+            <%= inbound ? 'Departing' : 'Flight' %>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Airline</strong></td>
+          <td><%= outbound.airline?.name || offer.airline?.name || '—' %> <%= (outbound.flightNumber || offer.flightNumber) ? '(' + (outbound.flightNumber || offer.flightNumber) + ')' : '' %></td>
+        </tr>
+        <tr>
+          <td><strong>From</strong></td>
+          <td><%= inquiry.travel.from %> — <%= fmtWhen(outbound.departure?.at || offer.departure?.at, inquiry.travel.departureDate) %></td>
+        </tr>
+        <tr>
+          <td><strong>To</strong></td>
+          <td><%= inquiry.travel.to %> — <%= fmtWhen(outbound.arrival?.at || offer.arrival?.at, null) %></td>
+        </tr>
+        <tr>
+          <td><strong>Duration</strong></td>
+          <td><%= fmtDuration(outbound.duration || offer.duration) %></td>
+        </tr>
+        <% if (inbound) { %>
+        <tr>
+          <td colspan="2" style="padding-top:16px;color:#64748b;font-size:12px;text-transform:uppercase;">
+            Returning
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Airline</strong></td>
+          <td><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber ? '(' + inbound.flightNumber + ')' : '' %></td>
+        </tr>
+        <tr>
+          <td><strong>From</strong></td>
+          <td><%= inquiry.travel.to %> — <%= fmtWhen(inbound.departure?.at, inquiry.travel.returnDate) %></td>
+        </tr>
+        <tr>
+          <td><strong>To</strong></td>
+          <td><%= inquiry.travel.from %> — <%= fmtWhen(inbound.arrival?.at, null) %></td>
+        </tr>
+        <tr>
+          <td><strong>Duration</strong></td>
+          <td><%= fmtDuration(inbound.duration) %></td>
+        </tr>
+        <% } else if (inquiry.travel.returnDate) { %>
+        <tr>
+          <td><strong>Return date</strong></td>
+          <td><%= fmtWhen(null, inquiry.travel.returnDate) %></td>
+        </tr>
+        <% } %>
+      </table>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
+      <h3 style="margin:0 0 12px;">Passengers</h3>
+      <ul style="padding-left:18px;margin:0;">
+        <% (inquiry.passengers || []).forEach(function(p) { %>
+          <li><%= p.firstName %> <%= p.lastName %> (<%= p.type %>)</li>
+        <% }) %>
+      </ul>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
+      <p style="font-size:18px;margin:0;">
+        <strong>Total Amount:</strong>
+        <%= currency %> <%= Number(grandTotal).toFixed(2) %>
+      </p>
+
+      <p style="font-size:12px;color:#64748b;margin:16px 0 0;">
+        Our team will contact you shortly. If you have questions, reply to this email or contact the agency.
+      </p>
+
+<%- include('partials/footer') %>

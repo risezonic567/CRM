@@ -3,7 +3,11 @@ import { verifyPublicToken } from '../../utils/signPublicToken.js';
 import { AppError } from '../../utils/apiResponse.js';
 import { INQUIRY_STATUSES } from '../../config/constants.js';
 import { getIO } from '../../socket/socket.js';
-import { renderTemplate } from '../notification/notification.service.js';
+import {
+  renderTemplate,
+  queueConfirmationEmail,
+} from '../notification/notification.service.js';
+import { parseClientMeta } from '../../utils/clientMeta.js';
 
 export async function loadConfirmPage(inquiryId, token) {
   const { inquiry, agency } = await verifyAndLoad(inquiryId, token);
@@ -56,6 +60,9 @@ export async function confirmInquiry(inquiryId, { token, agreed }, meta) {
     throw new AppError('Inquiry is not awaiting confirmation', 400);
   }
 
+  const userAgent = meta.userAgent || '';
+  const parsed = parseClientMeta(userAgent);
+
   // Atomic update — only one request can flip from preview_sent
   const updated = await Inquiry.findOneAndUpdate(
     {
@@ -70,7 +77,10 @@ export async function confirmInquiry(inquiryId, { token, agreed }, meta) {
         agreement: {
           agreedAt: new Date(),
           agreedIp: meta.ip || '',
-          agreedUserAgent: meta.userAgent || '',
+          agreedUserAgent: userAgent,
+          browser: parsed.browser,
+          os: parsed.os,
+          deviceType: parsed.deviceType,
         },
       },
     },
@@ -102,6 +112,9 @@ export async function confirmInquiry(inquiryId, { token, agreed }, meta) {
   } catch {
     // ignore if socket not ready
   }
+
+  // Fire-and-forget confirmation receipt — do not block thank-you page
+  queueConfirmationEmail({ inquiry: updated, agency }).catch(() => {});
 
   const html = await renderTemplate('thankYou.ejs', {
     inquiry: updated,

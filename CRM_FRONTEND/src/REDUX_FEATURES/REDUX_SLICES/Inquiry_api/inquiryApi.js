@@ -77,6 +77,13 @@ export const inquiryApi = createApi({
       }),
       invalidatesTags: ['Inquiries', 'Inquiry', 'InquiryMargin'],
     }),
+    resendConfirmation: builder.mutation({
+      query: (id) => ({
+        url: `/inquiries/${id}/resend-confirmation`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_r, _e, id) => [{ type: 'Inquiry', id }],
+    }),
     deleteInquiry: builder.mutation({
       query: (id) => ({
         url: `/inquiries/${id}`,
@@ -96,5 +103,6 @@ export const {
   useSaveDraftMutation,
   useSendInquiryMutation,
   useCloseInquiryMutation,
+  useResendConfirmationMutation,
   useDeleteInquiryMutation,
 } = inquiryApi;

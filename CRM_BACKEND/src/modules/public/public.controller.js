@@ -2,6 +2,7 @@ import * as publicService from './public.service.js';
 import { AppError } from '../../utils/apiResponse.js';
 import { renderTemplate } from '../notification/notification.service.js';
 import { Inquiry, Agency } from '../../models/index.js';
+import { resolveClientIp } from '../../utils/clientMeta.js';
 
 export async function showConfirm(req, res, next) {
   try {
@@ -23,9 +24,7 @@ export async function submitConfirm(req, res, next) {
       req.params.inquiryId,
       { token, agreed },
       {
-        ip:
-          req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() ||
-          req.ip,
+        ip: resolveClientIp(req),
         userAgent: req.headers['user-agent'] || '',
       }
     );

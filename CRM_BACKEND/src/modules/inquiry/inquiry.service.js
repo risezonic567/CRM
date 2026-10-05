@@ -9,7 +9,12 @@ import {
   ROLES,
 } from '../../config/constants.js';
 import config from '../../config/index.js';
-import { queueInquiryEmail } from '../notification/notification.service.js';
+import {
+  queueInquiryEmail,
+  queueConfirmationEmail,
+  renderTemplate,
+} from '../notification/notification.service.js';
+import { enrichAgreement } from '../../utils/enrichAgreement.js';
 import { getIO } from '../../socket/socket.js';
 
 function buildInquiryScopeFilter(user, extra = {}) {
@@ -148,7 +153,12 @@ export async function getInquiry(user, inquiryId) {
     .populate('callId')
     .populate('closedBy', 'firstName lastName email');
   if (!inquiry) throw new AppError('Inquiry not found', 404);
-  return inquiry;
+
+  const doc = inquiry.toObject();
+  if (doc.agreement) {
+    doc.agreement = enrichAgreement(doc.agreement);
+  }
+  return doc;
 }
 
 export async function lookupInquiries(user, q) {
@@ -367,6 +377,64 @@ export async function closeInquiry(user, inquiryId, { reason, source }) {
   }
 
   return inquiry;
+}
+
+/**
+ * Agent resends confirmation receipt email (customer_confirmed only).
+ */
+export async function resendConfirmationEmail(user, inquiryId) {
+  const inquiry = await findInquiryForUser(user, inquiryId);
+
+  if (inquiry.status !== INQUIRY_STATUSES.CUSTOMER_CONFIRMED) {
+    throw new AppError(
+      'Confirmation email can only be resent for confirmed inquiries',
+      400
+    );
+  }
+
+  const email = inquiry.customer?.email?.trim();
+  if (!email) {
+    throw new AppError('Customer email is missing', 400);
+  }
+
+  const agency = await Agency.findById(inquiry.agencyId);
+  if (!agency) throw new AppError('Agency not found', 404);
+
+  await queueConfirmationEmail({ inquiry, agency });
+
+  return { inquiry, emailedTo: email };
+}
+
+/**
+ * HTML confirmation receipt for agent download (customer_confirmed only).
+ */
+export async function getConfirmationReceipt(user, inquiryId) {
+  const inquiry = await findInquiryForUser(user, inquiryId);
+
+  if (inquiry.status !== INQUIRY_STATUSES.CUSTOMER_CONFIRMED) {
+    throw new AppError(
+      'Confirmation receipt is only available for confirmed inquiries',
+      400
+    );
+  }
+
+  const agency = await Agency.findById(inquiry.agencyId);
+  if (!agency) throw new AppError('Agency not found', 404);
+
+  const html = await renderTemplate('confirmationEmail.ejs', {
+    agency,
+    inquiry,
+    grandTotal: inquiry.pricing.sellingPrice,
+    currency: inquiry.pricing.currency,
+  });
+
+  const safeRef = String(inquiry.inquiryReference || inquiryId).replace(
+    /[^\w.-]+/g,
+    '_'
+  );
+  const filename = `Confirmed-${safeRef}.html`;
+
+  return { html, filename };
 }
 
 /**

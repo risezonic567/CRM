@@ -90,6 +90,38 @@ export async function close(req, res, next) {
   }
 }
 
+export async function resendConfirmation(req, res, next) {
+  try {
+    const result = await inquiryService.resendConfirmationEmail(
+      req.user,
+      req.params.id
+    );
+    return success(res, {
+      message: `Confirmation email resent to ${result.emailedTo}`,
+      data: { inquiry: result.inquiry },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function downloadConfirmationReceipt(req, res, next) {
+  try {
+    const { html, filename } = await inquiryService.getConfirmationReceipt(
+      req.user,
+      req.params.id
+    );
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${filename.replace(/"/g, '')}"`
+    );
+    return res.status(200).send(html);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 export async function remove(req, res, next) {
   try {
     const inquiry = await inquiryService.deleteInquiry(req.user, req.params.id);
