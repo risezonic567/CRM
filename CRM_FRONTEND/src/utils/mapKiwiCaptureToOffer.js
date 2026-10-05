@@ -1,5 +1,9 @@
 /**
- * Map Kiwi extension capture → CRM offer + travel patch.
+ * Map Kiwi/Google extension capture → CRM offer + travel patch.
+ *
+ * Additive: when capture has baggage / flight no / amenities, also fill
+ * SerpApi-shaped `raw.flights` + `raw.extensions` so FlightResultCard
+ * shows details without changing Duffel/SerpApi offer paths.
  */
 
 /** Common Kiwi URL city slugs → IATA (extend as needed) */
@@ -92,10 +96,8 @@ function slugToIata(slug) {
   const s = String(slug).toLowerCase().trim();
   if (/^[a-z]{3}$/.test(s)) return s.toUpperCase();
   if (CITY_SLUG_TO_IATA[s]) return CITY_SLUG_TO_IATA[s];
-  // try first city token: "delhi-india" → delhi
   const first = s.split('-')[0];
   if (CITY_SLUG_TO_IATA[first]) return CITY_SLUG_TO_IATA[first];
-  // full slug without country
   for (const [key, code] of Object.entries(CITY_SLUG_TO_IATA)) {
     if (s.includes(key) || key.includes(s)) return code;
   }
@@ -104,17 +106,60 @@ function slugToIata(slug) {
 
 function resolveAirportCode(capture, side) {
   const direct =
-    side === 'from'
-      ? capture?.origin
-      : capture?.destination;
+    side === 'from' ? capture?.origin : capture?.destination;
   const fromIata = extractIata(direct);
   if (fromIata) return fromIata;
 
   const ctx = capture?.searchContext || {};
   const slug = side === 'from' ? ctx.origin : ctx.destination;
-  const q =
-    side === 'from' ? ctx.queryOrigin : ctx.queryDestination;
+  const q = side === 'from' ? ctx.queryOrigin : ctx.queryDestination;
   return slugToIata(q) || slugToIata(slug) || '';
+}
+
+/**
+ * Build SerpApi-like raw.extensions so FlightResultCard baggage UI works.
+ */
+function buildExtensions(capture) {
+  const ext = [];
+  const bags = Array.isArray(capture?.baggage) ? capture.baggage : [];
+  for (const b of bags) {
+    const s = String(b || '').trim();
+    if (s && !ext.includes(s)) ext.push(s);
+  }
+  const amenities = Array.isArray(capture?.amenities) ? capture.amenities : [];
+  for (const a of amenities) {
+    const s = String(a || '').trim();
+    if (s && !ext.includes(s)) ext.push(s);
+  }
+  return ext;
+}
+
+/**
+ * Single-segment SerpApi-like flight for expandable card timeline.
+ */
+function buildRawFlights(capture, offerShell) {
+  const airlineName = offerShell.airline?.name || '';
+  const logo = offerShell.airline?.logoSymbolUrl || '';
+  return [
+    {
+      airline: airlineName,
+      flight_number: offerShell.flightNumber || '',
+      airplane: '',
+      travel_class: offerShell.cabinClass || '',
+      airline_logo: logo,
+      departure_airport: {
+        time: offerShell.departure?.at || '',
+        id: offerShell.departure?.airport || '',
+        name: offerShell.departure?.city || '',
+      },
+      arrival_airport: {
+        time: offerShell.arrival?.at || '',
+        id: offerShell.arrival?.airport || '',
+        name: offerShell.arrival?.city || '',
+      },
+      duration: offerShell.duration || capture?.duration || '',
+    },
+  ];
 }
 
 /**
@@ -168,6 +213,7 @@ export function mapKiwiCaptureToOffer(capture) {
 
   const airlineName =
     (Array.isArray(capture?.airlines) && capture.airlines[0]) ||
+    capture?.operatingAirline ||
     (src === 'google' ? 'Google Flights capture' : 'Kiwi capture');
   const logo =
     (Array.isArray(capture?.logos) && capture.logos[0]) || '';
@@ -175,15 +221,18 @@ export function mapKiwiCaptureToOffer(capture) {
   const fromCode = resolveAirportCode(capture, 'from');
   const toCode = resolveAirportCode(capture, 'to');
 
-  return {
+  const flightNumber = String(capture?.flightNumber || '').trim();
+  const cabinClass = String(capture?.cabinClass || '').trim();
+
+  const offer = {
     id,
     airline: {
       name: airlineName,
-      iataCode: '',
+      iataCode: flightNumber.split(/\s+/)[0] || '',
       logoLockupUrl: logo,
       logoSymbolUrl: logo,
     },
-    flightNumber: capture?.flightNumber || '',
+    flightNumber,
     departure: {
       at: capture?.departure || '',
       airport: fromCode || capture?.origin || '',
@@ -196,7 +245,7 @@ export function mapKiwiCaptureToOffer(capture) {
     },
     duration: capture?.duration || '',
     stops: parseStops(capture?.stops),
-    cabinClass: '',
+    cabinClass,
     costPrice: amount,
     currency,
     expiresAt: null,
@@ -205,6 +254,29 @@ export function mapKiwiCaptureToOffer(capture) {
       capture,
     },
   };
+
+  // Additive SerpApi-shaped fields — only for extension captures.
+  // Duffel/SerpApi offers never go through this mapper.
+  const extensions = buildExtensions(capture);
+  if (extensions.length) {
+    offer.raw.extensions = extensions;
+  }
+  offer.raw.flights = buildRawFlights(capture, offer);
+
+  if (
+    Array.isArray(capture?.fareOptions) &&
+    capture.fareOptions.length > 0
+  ) {
+    offer.raw.fareOptions = capture.fareOptions;
+  }
+  if (capture?.operatingAirline) {
+    offer.raw.operatingAirline = capture.operatingAirline;
+  }
+  if (capture?.detailCaptured) {
+    offer.raw.detailCaptured = true;
+  }
+
+  return offer;
 }
 
 export default mapKiwiCaptureToOffer;

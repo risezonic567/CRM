@@ -12,11 +12,15 @@ import { getErrorMessage } from '../../../../utils/getErrorMessage';
 import FlightFilters, { applyFlightFilters } from './FlightFilters';
 import FlightResultCard from './FlightResultCard';
 
+const KIWI_EXT_ENABLED =
+  String(import.meta.env.VITE_ENABLE_KIWI_EXT || '').toLowerCase() === 'true';
+
 const sourceLabel = (source) => {
   if (source === 'duffel') return 'Duffel (live)';
   if (source === 'flightmcp') return 'Flight MCP';
   if (source === 'serpapi') return 'Google Flights (SerpApi)';
-  if (source === 'kiwi' || source === 'google') return 'Extension';
+  if (source === 'kiwi') return 'Kiwi (extension)';
+  if (source === 'google') return 'Google Flights (extension)';
   return 'Mock';
 };
 
@@ -261,13 +265,24 @@ const StepResults = () => {
         )}
       </div>
 
+      {KIWI_EXT_ENABLED && (source === 'kiwi' || source === 'google') && (
+        <p className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+          Captured from {source === 'google' ? 'Google Flights' : 'Kiwi'}
+          {meta?.fromExtension
+            ? ' — for full flight no / bags / seat info, open the itinerary on Kiwi then use “Send details to CRM”'
+            : ''}
+          . Review price/markup, then Select to continue.
+        </p>
+      )}
+
       {!offers.length ? (
         <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
           No offers returned
           {meta?.from && meta?.to
             ? ` for ${meta.from} → ${meta.to} on ${meta.departureDate}`
             : ''}
-          . Try another date or route.
+          . Try API search, or capture via Kiwi / Google Flights extension if
+          enabled.
         </p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[240px_1fr] lg:items-start">

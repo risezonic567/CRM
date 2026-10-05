@@ -87,8 +87,9 @@ export function useKiwiCaptureInWizard() {
       dispatch(setWizardStep(2));
 
       if (hasRoute) {
+        const detailNote = capture?.detailCaptured ? ' (with details)' : '';
         toast.success(
-          `Captured ${nextTravel.from} → ${nextTravel.to} · ${offer.currency} ${Number(offer.costPrice).toFixed(2)}`
+          `Captured ${nextTravel.from} → ${nextTravel.to} · ${offer.currency} ${Number(offer.costPrice).toFixed(2)}${detailNote}`
         );
       } else {
         toast.error(

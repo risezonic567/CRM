@@ -23,6 +23,9 @@ import { getErrorMessage } from '../../../../utils/getErrorMessage';
 import AirportAutocomplete from './AirportAutocomplete';
 import FlightDatePicker from './FlightDatePicker';
 
+const KIWI_EXT_ENABLED =
+  String(import.meta.env.VITE_ENABLE_KIWI_EXT || '').toLowerCase() === 'true';
+
 function todayLocalISO() {
   const n = new Date();
   const y = n.getFullYear();
@@ -163,6 +166,26 @@ const StepSearch = () => {
     } catch (err) {
       toast.error(getErrorMessage(err, 'Search failed'));
     }
+  };
+
+  const openKiwi = () => {
+    let url = 'https://www.kiwi.com/en/';
+    if (t.from && t.to && t.departureDate) {
+      url = `https://www.kiwi.com/en/search/results/${encodeURIComponent(
+        t.from.toLowerCase()
+      )}/${encodeURIComponent(t.to.toLowerCase())}/${t.departureDate}/${
+        t.returnDate || t.departureDate
+      }`;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const openGoogleFlights = () => {
+    window.open(
+      'https://www.google.com/travel/flights?gl=IN&hl=en',
+      '_blank',
+      'noopener,noreferrer'
+    );
   };
 
   const paxTotal = totalPax({
@@ -447,19 +470,41 @@ const StepSearch = () => {
           >
             Back
           </button>
-          <button
-            type="button"
-            disabled={isLoading}
-            className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
-            onClick={handleSearch}
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Search className="h-4 w-4" />
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {KIWI_EXT_ENABLED && (
+              <>
+                <button
+                  type="button"
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  onClick={openKiwi}
+                  title="Opens Kiwi.com — search there, then Send to CRM"
+                >
+                  Open Kiwi
+                </button>
+                <button
+                  type="button"
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  onClick={openGoogleFlights}
+                  title="Opens Google Flights — search there, then Send to CRM"
+                >
+                  Open Google Flights
+                </button>
+              </>
             )}
-            {isLoading ? 'Searching…' : 'Explore'}
-          </button>
+            <button
+              type="button"
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
+              onClick={handleSearch}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              {isLoading ? 'Searching…' : 'Explore'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

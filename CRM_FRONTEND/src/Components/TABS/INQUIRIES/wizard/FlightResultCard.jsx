@@ -76,11 +76,23 @@ function segmentsFromOffer(offer) {
 
 function baggageFromOffer(offer) {
   const ext = offer?.raw?.extensions;
-  if (!Array.isArray(ext)) return null;
-  const cabin = ext.find((x) => /cabin|carry/i.test(x));
-  const check = ext.find((x) => /checked|baggage|bag/i.test(x));
-  if (!cabin && !check) return null;
-  return { cabin, check };
+  if (Array.isArray(ext) && ext.length) {
+    const cabin = ext.find((x) => /cabin|carry/i.test(x));
+    const check = ext.find((x) => /checked|baggage|bag/i.test(x));
+    if (cabin || check) return { cabin, check };
+    // Amenity/baggage lines without keywords — extension captures only
+    const src = offer?.raw?.source;
+    if (src === 'kiwi-extension' || src === 'google-extension') {
+      return { cabin: ext[0] || null, check: ext[1] || null };
+    }
+    return null;
+  }
+  // Extension capture fallback (SerpApi/Duffel never set raw.capture)
+  const bags = offer?.raw?.capture?.baggage;
+  if (Array.isArray(bags) && bags.length) {
+    return { cabin: bags[0] || null, check: bags[1] || null };
+  }
+  return null;
 }
 
 /**

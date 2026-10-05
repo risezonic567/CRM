@@ -94,6 +94,33 @@ function getSearchContext() {
   };
 }
 
+function extractFlightNumberFromText(text) {
+  if (!text) return '';
+  const labeled = String(text).match(
+    /Flight\s*(?:no\.?|number)?\s*[:\s]*([A-Z0-9]{2})\s*-?\s*(\d{1,4})/i
+  );
+  if (labeled) return `${labeled[1].toUpperCase()} ${labeled[2]}`;
+  const m = String(text).match(
+    /\b([A-Z]{2}|[A-Z]\d|\d[A-Z])\s*-?\s*(\d{1,4})\b/
+  );
+  if (!m) return '';
+  return `${m[1].toUpperCase()} ${m[2]}`;
+}
+
+function extractBaggageLines(text) {
+  if (!text) return [];
+  const lines = [];
+  const cabin = text.match(
+    /(?:cabin|carry[- ]?on|hand\s*baggage)[^.\n]{0,80}/i
+  );
+  const check = text.match(
+    /(?:checked|check[- ]?in)\s*(?:bag|baggage|luggage)[^.\n]{0,80}/i
+  );
+  if (cabin) lines.push(cabin[0].replace(/\s+/g, ' ').trim());
+  if (check) lines.push(check[0].replace(/\s+/g, ' ').trim());
+  return lines.slice(0, 4);
+}
+
 function extractFlightCard(cardElement) {
   try {
     const iatas = collectIataCodes(cardElement);
@@ -101,6 +128,7 @@ function extractFlightCard(cardElement) {
     const { airlines, logos } = extractAirlines(cardElement);
     const price = extractPrice(cardElement);
     const duration = extractDuration(cardElement);
+    const cardText = textOf(cardElement);
 
     const payload = {
       price,
@@ -111,10 +139,15 @@ function extractFlightCard(cardElement) {
       destination: iatas[1] || '',
       airlines,
       logos,
-      flightNumber: '',
+      flightNumber: extractFlightNumberFromText(cardText),
       stops: '',
+      cabinClass: '',
+      baggage: extractBaggageLines(cardText),
+      amenities: [],
+      fareOptions: [],
+      detailCaptured: false,
       searchContext: getSearchContext(),
-      cardTextSnippet: textOf(cardElement).slice(0, 400),
+      cardTextSnippet: cardText.slice(0, 400),
       captureSource: 'google',
       capturedAt: new Date().toISOString(),
     };

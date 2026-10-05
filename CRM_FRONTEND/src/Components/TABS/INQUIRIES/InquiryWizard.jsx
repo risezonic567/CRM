@@ -37,7 +37,7 @@ const InquiryWizard = () => {
   const hydratedId = useRef(null);
   const skipNextSave = useRef(false);
 
-  // Educational Kiwi extension: listen while wizard is open (any step)
+  // Extension capture listener (Kiwi / Google Flights) — scrap-only power
   useKiwiCaptureInWizard();
 
   const inquiryId = searchParams.get('inquiryId') || wizard.inquiryId;

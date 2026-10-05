@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CRM Flight Capture (Educational)",
-  "version": "1.1.0",
-  "description": "LOCAL LEARNING ONLY — capture flight cards from Kiwi / Google Flights into CRM. Not for production.",
+  "version": "1.2.0",
+  "description": "LOCAL LEARNING ONLY — capture Kiwi list cards + detail panels / Google Flights into CRM. Not for production.",
   "permissions": ["tabs", "storage", "windows"],
   "host_permissions": [
     "https://www.kiwi.com/*",
