@@ -7,6 +7,9 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
 import {
   PhoneCall,
@@ -104,6 +107,11 @@ const DashboardTab = ({ onSwitchTab }) => {
       };
     }).filter((row) => row.count > 0);
   }, [callItems]);
+
+  const dispositionChartTotal = useMemo(
+    () => dispositionBreakdown.reduce((sum, row) => sum + row.count, 0),
+    [dispositionBreakdown]
+  );
 
   return (
     <div className="flex flex-col gap-5 text-slate-900 font-sans">
@@ -298,28 +306,79 @@ const DashboardTab = ({ onSwitchTab }) => {
             <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Distribution</span>
           </div>
 
-          <div className="flex flex-col gap-3 mt-2">
+          <div className="mt-1 flex flex-1 flex-col">
             {dispositionBreakdown.length === 0 ? (
               <p className="text-xs text-slate-500 py-4">No call dispositions logged yet.</p>
             ) : (
-              dispositionBreakdown.map((item) => (
-                <div key={item.name} className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-slate-700 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                      {item.name}
-                      <span className="text-slate-400 font-normal">({item.count})</span>
+              <>
+                <div className="relative h-[200px] w-full shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={dispositionBreakdown}
+                        dataKey="count"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={52}
+                        outerRadius={78}
+                        paddingAngle={2}
+                        stroke="#fff"
+                        strokeWidth={2}
+                      >
+                        {dispositionBreakdown.map((item) => (
+                          <Cell key={item.name} fill={item.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const row = payload[0]?.payload;
+                          if (!row) return null;
+                          return (
+                            <div className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white shadow-lg">
+                              <p className="font-semibold">{row.name}</p>
+                              <p className="mt-0.5 text-slate-300">
+                                {row.count} calls · {row.percent}%
+                              </p>
+                            </div>
+                          );
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-bold tabular-nums text-slate-900">
+                      {dispositionChartTotal}
                     </span>
-                    <span className="font-semibold text-slate-900">{item.percent}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{ width: `${item.percent}%`, backgroundColor: item.color }}
-                    />
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                      With outcome
+                    </span>
                   </div>
                 </div>
-              ))
+                <ul className="mt-3 max-h-[120px] space-y-2 overflow-y-auto pr-1">
+                  {dispositionBreakdown.map((item) => (
+                    <li
+                      key={item.name}
+                      className="flex items-center justify-between gap-2 text-xs"
+                    >
+                      <span className="flex min-w-0 items-center gap-1.5 font-medium text-slate-700">
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="truncate">{item.name}</span>
+                        <span className="shrink-0 font-normal text-slate-400">
+                          ({item.count})
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-semibold tabular-nums text-slate-900">
+                        {item.percent}%
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </div>
         </div>

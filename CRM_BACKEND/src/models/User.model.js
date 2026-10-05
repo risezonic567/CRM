@@ -1,6 +1,20 @@
 import mongoose from 'mongoose';
 import { ROLES } from '../config/constants.js';
 
+const refreshSessionSchema = new mongoose.Schema(
+  {
+    /** sha256 of the active refresh token for this browser/device */
+    current: { type: String, required: true },
+    /**
+     * sha256 of the previous refresh token (rotation grace).
+     * Lets a concurrent refresh that still holds the old cookie succeed
+     * instead of 401 → forced logout.
+     */
+    previous: { type: String, default: null },
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     firstName: { type: String, required: true, trim: true },
@@ -25,7 +39,16 @@ const userSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date },
+    /** @deprecated single-session; migrate-on-read */
     refreshTokenHash: { type: String, select: false },
+    /** @deprecated plain hash list; migrate-on-read into refreshSessions */
+    refreshTokenHashes: { type: [String], select: false, default: [] },
+    /** Multi-browser sessions with rotation grace (current + previous) */
+    refreshSessions: {
+      type: [refreshSessionSchema],
+      select: false,
+      default: [],
+    },
   },
   { timestamps: true }
 );

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { sharedRefreshSession } from './refreshSession';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -14,12 +15,12 @@ let accessTokenGetter = () => null;
 let accessTokenSetter = () => {};
 let onUnauthorized = () => {};
 
-console.log("API_URL", API_URL);
+console.log('API_URL', API_URL);
 
 export function bindAuthTokenHandlers({ getToken, setToken, onAuthFailure }) {
   accessTokenGetter = getToken;
   accessTokenSetter = setToken;
-  onUnauthorized = onAuthFailure; 
+  onUnauthorized = onAuthFailure;
 }
 
 axiosInstance.interceptors.request.use((config) => {
@@ -29,8 +30,6 @@ axiosInstance.interceptors.request.use((config) => {
   }
   return config;
 });
-
-let refreshPromise = null;
 
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -42,32 +41,21 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Don't try refresh on login/refresh endpoints
-    if (original?.url?.includes('/auth/login') || original?.url?.includes('/auth/refresh')) {
+    if (
+      original?.url?.includes('/auth/login') ||
+      original?.url?.includes('/auth/refresh')
+    ) {
       return Promise.reject(error);
     }
 
     original._retry = true;
 
     try {
-      if (!refreshPromise) {
-        refreshPromise = axios
-          .post(
-            `${API_URL}/api/auth/refresh`,
-            {},
-            { withCredentials: true }
-          )
-          .then((res) => {
-            const token = res.data?.data?.accessToken;
-            if (token) accessTokenSetter(token);
-            return token;
-          })
-          .finally(() => {
-            refreshPromise = null;
-          });
-      }
-
-      const token = await refreshPromise;
+      const data = await sharedRefreshSession({
+        apiUrl: API_URL,
+        onAccessToken: accessTokenSetter,
+      });
+      const token = data?.accessToken;
       if (!token) {
         onUnauthorized();
         return Promise.reject(error);
@@ -76,7 +64,10 @@ axiosInstance.interceptors.response.use(
       original.headers.Authorization = `Bearer ${token}`;
       return axiosInstance(original);
     } catch (refreshErr) {
-      onUnauthorized();
+      const refreshStatus = refreshErr?.response?.status;
+      if (refreshStatus === 401 || refreshStatus === 403) {
+        onUnauthorized();
+      }
       return Promise.reject(refreshErr);
     }
   }

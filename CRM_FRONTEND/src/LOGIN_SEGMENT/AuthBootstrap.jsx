@@ -1,23 +1,25 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useRefreshMutation } from '../REDUX_FEATURES/REDUX_SLICES/Auth_api/authApi';
 import {
   selectAccessToken,
   selectSessionStatus,
+  setCredentials,
   setSessionStatus,
 } from '../REDUX_FEATURES/REDUX_SLICES/Auth_api/authSlice';
 import { syncCurrentUserFromAuth } from '../Components/roles';
+import { sharedRefreshSession } from '../SERVICES/refreshSession';
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 /**
  * On app load: if no access token in memory, try refresh cookie once.
- * Aborts in-flight refresh on unmount / when accessToken appears so a late
- * 401 cannot wipe a successful login (Strict Mode / slow network race).
+ * Uses sharedRefreshSession so Strict Mode / Axios interceptor cannot
+ * fire a second competing refresh against the same cookie.
  */
 const AuthBootstrap = ({ children }) => {
   const dispatch = useDispatch();
   const accessToken = useSelector(selectAccessToken);
   const sessionStatus = useSelector(selectSessionStatus);
-  const [refresh] = useRefreshMutation();
 
   useEffect(() => {
     if (accessToken) {
@@ -27,16 +29,27 @@ const AuthBootstrap = ({ children }) => {
 
     let cancelled = false;
     dispatch(setSessionStatus('restoring'));
-    const req = refresh();
 
-    req
-      .unwrap()
-      .then((res) => {
+    sharedRefreshSession({
+      apiUrl: API_URL,
+      onAccessToken: () => {
+        /* credentials set below with user */
+      },
+    })
+      .then((data) => {
         if (cancelled) return;
-        syncCurrentUserFromAuth(res?.data?.user);
+        if (data?.accessToken && data?.user) {
+          dispatch(
+            setCredentials({
+              accessToken: data.accessToken,
+              user: data.user,
+            })
+          );
+          syncCurrentUserFromAuth(data.user);
+        }
       })
       .catch(() => {
-        // No valid refresh cookie / aborted — stay logged out
+        // No valid refresh cookie — stay logged out
       })
       .finally(() => {
         if (!cancelled) {
@@ -44,11 +57,12 @@ const AuthBootstrap = ({ children }) => {
         }
       });
 
+    // Do NOT abort the shared in-flight refresh on unmount (Strict Mode).
+    // Aborting caused cookie rotation races (200 then 401).
     return () => {
       cancelled = true;
-      req.abort();
     };
-  }, [accessToken, dispatch, refresh]);
+  }, [accessToken, dispatch]);
 
   if (sessionStatus === 'idle' || sessionStatus === 'restoring') {
     return (
