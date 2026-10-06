@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, X } from 'lucide-react';
 import CallsTable from './CallsTable';
 import CallDispositionModal from './CallDispositionModal';
@@ -17,9 +18,16 @@ const PAGE_SIZE = 10;
 
 const CallsDashboard = () => {
   const dispatch = useDispatch();
+  const [, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(1);
   const filters = useSelector(selectCallFilters);
+
+  /** Deep-link into Inquiries detail (same URL contract as InquiriesDashboard). */
+  const openInquiryFromCall = (inquiryId) => {
+    if (!inquiryId) return;
+    setSearchParams({ tab: 'inquiries', inquiryId: String(inquiryId) });
+  };
 
   const { data, isFetching } = useListCallsQuery({
     page,
@@ -69,7 +77,7 @@ const CallsDashboard = () => {
         <Can do="call.create">
           <button
             type="button"
-            onClick={() => setOpen  (true)}
+            onClick={() => setOpen(true)}
             className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-semibold border border-slate-900 transition-colors shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" strokeWidth={2.2} />
@@ -123,6 +131,7 @@ const CallsDashboard = () => {
         items={items}
         isLoading={isFetching}
         onOpenCreate={() => setOpen(true)}
+        onOpenInquiry={openInquiryFromCall}
         footer={
           <PaginationBar
             page={page}

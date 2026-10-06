@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, PhoneOff, Plus, Loader2 } from 'lucide-react';
+import { Phone, PhoneOff, Plus, Loader2, Eye } from 'lucide-react';
 import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
 import Can from '../../shared/Can';
 
@@ -51,7 +51,21 @@ const resolveCaller = (call) => {
   };
 };
 
-const CallsTable = ({ items = [], isLoading, onOpenCreate, footer = null }) => {
+/** Populate may return object or bare id string. */
+const linkedInquiryId = (call) => {
+  const inq = call?.inquiryId;
+  if (!inq) return null;
+  if (typeof inq === 'string') return inq;
+  return inq._id || null;
+};
+
+const CallsTable = ({
+  items = [],
+  isLoading,
+  onOpenCreate,
+  onOpenInquiry,
+  footer = null,
+}) => {
   if (isLoading) {
     return (
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -113,9 +127,46 @@ const CallsTable = ({ items = [], isLoading, onOpenCreate, footer = null }) => {
                 ? `${call.loggedBy.firstName || ''} ${call.loggedBy.lastName || ''}`.trim()
                 : '—';
               const dispConfig = getDispositionConfig(call.disposition);
+              const inquiryId = linkedInquiryId(call);
+              const inquiryRef = call.inquiryId?.inquiryReference;
+              const canOpen = Boolean(inquiryId && onOpenInquiry);
+
+              const openInquiry = () => {
+                if (canOpen) onOpenInquiry(inquiryId);
+              };
 
               return (
-                <tr key={call._id} className="hover:bg-slate-50/75 transition-colors">
+                <tr
+                  key={call._id}
+                  className={`transition-colors ${
+                    canOpen
+                      ? 'hover:bg-sky-50/60 cursor-pointer focus-visible:outline-none focus-visible:bg-sky-50/80'
+                      : 'hover:bg-slate-50/75'
+                  }`}
+                  onClick={canOpen ? openInquiry : undefined}
+                  onKeyDown={
+                    canOpen
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            openInquiry();
+                          }
+                        }
+                      : undefined
+                  }
+                  tabIndex={canOpen ? 0 : undefined}
+                  role={canOpen ? 'button' : undefined}
+                  title={
+                    canOpen
+                      ? `Open inquiry ${inquiryRef || inquiryId}`
+                      : undefined
+                  }
+                  aria-label={
+                    canOpen
+                      ? `Open inquiry ${inquiryRef || inquiryId}`
+                      : undefined
+                  }
+                >
                   <td className="py-3 px-4 text-slate-500 whitespace-nowrap font-mono text-[11px]">
                     {call.createdAt
                       ? new Date(call.createdAt).toLocaleString(undefined, {
@@ -161,10 +212,20 @@ const CallsTable = ({ items = [], isLoading, onOpenCreate, footer = null }) => {
                   </td>
 
                   <td className="py-3 px-4">
-                    {call.inquiryId?.inquiryReference ? (
-                      <span className="inline-flex items-center text-[11px] font-semibold font-mono text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded">
-                        {call.inquiryId.inquiryReference}
-                      </span>
+                    {inquiryRef ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 text-[11px] font-semibold font-mono text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded hover:bg-sky-100 hover:border-sky-300 transition-colors cursor-pointer"
+                        title={`Open inquiry ${inquiryRef}`}
+                        aria-label={`Open inquiry ${inquiryRef}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openInquiry();
+                        }}
+                      >
+                        <Eye className="w-3 h-3 shrink-0 opacity-70" strokeWidth={2} />
+                        {inquiryRef}
+                      </button>
                     ) : (
                       <span className="text-slate-400">—</span>
                     )}
