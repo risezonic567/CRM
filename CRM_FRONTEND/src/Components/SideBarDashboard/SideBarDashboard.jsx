@@ -42,6 +42,7 @@ const SideBarDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isSidebarExpanded = isExpanded || isMobileMenuOpen;
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const authUser = useSelector(selectCurrentUser);
@@ -95,7 +96,7 @@ const SideBarDashboard = () => {
     updateIndicator();
     const timer = setTimeout(updateIndicator, 100);
     return () => clearTimeout(timer);
-  }, [activeTab, expandedTab, isExpanded]);
+  }, [activeTab, expandedTab, isExpanded, isMobileMenuOpen]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -202,24 +203,24 @@ const SideBarDashboard = () => {
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
         className={`
-          fixed left-0 top-0 h-screen z-50
+          fixed top-0 h-screen z-50
           flex flex-col shrink-0 bg-app-sidebar border-r border-slate-700/60
           overflow-hidden shadow-xl
           ${isMobileMenuOpen ? "left-0" : "-left-full md:left-0"}
         `}
         style={{
-          width: isExpanded ? "240px" : "64px",
-          transition: "width 250ms ease",
+          width: isSidebarExpanded ? "240px" : "64px",
+          transition: "width 250ms ease, left 300ms ease-in-out",
         }}
       >
         {/* Brand / Logo */}
         <div className="relative shrink-0 border-b border-white/10 py-3">
           <div
             className={`flex items-center justify-center w-full overflow-hidden transition-all duration-200 ${
-              isExpanded ? "h-14 px-4" : "h-12"
+              isSidebarExpanded ? "h-14 px-4" : "h-12"
             }`}
           >
-            {isExpanded ? (
+            {isSidebarExpanded ? (
               <div className="flex items-center gap-2.5 w-full">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400 border border-sky-400/30">
                   {/* <Plane className="w-5 h-5 text-sky-300" strokeWidth={2} /> */}
@@ -243,7 +244,7 @@ const SideBarDashboard = () => {
           </div>
 
           {/* Role badge */}
-          {isExpanded ? (
+          {isSidebarExpanded ? (
             <div className="mt-2 text-center">
               <span className="inline-block px-2.5 py-0.5 text-[10px] rounded text-white bg-white/[0.08] border border-white/10 whitespace-nowrap font-medium">
                 {ROLE_LABELS[activeRole] || activeRole}
@@ -289,7 +290,7 @@ const SideBarDashboard = () => {
                 <div
                   key={tab.id}
                   className={`flex flex-col min-w-0 ${
-                    isTabExpanded && isExpanded ? "pb-1" : ""
+                    isTabExpanded && isSidebarExpanded ? "pb-1" : ""
                   }`}
                 >
                   <button
@@ -317,8 +318,8 @@ const SideBarDashboard = () => {
                     </svg>
                     <span
                       style={{
-                        opacity: isExpanded ? 1 : 0,
-                        transform: isExpanded
+                        opacity: isSidebarExpanded ? 1 : 0,
+                        transform: isSidebarExpanded
                           ? "translateX(0)"
                           : "translateX(-8px)",
                         transition: "opacity 200ms ease, transform 200ms ease",
@@ -329,7 +330,7 @@ const SideBarDashboard = () => {
                     >
                       {tab.label}
                     </span>
-                    {hasSubItems && isExpanded && (
+                    {hasSubItems && isSidebarExpanded && (
                       <svg
                         className={`w-3.5 h-3.5 shrink-0 ml-0.5 transition-transform duration-200 ${
                           isTabExpanded ? "rotate-180" : ""
@@ -349,7 +350,7 @@ const SideBarDashboard = () => {
                   </button>
 
                   {/* Sub-items list */}
-                  {hasSubItems && isExpanded && isTabExpanded && (
+                  {hasSubItems && isSidebarExpanded && isTabExpanded && (
                     <div className="mt-1 ml-4 pl-2 border-l border-white/15 flex flex-col gap-0.5 min-w-0">
                       {subItems.map((sub) => {
                         const isSubActive = isActive && activeCtab === sub.id;
@@ -369,8 +370,8 @@ const SideBarDashboard = () => {
                           >
                             <span
                               style={{
-                                opacity: isExpanded ? 1 : 0,
-                                transform: isExpanded
+                                opacity: isSidebarExpanded ? 1 : 0,
+                                transform: isSidebarExpanded
                                   ? "translateX(0)"
                                   : "translateX(-8px)",
                                 transition:
@@ -404,8 +405,8 @@ const SideBarDashboard = () => {
             <LogOut className="w-5 h-5 shrink-0 min-w-[20px] text-slate-400" strokeWidth={1.8} />
             <span
               style={{
-                opacity: isExpanded ? 1 : 0,
-                transform: isExpanded ? "translateX(0)" : "translateX(-8px)",
+                opacity: isSidebarExpanded ? 1 : 0,
+                transform: isSidebarExpanded ? "translateX(0)" : "translateX(-8px)",
                 transition: "opacity 200ms ease, transform 200ms ease",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
@@ -418,10 +419,10 @@ const SideBarDashboard = () => {
 
           <div
             style={{
-              opacity: isExpanded ? 1 : 0,
-              transform: isExpanded ? "translateY(0)" : "translateY(-4px)",
+              opacity: isSidebarExpanded ? 1 : 0,
+              transform: isSidebarExpanded ? "translateY(0)" : "translateY(-4px)",
               transition: "opacity 200ms ease, transform 200ms ease",
-              height: isExpanded ? "auto" : "0px",
+              height: isSidebarExpanded ? "auto" : "0px",
               overflow: "hidden",
             }}
           >
@@ -433,7 +434,7 @@ const SideBarDashboard = () => {
       </aside>
 
       {/* Main Content Area: offset with ml-16 (64px) so it stays adjacent to collapsed sidebar */}
-      <main className="ml-16 flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden h-screen">
+      <main className="ml-0 md:ml-16 flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden h-screen">
         {/* Header bar */}
         <header className="bg-white h-12 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-10 shadow-xs">
           <div className="flex items-center gap-3 min-w-0">
