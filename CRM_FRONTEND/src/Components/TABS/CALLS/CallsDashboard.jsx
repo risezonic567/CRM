@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, X } from 'lucide-react';
+import { Plus, Search, X, RefreshCw } from 'lucide-react';
 import CallsTable from './CallsTable';
 import CallDispositionModal from './CallDispositionModal';
 import PaginationBar from '../../shared/PaginationBar';
@@ -29,7 +29,7 @@ const CallsDashboard = () => {
     setSearchParams({ tab: 'inquiries', inquiryId: String(inquiryId) });
   };
 
-  const { data, isFetching } = useListCallsQuery({
+  const { data, isFetching, refetch } = useListCallsQuery({
     page,
     limit: PAGE_SIZE,
     disposition: filters.disposition || undefined,
@@ -46,6 +46,11 @@ const CallsDashboard = () => {
     dispatch(setCallFilters({ search: e.target.value }));
   };
 
+  const handleClearSearch = () => {
+    setPage(1);
+    dispatch(setCallFilters({ search: '' }));
+  };
+
   const handleDispositionChange = (e) => {
     setPage(1);
     dispatch(setCallFilters({ disposition: e.target.value }));
@@ -54,6 +59,10 @@ const CallsDashboard = () => {
   const handleReset = () => {
     setPage(1);
     dispatch(resetCallFilters());
+  };
+
+  const handleRefresh = () => {
+    refetch();
   };
 
   const hasActiveFilters = Boolean(filters.search || filters.disposition);
@@ -92,11 +101,22 @@ const CallsDashboard = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4" strokeWidth={1.8} />
           <input
             type="text"
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-600 transition-colors"
+            className="w-full pl-9 pr-8 py-1.5 text-xs bg-white border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-600 transition-colors"
             placeholder="Search caller name, phone number, or notes…"
             value={filters.search || ''}
             onChange={handleSearchChange}
           />
+          {Boolean(filters.search) && (
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
+              title="Clear search"
+              aria-label="Clear search"
+              onClick={handleClearSearch}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -123,6 +143,20 @@ const CallsDashboard = () => {
               Reset
             </button>
           )}
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+            title="Refresh list"
+            aria-label="Refresh calls"
+            disabled={isFetching}
+            onClick={handleRefresh}
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`}
+            />
+            Refresh
+          </button>
         </div>
       </div>
 

@@ -9,6 +9,8 @@ import {
   FileText,
   ArrowRight,
   Loader2,
+  X,
+  RefreshCw,
 } from 'lucide-react';
 import {
   useListInquiriesQuery,
@@ -42,7 +44,10 @@ const InquiriesDashboard = () => {
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [lookupActive, setLookupActive] = useState(false);
-  const { data, isFetching } = useListInquiriesQuery({ page, limit: PAGE_SIZE });
+  const { data, isFetching, refetch } = useListInquiriesQuery({
+    page,
+    limit: PAGE_SIZE,
+  });
   const [lookup, { data: lookupData, isFetching: isLookupFetching }] =
     useLazyLookupInquiriesQuery();
   const [deleteInquiry, { isLoading: isDeleting }] = useDeleteInquiryMutation();
@@ -55,6 +60,7 @@ const InquiriesDashboard = () => {
     ? lookupItems.length
     : (meta.total ?? listItems.length);
   const totalPages = meta.pages ?? 1;
+  const isRefreshing = lookupActive ? isLookupFetching : isFetching;
 
   const openDetail = (id) => {
     setSearchParams({ tab: 'inquiries', inquiryId: id });
@@ -76,6 +82,24 @@ const InquiriesDashboard = () => {
     setQ('');
     setLookupActive(false);
     setPage(1);
+  };
+
+  /** Backspace / delete-all: leave lookup mode and restore normal list. */
+  const handleQueryChange = (e) => {
+    const next = e.target.value;
+    setQ(next);
+    if (!next.trim() && lookupActive) {
+      setLookupActive(false);
+      setPage(1);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (lookupActive && q.trim()) {
+      lookup(q.trim());
+      return;
+    }
+    refetch();
   };
 
   const handleDelete = async (inq) => {
@@ -136,11 +160,22 @@ const InquiriesDashboard = () => {
                 />
                 <input
                   type="text"
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-600 transition-colors"
+                  className="w-full pl-9 pr-8 py-1.5 text-xs bg-white border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-600 transition-colors"
                   placeholder="Lookup Reference ID, customer email, or phone…"
                   value={q}
-                  onChange={(e) => setQ(e.target.value)}
+                  onChange={handleQueryChange}
                 />
+                {(q || lookupActive) && (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
+                    title="Clear lookup"
+                    aria-label="Clear lookup"
+                    onClick={handleClearLookup}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
               <button
                 type="submit"
@@ -148,7 +183,7 @@ const InquiriesDashboard = () => {
               >
                 Lookup
               </button>
-              {q && (
+              {(q || lookupActive) && (
                 <button
                   type="button"
                   className="text-xs font-medium text-slate-500 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1.5 rounded-md transition-colors cursor-pointer"
@@ -158,6 +193,20 @@ const InquiriesDashboard = () => {
                 </button>
               )}
             </form>
+
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-1.5 self-end sm:self-auto shrink-0 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+              title="Refresh list"
+              aria-label="Refresh inquiries"
+              disabled={isRefreshing}
+              onClick={handleRefresh}
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
+              />
+              Refresh
+            </button>
           </div>
 
           {/* Table Container */}
