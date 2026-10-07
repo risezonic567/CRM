@@ -8,17 +8,22 @@
     body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#0f172a; }
     .card { max-width:720px; margin:40px auto; background:#fff; border-radius:10px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
     h1 { font-size:22px; margin:0 0 8px; }
+    h3 { font-size:14px; margin:20px 0 10px; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
     .muted { color:#64748b; font-size:14px; }
-    .total { font-size:22px; font-weight:bold; margin:20px 0; }
+    .total { font-size:22px; font-weight:bold; margin:16px 0; }
     .row { margin:8px 0; font-size:14px; }
     table.segs { width:100%; border-collapse:collapse; font-size:13px; margin:12px 0; }
     table.segs th { text-align:left; font-size:11px; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0; padding:8px 6px; background:#f8fafc; }
     table.segs td { border-bottom:1px solid #f1f5f9; padding:8px 6px; }
+    table.info { width:100%; border-collapse:collapse; font-size:14px; }
+    table.info td { padding:6px 0; vertical-align:top; }
+    table.info td.k { width:140px; color:#64748b; }
     .leg { margin:16px 0; padding:12px; background:#f8fafc; border-radius:8px; font-size:14px; }
-    .leg h3 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
-    label { display:flex; gap:10px; align-items:flex-start; font-size:14px; margin:24px 0; }
-    button { width:100%; border:0; background:#0f172a; color:#fff; padding:14px; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; }
-    button:disabled { opacity:.45; cursor:not-allowed; }
+    .auth-box { margin:16px 0; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; line-height:1.55; color:#334155; white-space:pre-wrap; }
+    .sig { margin-top:14px; padding-top:12px; border-top:1px dashed #e2e8f0; text-align:center; }
+    .sig .name { font-family:Georgia, 'Times New Roman', serif; font-style:italic; font-size:18px; }
+    .sig .label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-top:4px; }
+    button { width:100%; border:0; background:#0f172a; color:#fff; padding:14px; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; margin-top:20px; }
     .error { color:#b91c1c; font-size:14px; margin-bottom:12px; }
   </style>
 </head>
@@ -58,6 +63,11 @@
       : [];
     var outbound = offer.outbound || offer;
     var inbound = offer.inbound || null;
+    var billing = inquiry.billing || {};
+    var authText = inquiry.authorizationText || '';
+    var signature = billing.cardholderName
+      || [inquiry.customer?.firstName, inquiry.customer?.lastName].filter(Boolean).join(' ')
+      || '—';
   %>
   <div class="card">
     <h1>Authorize your itinerary</h1>
@@ -73,6 +83,7 @@
       <div class="row"><strong>Return date:</strong> <%= fmtDateOnly(inquiry.travel.returnDate) %></div>
     <% } %>
 
+    <h3>Itinerary</h3>
     <% if (pnrSegments.length) { %>
     <table class="segs">
       <thead>
@@ -107,46 +118,65 @@
     </table>
     <% } else { %>
     <div class="leg">
-      <h3><%= inbound ? 'Departing flight' : 'Flight' %></h3>
       <div><%= outbound.airline?.name || offer.airline?.name || '—' %> <%= outbound.flightNumber || offer.flightNumber || '' %></div>
       <div><%= inquiry.travel.from %> <%= fmtWhen(outbound.departure?.at || offer.departure?.at) %> → <%= inquiry.travel.to %> <%= fmtWhen(outbound.arrival?.at || offer.arrival?.at) %></div>
     </div>
     <% if (inbound) { %>
     <div class="leg">
-      <h3>Returning flight</h3>
       <div><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber || '' %></div>
       <div><%= inquiry.travel.to %> <%= fmtWhen(inbound.departure?.at) %> → <%= inquiry.travel.from %> <%= fmtWhen(inbound.arrival?.at) %></div>
     </div>
     <% } %>
     <% } %>
 
-    <div class="row"><strong>Passengers:</strong>
+    <h3>Passengers</h3>
+    <div class="row">
       <% (inquiry.passengers || []).forEach(function(p, i) { %>
-        <%= p.firstName %> <%= p.lastName %><%= i < inquiry.passengers.length - 1 ? ', ' : '' %>
+        <%= p.firstName %> <%= p.lastName %> (<%= p.type %>)<%= i < inquiry.passengers.length - 1 ? ', ' : '' %>
       <% }) %>
     </div>
+
+    <h3>Billing</h3>
+    <table class="info">
+      <tr><td class="k">Phone</td><td><%= billing.phone || '—' %></td></tr>
+      <tr><td class="k">Address</td><td><%= billing.address || '—' %></td></tr>
+      <tr><td class="k">State / Zip</td><td><%= [billing.state, billing.zip].filter(Boolean).join(' ') || '—' %></td></tr>
+      <tr><td class="k">Country</td><td><%= billing.country || '—' %></td></tr>
+      <tr>
+        <td class="k">Card</td>
+        <td>
+          <%= billing.cardType || 'Card' %>
+          <% if (billing.last4) { %> •••• <%= billing.last4 %><% } %>
+          <% if (billing.expiryMonth && billing.expiryYear) { %>
+            · exp <%= billing.expiryMonth %>/<%= billing.expiryYear %>
+          <% } %>
+        </td>
+      </tr>
+      <tr><td class="k">Cardholder</td><td><%= billing.cardholderName || '—' %></td></tr>
+    </table>
 
     <div class="total">
       Total Amount: <%= inquiry.pricing.currency %> <%= Number(inquiry.pricing.sellingPrice).toFixed(2) %>
     </div>
 
-    <%- include('partials/gotoflyerTerms') %>
+    <h3>Authorization</h3>
+    <% if (authText) { %>
+      <div class="auth-box"><%= authText %></div>
+    <% } else { %>
+      <p class="muted">Authorization statement is attached to this inquiry.</p>
+    <% } %>
+    <div class="sig">
+      <div class="name"><%= signature %></div>
+      <div class="label">Customer signature (cardholder)</div>
+    </div>
 
     <form method="POST" action="/public/confirm/<%= inquiry._id %>">
       <input type="hidden" name="token" value="<%= token %>" />
-      <label>
-        <input type="checkbox" name="agreed" id="agreed" value="true" required />
-        <span>I have read the DEMO terms and I authorize this itinerary and payment method on file.</span>
-      </label>
-      <button type="submit" id="confirmBtn" disabled>I Authorize</button>
+      <button type="submit">I Authorize</button>
     </form>
+    <p class="muted" style="margin-top:12px;text-align:center;font-size:12px;">
+      Clicking I Authorize records your authorization for this itinerary and card on file.
+    </p>
   </div>
-  <script>
-    const box = document.getElementById('agreed');
-    const btn = document.getElementById('confirmBtn');
-    box.addEventListener('change', function () {
-      btn.disabled = !box.checked;
-    });
-  </script>
 </body>
 </html>

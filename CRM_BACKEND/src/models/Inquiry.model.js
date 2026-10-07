@@ -130,6 +130,8 @@ const inquirySchema = new mongoose.Schema(
       required: true,
     },
     notes: { type: String, default: '' },
+    /** Agent-edited authorization paragraph sent to customer (one total amount). */
+    authorizationText: { type: String, default: '' },
     publicTokenJti: { type: String, default: null, select: false },
   },
   { timestamps: true }

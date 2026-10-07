@@ -47,6 +47,7 @@ const initialState = {
     passengers: [],
     billing: { ...emptyBilling },
     notes: '',
+    authorizationText: '',
     // PNR decode (wizard step 1) — also mirrored on selectedOffer.raw
     pnrRaw: '',
     pnrSegments: [],
@@ -111,6 +112,7 @@ export function mapInquiryToWizard(inquiry) {
       expiryYear: inquiry.billing?.expiryYear || '',
     },
     notes: inquiry.notes || '',
+    authorizationText: inquiry.authorizationText || '',
     pnrRaw: pnrRawOffer?.pnrRaw || '',
     pnrSegments: Array.isArray(pnrRawOffer?.segments) ? pnrRawOffer.segments : [],
     pnrTripSummary: pnrRawOffer?.tripSummary || null,
@@ -144,6 +146,7 @@ export function buildDraftPayload(wizard) {
     passengers: wizard.passengers || [],
     billing: wizard.billing || {},
     notes: wizard.notes || '',
+    authorizationText: wizard.authorizationText || '',
   };
 }
 

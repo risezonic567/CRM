@@ -124,20 +124,51 @@
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 
+      <h3 style="margin:0 0 12px;">Billing</h3>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
+        <tr>
+          <td style="width:140px;color:#64748b;">Phone</td>
+          <td><%= billing.phone || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Address</td>
+          <td><%= billing.address || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">State / Zip</td>
+          <td><%= [billing.state, billing.zip].filter(Boolean).join(' ') || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Country</td>
+          <td><%= billing.country || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Card</td>
+          <td>
+            <%= billing.cardType || 'Card' %>
+            <% if (billing.last4) { %> •••• <%= billing.last4 %><% } %>
+            <% if (billing.expiryMonth && billing.expiryYear) { %>
+              · exp <%= billing.expiryMonth %>/<%= billing.expiryYear %>
+            <% } %>
+          </td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Cardholder</td>
+          <td><%= billing.cardholderName || '—' %></td>
+        </tr>
+      </table>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
       <p style="font-size:18px;margin:0;">
         <strong>Total Amount:</strong>
         <%= currency %> <%= Number(grandTotal).toFixed(2) %>
       </p>
 
-      <% if (billing.cardType || billing.last4 || billing.cardholderName) { %>
-      <p style="font-size:13px;color:#475569;margin:16px 0 0;">
-        Card on file:
-        <%= billing.cardType || 'Card' %>
-        <% if (billing.last4) { %>•••• <%= billing.last4 %><% } %>
-        <% if (billing.expiryMonth && billing.expiryYear) { %>
-          · exp <%= billing.expiryMonth %>/<%= billing.expiryYear %>
-        <% } %>
-      </p>
+      <% if (inquiry.authorizationText) { %>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+      <h3 style="margin:0 0 12px;">Authorization</h3>
+      <p style="font-size:13px;line-height:1.55;color:#334155;white-space:pre-wrap;"><%= inquiry.authorizationText %></p>
       <% } %>
 
       <div style="margin:28px 0 8px;padding-top:20px;border-top:1px solid #e2e8f0;">
@@ -146,7 +177,5 @@
           <%= signature %>
         </p>
       </div>
-
-      <%- include('partials/gotoflyerTerms') %>
 
 <%- include('partials/footer') %>

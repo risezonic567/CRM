@@ -18,11 +18,10 @@ export async function showConfirm(req, res, next) {
 export async function submitConfirm(req, res, next) {
   try {
     const token = req.body.token || req.query.token;
-    const agreed = req.body.agreed;
 
     const result = await publicService.confirmInquiry(
       req.params.inquiryId,
-      { token, agreed },
+      { token },
       {
         ip: resolveClientIp(req),
         userAgent: req.headers['user-agent'] || '',

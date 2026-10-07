@@ -35,16 +35,30 @@
             timeZone: 'UTC'
           });
         }
+        function esc(s) {
+          return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        }
         var offer = inquiry.selectedOffer || {};
         var pnrSegments = (offer.raw && offer.raw.source === 'pnr' && Array.isArray(offer.raw.segments))
           ? offer.raw.segments
           : [];
         var outbound = offer.outbound || offer;
         var inbound = offer.inbound || null;
+        var billing = inquiry.billing || {};
+        var authText = inquiry.authorizationText || '';
+        var signature = billing.cardholderName
+          || [inquiry.customer.firstName, inquiry.customer.lastName].filter(Boolean).join(' ')
+          || '—';
       %>
 
       <p>Hello <%= inquiry.customer.firstName %>,</p>
-      <p>Please review your flight itinerary below. Click <strong>I Authorize</strong> to authorize this booking.</p>
+      <p>
+        Please review your itinerary and billing details below.
+        Then open the authorization page and click <strong>I Authorize</strong>.
+      </p>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 
@@ -83,11 +97,6 @@
       <% } else { %>
       <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
         <tr>
-          <td colspan="2" style="padding-top:8px;color:#64748b;font-size:12px;text-transform:uppercase;">
-            <%= inbound ? 'Departing' : 'Flight' %>
-          </td>
-        </tr>
-        <tr>
           <td><strong>Airline</strong></td>
           <td><%= outbound.airline?.name || offer.airline?.name || '—' %> <%= (outbound.flightNumber || offer.flightNumber) ? '(' + (outbound.flightNumber || offer.flightNumber) + ')' : '' %></td>
         </tr>
@@ -101,19 +110,8 @@
         </tr>
         <% if (inbound) { %>
         <tr>
-          <td colspan="2" style="padding-top:16px;color:#64748b;font-size:12px;text-transform:uppercase;">Returning</td>
-        </tr>
-        <tr>
-          <td><strong>Airline</strong></td>
-          <td><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber ? '(' + inbound.flightNumber + ')' : '' %></td>
-        </tr>
-        <tr>
-          <td><strong>From</strong></td>
-          <td><%= inquiry.travel.to %> — <%= fmtWhen(inbound.departure?.at, inquiry.travel.returnDate) %></td>
-        </tr>
-        <tr>
-          <td><strong>To</strong></td>
-          <td><%= inquiry.travel.from %> — <%= fmtWhen(inbound.arrival?.at, null) %></td>
+          <td><strong>Return</strong></td>
+          <td><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber || '' %></td>
         </tr>
         <% } %>
       </table>
@@ -130,6 +128,42 @@
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 
+      <h3 style="margin:0 0 12px;">Billing</h3>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
+        <tr>
+          <td style="width:140px;color:#64748b;">Phone</td>
+          <td><%= billing.phone || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Address</td>
+          <td><%= billing.address || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">State / Zip</td>
+          <td><%= [billing.state, billing.zip].filter(Boolean).join(' ') || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Country</td>
+          <td><%= billing.country || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Card</td>
+          <td>
+            <%= billing.cardType || 'Card' %>
+            <% if (billing.last4) { %> •••• <%= billing.last4 %><% } %>
+            <% if (billing.expiryMonth && billing.expiryYear) { %>
+              · exp <%= billing.expiryMonth %>/<%= billing.expiryYear %>
+            <% } %>
+          </td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Cardholder</td>
+          <td><%= billing.cardholderName || '—' %></td>
+        </tr>
+      </table>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
       <p style="font-size:18px;margin:0;">
         <strong>Total Amount:</strong>
         <%= currency %> <%= Number(grandTotal).toFixed(2) %>
@@ -138,18 +172,26 @@
         Reference: <%= inquiry.inquiryReference %>
       </p>
 
-      <%- include('partials/gotoflyerTerms') %>
+      <% if (authText) { %>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+      <h3 style="margin:0 0 12px;">Authorization</h3>
+      <p style="font-size:13px;line-height:1.55;color:#334155;margin:0;">
+        <%= esc(authText) %>
+      </p>
+      <p style="margin:16px 0 0;font-size:12px;color:#64748b;">Customer signature</p>
+      <p style="margin:4px 0 0;font-size:16px;font-family:Georgia, serif;font-style:italic;"><%= esc(signature) %></p>
+      <% } %>
 
       <div style="margin:28px 0;text-align:center;">
         <a href="<%= confirmUrl %>"
            style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:14px 28px;border-radius:6px;font-weight:bold;">
-          I Authorize
+          Review &amp; Authorize
         </a>
       </div>
 
       <p style="font-size:12px;color:#64748b;">
-        You will be asked to agree to the DEMO terms and authorization conditions before authorizing.
-        This link expires in 7 days.
+        This link opens your authorization page. Click <strong>I Authorize</strong> there to complete.
+        Link expires in 7 days.
       </p>
 
 <%- include('partials/footer') %>

@@ -16,7 +16,9 @@ Related: [pnrconverter.com](https://www.pnrconverter.com/) · [API intro](https:
 | Price | `supplier + markup = total`; merchant fee **0** on send/draft |
 | Pax sees | **Total only** |
 | Card | type, holder, last4, expiry persisted; **CVV never stored** (optional UI-only) |
-| Preview / email | Authorization + DEMO Gotoflyer T&Cs |
+| Preview / email | Editable `authorizationText` (one **total** only) + billing; email links to confirm page |
+| Confirm page | Full preview + auth text + signature; **no checkbox**; **I Authorize** → thank you |
+| Document upload | Deferred (optional later) |
 | Status | **`authorized`** (migrates `customer_confirmed` on boot) |
 | After authorize | No auto receipt email; agent **Download** / **Resend**; signature = cardholder name |
 | Timestamp field | `confirmedAt` kept (means authorized-at) |
@@ -79,11 +81,18 @@ selectedOffer.raw = {
 
 ## Customer flow
 
-1. Agent sends → authorization email (multi-segment table + **I Authorize**)  
-2. Public page (`/public/confirm/:id` URL unchanged) → DEMO T&Cs + **I Authorize**  
-3. Status → `authorized`; socket `inquiry:authorized`  
-4. Thank-you page — **no** auto confirmation email  
-5. Agent download / resend receipt (cardholder signature line)
+1. Agent StepPreview → editable authorization text (auto-fill, **one total**) + staff price breakdown  
+2. Send → email: itinerary + passengers + **billing** + total + auth text + **Review & Authorize** link  
+3. Confirm page (`/public/confirm/:id`) → full preview + read-only auth text + signature + **I Authorize** (no checkbox)  
+4. POST → status `authorized` + agreement meta (IP/UA); socket `inquiry:authorized`  
+5. `thankYou.ejs` — **no** auto confirmation email  
+6. Agent download / resend receipt  
+
+### Auth text helper
+
+- FE: `CRM_FRONTEND/src/utils/buildAuthorizationText.js`  
+- BE fallback: `CRM_BACKEND/src/utils/buildAuthorizationText.js`  
+- Field: `Inquiry.authorizationText`
 
 ---
 

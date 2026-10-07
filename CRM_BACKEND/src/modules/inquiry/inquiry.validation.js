@@ -63,6 +63,7 @@ export const sendInquirySchema = Joi.object({
     cvv: Joi.string().trim().allow('').optional(),
   }).default({}),
   notes: Joi.string().allow('').default(''),
+  authorizationText: Joi.string().trim().allow('').max(5000).default(''),
 });
 
 export const closeInquirySchema = Joi.object({
@@ -130,6 +131,7 @@ export const saveDraftSchema = Joi.object({
     cvv: Joi.string().trim().allow('').optional(),
   }),
   notes: Joi.string().allow('').default(''),
+  authorizationText: Joi.string().trim().allow('').max(5000),
 }).min(1);
 
 export const listInquiriesQuerySchema = Joi.object({

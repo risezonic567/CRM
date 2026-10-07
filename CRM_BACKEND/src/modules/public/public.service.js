@@ -36,13 +36,10 @@ export async function loadConfirmPage(inquiryId, token) {
 
 /**
  * Idempotent authorize: first wins; second click still shows thank-you.
+ * No checkbox — POST with valid token is the authorization action.
  * Does NOT send an automatic confirmation/receipt email — agent downloads or resends.
  */
-export async function confirmInquiry(inquiryId, { token, agreed }, meta) {
-  if (agreed !== true && agreed !== 'true') {
-    throw new AppError('You must agree to the terms to authorize', 400);
-  }
-
+export async function confirmInquiry(inquiryId, { token }, meta) {
   const { inquiry, agency, decoded } = await verifyAndLoad(inquiryId, token);
 
   if (inquiry.status === INQUIRY_STATUSES.AUTHORIZED) {

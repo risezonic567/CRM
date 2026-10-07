@@ -3,6 +3,7 @@ import { Inquiry, Agency, Call } from '../../models/index.js';
 import { AppError } from '../../utils/apiResponse.js';
 import { calculatePricing } from '../../utils/calculatePricing.js';
 import { sanitizeBilling } from '../../utils/sanitizeBilling.js';
+import { buildAuthorizationText } from '../../utils/buildAuthorizationText.js';
 import { signPublicToken } from '../../utils/signPublicToken.js';
 import {
   INQUIRY_STATUSES,
@@ -234,6 +235,32 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
   inquiry.passengers = payload.passengers;
   inquiry.billing = sanitizeBilling(payload.billing || {});
   inquiry.notes = payload.notes || '';
+
+  const authorizerName =
+    payload.billing?.cardholderName ||
+    [payload.customer?.firstName, payload.customer?.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+  const purpose = [
+    payload.travel?.from && payload.travel?.to
+      ? `${payload.travel.from} to ${payload.travel.to}`
+      : '',
+    inquiry.inquiryReference,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const fromAgent = String(payload.authorizationText || '').trim();
+  inquiry.authorizationText =
+    fromAgent ||
+    buildAuthorizationText({
+      authorizerName,
+      agencyName: agency.name || 'DEMO Travel Agency',
+      currency: pricing.currency,
+      total: pricing.sellingPrice,
+      purpose,
+    });
+
   inquiry.wizardStep = 5;
   inquiry.status = INQUIRY_STATUSES.PREVIEW_SENT;
   inquiry.emailSentAt = new Date();
@@ -303,6 +330,9 @@ export async function saveDraft(user, inquiryId, payload) {
   }
   if (payload.notes !== undefined) {
     inquiry.notes = payload.notes;
+  }
+  if (payload.authorizationText !== undefined) {
+    inquiry.authorizationText = String(payload.authorizationText || '').trim();
   }
   if (typeof payload.wizardStep === 'number') {
     inquiry.wizardStep = payload.wizardStep;

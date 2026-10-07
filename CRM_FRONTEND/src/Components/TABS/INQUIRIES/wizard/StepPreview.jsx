@@ -1,12 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ClipboardList, Loader2, Plane, Send, Users, CreditCard } from 'lucide-react';
+import {
+  ClipboardList,
+  Loader2,
+  Plane,
+  Send,
+  Users,
+  CreditCard,
+  FileText,
+} from 'lucide-react';
 import {
   selectWizard,
   setWizardStep,
   resetWizard,
+  patchWizard,
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
 import { useSendInquiryMutation } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
 import { selectAccessToken } from '../../../../REDUX_FEATURES/REDUX_SLICES/Auth_api/authSlice';
@@ -17,12 +26,14 @@ import {
   getSocket,
 } from '../../../../SERVICES/socket';
 import { getErrorMessage } from '../../../../utils/getErrorMessage';
+import { buildAuthorizationText } from '../../../../utils/buildAuthorizationText';
 import WaitingConfirmModal from '../WaitingConfirmModal';
 import PnrItineraryTable from './PnrItineraryTable';
 
 /**
  * Staff preview before sending authorization email.
  * Customer total = cost + markup only (no merchant fee).
+ * Authorization text uses ONE total; staff pricing breakdown stays separate.
  */
 const StepPreview = ({ onDone }) => {
   const dispatch = useDispatch();
@@ -32,6 +43,7 @@ const StepPreview = ({ onDone }) => {
   const [sendInquiry, { isLoading }] = useSendInquiryMutation();
   const [waiting, setWaiting] = useState(false);
   const [sentInquiry, setSentInquiry] = useState(null);
+  const authEditedRef = useRef(false);
 
   const cost = Number(wizard.costPrice || 0);
   const markup = Number(wizard.markup || 0);
@@ -40,8 +52,45 @@ const StepPreview = ({ onDone }) => {
 
   const segments =
     wizard.pnrSegments || wizard.selectedOffer?.raw?.segments || [];
-  const isPnr = wizard.selectedOffer?.raw?.source === 'pnr' || segments.length > 0;
+  const isPnr =
+    wizard.selectedOffer?.raw?.source === 'pnr' || segments.length > 0;
   const billing = wizard.billing || {};
+
+  const authorizerName = useMemo(() => {
+    return (
+      billing.cardholderName ||
+      [wizard.customer?.firstName, wizard.customer?.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+    );
+  }, [billing.cardholderName, wizard.customer?.firstName, wizard.customer?.lastName]);
+
+  const purpose = useMemo(() => {
+    if (wizard.travel?.from && wizard.travel?.to) {
+      return `${wizard.travel.from} to ${wizard.travel.to}`;
+    }
+    return 'the itinerary detailed above';
+  }, [wizard.travel?.from, wizard.travel?.to]);
+
+  const defaultAuthText = useMemo(
+    () =>
+      buildAuthorizationText({
+        authorizerName,
+        agencyName: 'DEMO Travel Agency',
+        currency,
+        total: grandTotal,
+        purpose,
+      }),
+    [authorizerName, currency, grandTotal, purpose]
+  );
+
+  // Seed / refresh auto text when inputs change, unless agent has edited it
+  useEffect(() => {
+    if (authEditedRef.current && wizard.authorizationText) return;
+    if (wizard.authorizationText === defaultAuthText) return;
+    dispatch(patchWizard({ authorizationText: defaultAuthText }));
+  }, [defaultAuthText, dispatch, wizard.authorizationText]);
 
   useEffect(() => {
     if (!waiting || !sentInquiry?._id || !accessToken) return undefined;
@@ -71,6 +120,13 @@ const StepPreview = ({ onDone }) => {
       toast.error('Missing inquiry or offer');
       return;
     }
+    const authorizationText = (
+      wizard.authorizationText || defaultAuthText
+    ).trim();
+    if (!authorizationText) {
+      toast.error('Authorization text is required');
+      return;
+    }
     try {
       const body = {
         customer: wizard.customer,
@@ -97,6 +153,7 @@ const StepPreview = ({ onDone }) => {
           expiryYear: billing.expiryYear || '',
         },
         notes: wizard.notes || '',
+        authorizationText,
       };
 
       const res = await sendInquiry({ id: wizard.inquiryId, body }).unwrap();
@@ -123,8 +180,9 @@ const StepPreview = ({ onDone }) => {
               Preview &amp; send authorization
             </h3>
             <p className="mt-0.5 text-sm text-slate-500">
-              Customer will receive an authorization link (not a confirm-inquiry
-              email). No auto receipt is sent after they authorize.
+              Customer email includes itinerary, billing, and this authorization
+              text. They open the authorize page and click I Authorize — no
+              checkbox. No auto receipt after authorize.
             </p>
           </div>
         </div>
@@ -188,22 +246,33 @@ const StepPreview = ({ onDone }) => {
             <div className="mb-2 flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-slate-400" />
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Card on file
+                Billing
               </p>
             </div>
-            <p className="text-sm text-slate-800">
-              {billing.cardType || 'Card'}{' '}
-              {billing.last4 ? `•••• ${billing.last4}` : ''}
-              {billing.cardholderName ? ` · ${billing.cardholderName}` : ''}
-              {billing.expiryMonth && billing.expiryYear
-                ? ` · ${billing.expiryMonth}/${billing.expiryYear}`
-                : ''}
-            </p>
+            <div className="space-y-1 text-sm text-slate-800">
+              <p>
+                {billing.phone || '—'}
+                {billing.address ? ` · ${billing.address}` : ''}
+              </p>
+              <p className="text-slate-600">
+                {[billing.state, billing.zip, billing.country]
+                  .filter(Boolean)
+                  .join(', ') || '—'}
+              </p>
+              <p>
+                {billing.cardType || 'Card'}{' '}
+                {billing.last4 ? `•••• ${billing.last4}` : ''}
+                {billing.cardholderName ? ` · ${billing.cardholderName}` : ''}
+                {billing.expiryMonth && billing.expiryYear
+                  ? ` · ${billing.expiryMonth}/${billing.expiryYear}`
+                  : ''}
+              </p>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Pricing
+              Pricing (staff)
             </p>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-slate-600">
@@ -224,6 +293,49 @@ const StepPreview = ({ onDone }) => {
                   {currency} {grandTotal.toFixed(2)}
                 </span>
               </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-slate-400" />
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Authorization text
+                </p>
+              </div>
+              <button
+                type="button"
+                className="text-xs font-medium text-sky-700 hover:underline"
+                onClick={() => {
+                  authEditedRef.current = false;
+                  dispatch(patchWizard({ authorizationText: defaultAuthText }));
+                }}
+              >
+                Reset to auto-fill
+              </button>
+            </div>
+            <p className="mb-2 text-xs text-slate-500">
+              Auto-filled with a single total ({currency} {grandTotal.toFixed(2)}
+              ). Editable before send. Customer sees this on email and authorize
+              page.
+            </p>
+            <textarea
+              className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              value={wizard.authorizationText || ''}
+              onChange={(e) => {
+                authEditedRef.current = true;
+                dispatch(patchWizard({ authorizationText: e.target.value }));
+              }}
+              spellCheck
+            />
+            <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-center">
+              <p className="text-sm italic text-slate-700">
+                {billing.cardholderName || authorizerName || '—'}
+              </p>
+              <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                Customer signature (cardholder name)
+              </p>
             </div>
           </div>
         </div>
