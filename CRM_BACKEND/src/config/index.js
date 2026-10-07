@@ -55,41 +55,15 @@ const config = {
     api: process.env.API_URL,
   },
 
-  duffel: {
-    apiKey: process.env.DUFFEL_API_KEY,
-    env: process.env.DUFFEL_ENV,
-    baseUrl: process.env.DUFFEL_BASE_URL,
-    useMock: process.env.USE_MOCK_DUFFEL === 'true',
-  },
-
   /**
-   * Active flight search backend: duffel | flightmcp | serpapi | mock
-   * Default duffel keeps existing deployments unchanged.
+   * Official PNR Converter API (optional). Without key → local GDS parser.
+   * See docs/PNR_AUTHORIZE_FLOW.md for future header/body field updates.
    */
-  flightProvider: (process.env.FLIGHT_PROVIDER || 'duffel').toLowerCase(),
-
-  flightmcp: {
-    apiKey: process.env.FLIGHT_MCP_API_KEY || '',
-    url:
-      process.env.FLIGHT_MCP_URL ||
-      'https://flight-mcp.com/v1/flights/search',
-    currency: process.env.FLIGHT_MCP_CURRENCY || '',
-    locale: process.env.FLIGHT_MCP_LOCALE || 'en-US',
-    pointOfSaleCountry: process.env.FLIGHT_MCP_POS_COUNTRY || 'US',
-    maxResults: Number(process.env.FLIGHT_MCP_MAX_RESULTS) || 20,
-    cacheTtlSeconds: Number(process.env.FLIGHT_MCP_CACHE_TTL) || 300,
-    timeoutMs: Number(process.env.FLIGHT_MCP_TIMEOUT_MS) || 30_000,
-  },
-
-  /** SerpApi Google Flights — quote/compare only (US CRM defaults). */
-  serpapi: {
-    apiKey: process.env.SERPAPI_API_KEY || '',
-    baseUrl: process.env.SERPAPI_BASE_URL || 'https://serpapi.com/search',
-    gl: process.env.SERPAPI_GL || 'us',
-    hl: process.env.SERPAPI_HL || 'en',
-    currency: process.env.SERPAPI_CURRENCY || 'USD',
-    deepSearch: process.env.SERPAPI_DEEP_SEARCH === 'true',
-    timeoutMs: Number(process.env.SERPAPI_TIMEOUT_MS) || 45_000,
+  pnrConverter: {
+    apiKey: process.env.PNR_CONVERTER_API_KEY || '',
+    baseUrl:
+      process.env.PNR_CONVERTER_BASE_URL ||
+      'https://api.pnrconverter.com/api',
   },
 
   pricing: {

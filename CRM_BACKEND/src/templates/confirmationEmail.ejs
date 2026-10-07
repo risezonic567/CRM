@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: 'Inquiry Confirmed', agency }) %>
+<%- include('partials/header', { title: 'Authorization Receipt', agency }) %>
 
       <%
         function fmtWhen(at, fallbackDate) {
@@ -26,20 +26,16 @@
           }
           return '—';
         }
-        function fmtDuration(value) {
-          if (!value) return '—';
-          var s = String(value).trim();
-          if (/^\d+h(?:\s+\d+m)?$/.test(s) || /^\d+m$/.test(s)) return s;
-          var m = s.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/i);
-          if (!m) return s;
-          var hours = Number(m[1] || 0) * 24 + Number(m[2] || 0);
-          var mins = Math.round(Number(m[3] || 0));
-          if (!hours && !mins) return '—';
-          if (hours && mins) return hours + 'h ' + mins + 'm';
-          if (hours) return hours + 'h';
-          return mins + 'm';
+        function fmtDate(iso) {
+          if (!iso) return '—';
+          var d = new Date(String(iso).length === 10 ? iso + 'T00:00:00Z' : iso);
+          if (isNaN(d.getTime())) return String(iso);
+          return d.toLocaleDateString('en-US', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            timeZone: 'UTC'
+          });
         }
-        function fmtConfirmedAt(value) {
+        function fmtAuthorizedAt(value) {
           if (!value) return '—';
           var d = new Date(value);
           if (isNaN(d.getTime())) return '—';
@@ -49,30 +45,53 @@
           });
         }
         var offer = inquiry.selectedOffer || {};
+        var pnrSegments = (offer.raw && offer.raw.source === 'pnr' && Array.isArray(offer.raw.segments))
+          ? offer.raw.segments
+          : [];
         var outbound = offer.outbound || offer;
         var inbound = offer.inbound || null;
+        var billing = inquiry.billing || {};
+        var signature = billing.cardholderName || [inquiry.customer.firstName, inquiry.customer.lastName].filter(Boolean).join(' ') || '—';
       %>
 
       <p>Hello <%= inquiry.customer.firstName %>,</p>
       <p>
-        Your flight inquiry has been <strong>confirmed</strong>.
-        Please keep this email as your confirmation record.
+        This is your <strong>authorization receipt</strong> for the itinerary below.
       </p>
 
       <p style="margin:16px 0;padding:12px 14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:6px;color:#065f46;font-size:14px;">
-        Confirmed at: <strong><%= fmtConfirmedAt(inquiry.confirmedAt || inquiry.agreement?.agreedAt) %></strong><br />
+        Authorized at: <strong><%= fmtAuthorizedAt(inquiry.confirmedAt || inquiry.agreement?.agreedAt) %></strong><br />
         Reference: <strong><%= inquiry.inquiryReference %></strong>
       </p>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 
       <h3 style="margin:0 0 12px;">Flight details</h3>
-      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
-        <tr>
-          <td colspan="2" style="padding-top:8px;color:#64748b;font-size:12px;text-transform:uppercase;">
-            <%= inbound ? 'Departing' : 'Flight' %>
-          </td>
+      <% if (pnrSegments.length) { %>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;border-collapse:collapse;">
+        <tr style="background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;">
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">#</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Airline</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Flight</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Date</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Route</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Dep</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Arr</td>
         </tr>
+        <% pnrSegments.forEach(function(seg) { %>
+        <tr>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.lineNumber || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.airlineName || seg.airlineCode || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= [seg.airlineCode, seg.flightNumber].filter(Boolean).join(' ') %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= fmtDate(seg.departureDate) %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.from %> → <%= seg.to %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.departureTime || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.arrivalTime || '—' %></td>
+        </tr>
+        <% }) %>
+      </table>
+      <% } else { %>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
         <tr>
           <td><strong>Airline</strong></td>
           <td><%= outbound.airline?.name || offer.airline?.name || '—' %> <%= (outbound.flightNumber || offer.flightNumber) ? '(' + (outbound.flightNumber || offer.flightNumber) + ')' : '' %></td>
@@ -85,39 +104,14 @@
           <td><strong>To</strong></td>
           <td><%= inquiry.travel.to %> — <%= fmtWhen(outbound.arrival?.at || offer.arrival?.at, null) %></td>
         </tr>
-        <tr>
-          <td><strong>Duration</strong></td>
-          <td><%= fmtDuration(outbound.duration || offer.duration) %></td>
-        </tr>
         <% if (inbound) { %>
         <tr>
-          <td colspan="2" style="padding-top:16px;color:#64748b;font-size:12px;text-transform:uppercase;">
-            Returning
-          </td>
-        </tr>
-        <tr>
-          <td><strong>Airline</strong></td>
-          <td><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber ? '(' + inbound.flightNumber + ')' : '' %></td>
-        </tr>
-        <tr>
-          <td><strong>From</strong></td>
-          <td><%= inquiry.travel.to %> — <%= fmtWhen(inbound.departure?.at, inquiry.travel.returnDate) %></td>
-        </tr>
-        <tr>
-          <td><strong>To</strong></td>
-          <td><%= inquiry.travel.from %> — <%= fmtWhen(inbound.arrival?.at, null) %></td>
-        </tr>
-        <tr>
-          <td><strong>Duration</strong></td>
-          <td><%= fmtDuration(inbound.duration) %></td>
-        </tr>
-        <% } else if (inquiry.travel.returnDate) { %>
-        <tr>
-          <td><strong>Return date</strong></td>
-          <td><%= fmtWhen(null, inquiry.travel.returnDate) %></td>
+          <td><strong>Return</strong></td>
+          <td><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber || '' %></td>
         </tr>
         <% } %>
       </table>
+      <% } %>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 
@@ -135,8 +129,24 @@
         <%= currency %> <%= Number(grandTotal).toFixed(2) %>
       </p>
 
-      <p style="font-size:12px;color:#64748b;margin:16px 0 0;">
-        Our team will contact you shortly. If you have questions, reply to this email or contact the agency.
+      <% if (billing.cardType || billing.last4 || billing.cardholderName) { %>
+      <p style="font-size:13px;color:#475569;margin:16px 0 0;">
+        Card on file:
+        <%= billing.cardType || 'Card' %>
+        <% if (billing.last4) { %>•••• <%= billing.last4 %><% } %>
+        <% if (billing.expiryMonth && billing.expiryYear) { %>
+          · exp <%= billing.expiryMonth %>/<%= billing.expiryYear %>
+        <% } %>
       </p>
+      <% } %>
+
+      <div style="margin:28px 0 8px;padding-top:20px;border-top:1px solid #e2e8f0;">
+        <p style="margin:0 0 4px;font-size:12px;color:#64748b;">Authorized signature (cardholder)</p>
+        <p style="margin:0;font-size:18px;font-family:Georgia, 'Times New Roman', serif;font-style:italic;color:#0f172a;">
+          <%= signature %>
+        </p>
+      </div>
+
+      <%- include('partials/gotoflyerTerms') %>
 
 <%- include('partials/footer') %>

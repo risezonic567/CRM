@@ -1,9 +1,6 @@
 import { Router } from 'express';
-import * as searchController from './search.controller.js';
-import {
-  searchFlightsSchema,
-  airportSuggestQuerySchema,
-} from './search.validation.js';
+import * as pnrController from './pnr.controller.js';
+import { convertPnrSchema } from './pnr.validation.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { authenticate } from '../../middlewares/auth.middleware.js';
 import { authorize, blockViewerWrites } from '../../middlewares/role.middleware.js';
@@ -14,19 +11,11 @@ const router = Router();
 router.use(authenticate);
 router.use(authorize(ROLES.ADMIN, ROLES.AGENT, ROLES.VIEWER));
 
-// Airport autocomplete (GET — viewers allowed)
-router.get(
-  '/airports',
-  validate(airportSuggestQuerySchema, 'query'),
-  searchController.airports
-);
-
-// Flight search (POST — viewers blocked from writes)
 router.post(
-  '/flights',
+  '/convert',
   blockViewerWrites,
-  validate(searchFlightsSchema),
-  searchController.flights
+  validate(convertPnrSchema),
+  pnrController.convert
 );
 
 export default router;

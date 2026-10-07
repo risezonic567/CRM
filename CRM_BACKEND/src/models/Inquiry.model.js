@@ -76,7 +76,7 @@ const inquirySchema = new mongoose.Schema(
       costPrice: { type: Number, default: 0 },
       markup: { type: Number, default: 0 },
       merchantFee: { type: Number, default: 0 },
-      merchantFeePercent: { type: Number, default: 2 },
+      merchantFeePercent: { type: Number, default: 0 },
       sellingPrice: { type: Number, default: 0 },
       currency: { type: String, default: 'USD' },
     },
@@ -89,6 +89,12 @@ const inquirySchema = new mongoose.Schema(
       state: { type: String, trim: true, default: '' },
       zip: { type: String, trim: true, default: '' },
       country: { type: String, trim: true, default: '' },
+      cardType: { type: String, trim: true, default: '' },
+      cardholderName: { type: String, trim: true, default: '' },
+      last4: { type: String, trim: true, default: '' },
+      expiryMonth: { type: String, trim: true, default: '' },
+      expiryYear: { type: String, trim: true, default: '' },
+      // CVV is never persisted
     },
     status: {
       type: String,

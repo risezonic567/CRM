@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: 'Flight Inquiry', agency }) %>
+<%- include('partials/header', { title: 'Authorize Itinerary', agency }) %>
 
       <%
         function fmtWhen(at, fallbackDate) {
@@ -26,30 +26,61 @@
           }
           return '—';
         }
-        function fmtDuration(value) {
-          if (!value) return '—';
-          var s = String(value).trim();
-          if (/^\d+h(?:\s+\d+m)?$/.test(s) || /^\d+m$/.test(s)) return s;
-          var m = s.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/i);
-          if (!m) return s;
-          var hours = Number(m[1] || 0) * 24 + Number(m[2] || 0);
-          var mins = Math.round(Number(m[3] || 0));
-          if (!hours && !mins) return '—';
-          if (hours && mins) return hours + 'h ' + mins + 'm';
-          if (hours) return hours + 'h';
-          return mins + 'm';
+        function fmtDate(iso) {
+          if (!iso) return '—';
+          var d = new Date(String(iso).length === 10 ? iso + 'T00:00:00Z' : iso);
+          if (isNaN(d.getTime())) return String(iso);
+          return d.toLocaleDateString('en-US', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            timeZone: 'UTC'
+          });
         }
         var offer = inquiry.selectedOffer || {};
+        var pnrSegments = (offer.raw && offer.raw.source === 'pnr' && Array.isArray(offer.raw.segments))
+          ? offer.raw.segments
+          : [];
         var outbound = offer.outbound || offer;
         var inbound = offer.inbound || null;
       %>
 
       <p>Hello <%= inquiry.customer.firstName %>,</p>
-      <p>Please review your flight inquiry below. Click <strong>Confirm Inquiry</strong> to proceed.</p>
+      <p>Please review your flight itinerary below. Click <strong>I Authorize</strong> to authorize this booking.</p>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 
       <h3 style="margin:0 0 12px;">Flight details</h3>
+
+      <% if (pnrSegments.length) { %>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;border-collapse:collapse;">
+        <tr style="background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;">
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">#</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Airline</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Flight</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Date</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Route</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Dep</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Arr</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Class</td>
+        </tr>
+        <% pnrSegments.forEach(function(seg) { %>
+        <tr>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.lineNumber || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.airlineName || seg.airlineCode || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= [seg.airlineCode, seg.flightNumber].filter(Boolean).join(' ') %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;white-space:nowrap;"><%= fmtDate(seg.departureDate) %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.from %> → <%= seg.to %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.departureTime || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;">
+            <%= seg.arrivalTime || '—' %>
+            <% if (seg.arrivalDate && seg.arrivalDate !== seg.departureDate) { %>
+              <span style="color:#b45309;font-size:11px;"> <%= fmtDate(seg.arrivalDate) %></span>
+            <% } %>
+          </td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.bookingClass || '—' %></td>
+        </tr>
+        <% }) %>
+      </table>
+      <% } else { %>
       <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
         <tr>
           <td colspan="2" style="padding-top:8px;color:#64748b;font-size:12px;text-transform:uppercase;">
@@ -68,15 +99,9 @@
           <td><strong>To</strong></td>
           <td><%= inquiry.travel.to %> — <%= fmtWhen(outbound.arrival?.at || offer.arrival?.at, null) %></td>
         </tr>
-        <tr>
-          <td><strong>Duration</strong></td>
-          <td><%= fmtDuration(outbound.duration || offer.duration) %></td>
-        </tr>
         <% if (inbound) { %>
         <tr>
-          <td colspan="2" style="padding-top:16px;color:#64748b;font-size:12px;text-transform:uppercase;">
-            Returning
-          </td>
+          <td colspan="2" style="padding-top:16px;color:#64748b;font-size:12px;text-transform:uppercase;">Returning</td>
         </tr>
         <tr>
           <td><strong>Airline</strong></td>
@@ -90,17 +115,9 @@
           <td><strong>To</strong></td>
           <td><%= inquiry.travel.from %> — <%= fmtWhen(inbound.arrival?.at, null) %></td>
         </tr>
-        <tr>
-          <td><strong>Duration</strong></td>
-          <td><%= fmtDuration(inbound.duration) %></td>
-        </tr>
-        <% } else if (inquiry.travel.returnDate) { %>
-        <tr>
-          <td><strong>Return date</strong></td>
-          <td><%= fmtWhen(null, inquiry.travel.returnDate) %> <span style="color:#b45309;">(return flight not attached)</span></td>
-        </tr>
         <% } %>
       </table>
+      <% } %>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 
@@ -121,15 +138,17 @@
         Reference: <%= inquiry.inquiryReference %>
       </p>
 
+      <%- include('partials/gotoflyerTerms') %>
+
       <div style="margin:28px 0;text-align:center;">
         <a href="<%= confirmUrl %>"
            style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:14px 28px;border-radius:6px;font-weight:bold;">
-          Confirm Inquiry
+          I Authorize
         </a>
       </div>
 
       <p style="font-size:12px;color:#64748b;">
-        You will be asked to agree to fare rules and cancellation policy before confirming.
+        You will be asked to agree to the DEMO terms and authorization conditions before authorizing.
         This link expires in 7 days.
       </p>
 

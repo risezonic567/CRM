@@ -60,7 +60,7 @@ const DashboardTab = ({ onSwitchTab }) => {
   const totalInquiries = inquiriesData?.meta?.total ?? inquiryItems.length;
 
   const confirmedCount = inquiryItems.filter(
-    (inq) => inq.status === 'customer_confirmed'
+    (inq) => inq.status === 'authorized'
   ).length;
   const confirmationRate =
     totalInquiries > 0 ? Math.round((confirmedCount / totalInquiries) * 100) : 0;
@@ -192,7 +192,7 @@ const DashboardTab = ({ onSwitchTab }) => {
 
         <div className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-xs hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Confirmations</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Authorizations</span>
             <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600">
               <CheckCircle2 className="w-4 h-4" strokeWidth={1.8} />
             </div>
@@ -218,7 +218,7 @@ const DashboardTab = ({ onSwitchTab }) => {
             {totalMargin.toFixed(2)}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <span className="font-semibold text-emerald-600">{marginConfirmedCount} confirmed</span>
+            <span className="font-semibold text-emerald-600">{marginConfirmedCount} authorized</span>
             <span>agency fee total</span>
           </div>
         </div>

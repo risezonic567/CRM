@@ -3,14 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Confirm Inquiry — <%= agency?.name || 'Travel CRM' %></title>
+  <title>Authorize Itinerary — <%= agency?.name || 'Travel CRM' %></title>
   <style>
     body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#0f172a; }
-    .card { max-width:560px; margin:40px auto; background:#fff; border-radius:10px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
+    .card { max-width:720px; margin:40px auto; background:#fff; border-radius:10px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
     h1 { font-size:22px; margin:0 0 8px; }
     .muted { color:#64748b; font-size:14px; }
     .total { font-size:22px; font-weight:bold; margin:20px 0; }
     .row { margin:8px 0; font-size:14px; }
+    table.segs { width:100%; border-collapse:collapse; font-size:13px; margin:12px 0; }
+    table.segs th { text-align:left; font-size:11px; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0; padding:8px 6px; background:#f8fafc; }
+    table.segs td { border-bottom:1px solid #f1f5f9; padding:8px 6px; }
     .leg { margin:16px 0; padding:12px; background:#f8fafc; border-radius:8px; font-size:14px; }
     .leg h3 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
     label { display:flex; gap:10px; align-items:flex-start; font-size:14px; margin:24px 0; }
@@ -49,25 +52,15 @@
       }
       return s;
     }
-    function fmtDuration(value) {
-      if (!value) return '';
-      var s = String(value).trim();
-      if (/^\d+h(?:\s+\d+m)?$/.test(s) || /^\d+m$/.test(s)) return s;
-      var m = s.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/i);
-      if (!m) return s;
-      var hours = Number(m[1] || 0) * 24 + Number(m[2] || 0);
-      var mins = Math.round(Number(m[3] || 0));
-      if (!hours && !mins) return '';
-      if (hours && mins) return hours + 'h ' + mins + 'm';
-      if (hours) return hours + 'h';
-      return mins + 'm';
-    }
     var offer = inquiry.selectedOffer || {};
+    var pnrSegments = (offer.raw && offer.raw.source === 'pnr' && Array.isArray(offer.raw.segments))
+      ? offer.raw.segments
+      : [];
     var outbound = offer.outbound || offer;
     var inbound = offer.inbound || null;
   %>
   <div class="card">
-    <h1>Confirm your inquiry</h1>
+    <h1>Authorize your itinerary</h1>
     <p class="muted"><%= agency?.name || 'Travel CRM' %> · Ref <%= inquiry.inquiryReference %></p>
 
     <% if (typeof error === 'string' && error) { %>
@@ -80,24 +73,51 @@
       <div class="row"><strong>Return date:</strong> <%= fmtDateOnly(inquiry.travel.returnDate) %></div>
     <% } %>
 
+    <% if (pnrSegments.length) { %>
+    <table class="segs">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Airline</th>
+          <th>Flight</th>
+          <th>Date</th>
+          <th>Route</th>
+          <th>Dep</th>
+          <th>Arr</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% pnrSegments.forEach(function(seg) { %>
+        <tr>
+          <td><%= seg.lineNumber || '—' %></td>
+          <td><%= seg.airlineName || seg.airlineCode || '—' %></td>
+          <td><%= [seg.airlineCode, seg.flightNumber].filter(Boolean).join(' ') %></td>
+          <td><%= fmtDateOnly(seg.departureDate) %></td>
+          <td><%= seg.from %> → <%= seg.to %></td>
+          <td><%= seg.departureTime || '—' %></td>
+          <td>
+            <%= seg.arrivalTime || '—' %>
+            <% if (seg.arrivalDate && seg.arrivalDate !== seg.departureDate) { %>
+              <span class="muted"><%= fmtDateOnly(seg.arrivalDate) %></span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <% } else { %>
     <div class="leg">
       <h3><%= inbound ? 'Departing flight' : 'Flight' %></h3>
       <div><%= outbound.airline?.name || offer.airline?.name || '—' %> <%= outbound.flightNumber || offer.flightNumber || '' %></div>
       <div><%= inquiry.travel.from %> <%= fmtWhen(outbound.departure?.at || offer.departure?.at) %> → <%= inquiry.travel.to %> <%= fmtWhen(outbound.arrival?.at || offer.arrival?.at) %></div>
-      <% var outDur = fmtDuration(outbound.duration || offer.duration); if (outDur) { %>
-        <div class="muted"><%= outDur %></div>
-      <% } %>
     </div>
-
     <% if (inbound) { %>
     <div class="leg">
       <h3>Returning flight</h3>
       <div><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber || '' %></div>
       <div><%= inquiry.travel.to %> <%= fmtWhen(inbound.departure?.at) %> → <%= inquiry.travel.from %> <%= fmtWhen(inbound.arrival?.at) %></div>
-      <% var inDur = fmtDuration(inbound.duration); if (inDur) { %>
-        <div class="muted"><%= inDur %></div>
-      <% } %>
     </div>
+    <% } %>
     <% } %>
 
     <div class="row"><strong>Passengers:</strong>
@@ -110,13 +130,15 @@
       Total Amount: <%= inquiry.pricing.currency %> <%= Number(inquiry.pricing.sellingPrice).toFixed(2) %>
     </div>
 
+    <%- include('partials/gotoflyerTerms') %>
+
     <form method="POST" action="/public/confirm/<%= inquiry._id %>">
       <input type="hidden" name="token" value="<%= token %>" />
       <label>
         <input type="checkbox" name="agreed" id="agreed" value="true" required />
-        <span>I agree to the terms, fare rules, and cancellation policy.</span>
+        <span>I have read the DEMO terms and I authorize this itinerary and payment method on file.</span>
       </label>
-      <button type="submit" id="confirmBtn" disabled>Confirm Inquiry</button>
+      <button type="submit" id="confirmBtn" disabled>I Authorize</button>
     </form>
   </div>
   <script>

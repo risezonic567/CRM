@@ -24,6 +24,7 @@ import {
 import { CLOSE_SOURCES } from '../../../constants/dispositions';
 import StatusBadge from '../../shared/StatusBadge';
 import { getErrorMessage } from '../../../utils/getErrorMessage';
+import PnrItineraryTable from './wizard/PnrItineraryTable';
 
 const CLOSE_SOURCE_LABELS = {
   [CLOSE_SOURCES.WAITING_MODAL]: 'Waiting modal',
@@ -106,16 +107,20 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
   const offer = inq?.selectedOffer || {};
   const outbound = offer.outbound || offer;
   const inbound = offer.inbound || null;
+  const pnrSegments =
+    offer?.raw?.source === 'pnr' && Array.isArray(offer.raw.segments)
+      ? offer.raw.segments
+      : [];
   const currency = inq?.pricing?.currency || 'USD';
-  const isConfirmed = inq?.status === 'customer_confirmed';
+  const isConfirmed = inq?.status === 'authorized';
 
   const handleResendConfirmation = async () => {
     if (!inquiryId) return;
     try {
       const res = await resendConfirmation(inquiryId).unwrap();
-      toast.success(res?.message || 'Confirmation email resent');
+      toast.success(res?.message || 'Authorization receipt resent');
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to resend confirmation email'));
+      toast.error(getErrorMessage(err, 'Failed to resend authorization receipt'));
     }
   };
 
@@ -134,14 +139,14 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Confirmed-${ref}.html`;
+      link.download = `Authorized-${ref}.html`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      toast.success('Confirmation downloaded');
+      toast.success('Authorization receipt downloaded');
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to download confirmation'));
+      toast.error(getErrorMessage(err, 'Failed to download authorization receipt'));
     } finally {
       setIsDownloading(false);
     }
@@ -187,7 +192,7 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
               ) : (
                 <Download className="h-4 w-4" />
               )}
-              Download confirmation
+              Download authorization receipt
             </button>
             <button
               type="button"
@@ -200,7 +205,7 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
               ) : (
                 <Mail className="h-4 w-4" />
               )}
-              Resend confirmation email
+              Resend authorization receipt
             </button>
           </div>
         )}
@@ -310,10 +315,14 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
             <div className="mb-1 flex items-center gap-2 px-1">
               <Plane className="h-4 w-4 text-blue-600" />
               <h3 className="text-sm font-semibold text-slate-900">
-                Selected flight
+                {pnrSegments.length ? 'Itinerary' : 'Selected flight'}
               </h3>
             </div>
-            {outbound?.flightNumber || outbound?.airline ? (
+            {pnrSegments.length ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <PnrItineraryTable segments={pnrSegments} />
+              </div>
+            ) : outbound?.flightNumber || outbound?.airline ? (
               <div className="grid gap-3 md:grid-cols-2">
                 <FlightLeg
                   title={inbound ? 'Departing' : 'Flight'}
@@ -332,7 +341,7 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
               </div>
             ) : (
               <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
-                No flight selected yet
+                No itinerary recorded yet
               </p>
             )}
           </div>
@@ -404,13 +413,36 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                   {inq.billing?.country || '—'}
                 </p>
               </div>
+              <div>
+                <p className="text-[11px] font-medium text-slate-500">Card</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {inq.billing?.cardType || '—'}
+                  {inq.billing?.last4 ? ` •••• ${inq.billing.last4}` : ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium text-slate-500">
+                  Cardholder
+                </p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {inq.billing?.cardholderName || '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium text-slate-500">Expiry</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {inq.billing?.expiryMonth && inq.billing?.expiryYear
+                    ? `${inq.billing.expiryMonth}/${inq.billing.expiryYear}`
+                    : '—'}
+                </p>
+              </div>
             </div>
           </Section>
 
           <Section icon={CreditCard} title="Pricing">
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-slate-600">
-                <span>Base fare</span>
+                <span>Supplier price</span>
                 <span className="font-medium tabular-nums text-slate-800">
                   {money(currency, inq.pricing?.costPrice)}
                 </span>
@@ -422,14 +454,15 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                 </span>
               </div>
               <div className="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold text-slate-900">
-                <span>Grand total</span>
+                <span>Total</span>
                 <span className="tabular-nums">
                   {money(currency, inq.pricing?.sellingPrice)}
                 </span>
               </div>
-              {inq.pricing?.merchantFee != null && (
+              {Number(inq.pricing?.merchantFee) > 0 && (
                 <p className="pt-1 text-xs text-slate-400">
-                  Merchant fee: {money(currency, inq.pricing.merchantFee)}
+                  Merchant fee (legacy):{' '}
+                  {money(currency, inq.pricing.merchantFee)}
                 </p>
               )}
             </div>
@@ -454,7 +487,7 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                 {inq.confirmedAt && (
                   <div>
                     <p className="text-[11px] font-medium text-slate-500">
-                      Customer confirmed
+                      Customer authorized
                     </p>
                     <p className="text-sm font-semibold text-emerald-600">
                       {formatDate(inq.confirmedAt)}

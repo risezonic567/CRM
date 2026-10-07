@@ -6,8 +6,6 @@ import callReducer from '../REDUX_SLICES/Call_api/callSlice';
 import { callApi } from '../REDUX_SLICES/Call_api/callApi';
 import inquiryReducer from '../REDUX_SLICES/Inquiry_api/inquirySlice';
 import { inquiryApi } from '../REDUX_SLICES/Inquiry_api/inquiryApi';
-import searchReducer from '../REDUX_SLICES/Search_api/searchSlice';
-import { searchApi } from '../REDUX_SLICES/Search_api/searchApi';
 import userReducer from '../REDUX_SLICES/User_api/userSlice';
 import { userApi } from '../REDUX_SLICES/User_api/userApi';
 import { bindAuthTokenHandlers } from '../../SERVICES/AxiosInstance';
@@ -17,12 +15,10 @@ export const store = configureStore({
     auth: authReducer,
     call: callReducer,
     inquiry: inquiryReducer,
-    search: searchReducer,
     user: userReducer,
     [authApi.reducerPath]: authApi.reducer,
     [callApi.reducerPath]: callApi.reducer,
     [inquiryApi.reducerPath]: inquiryApi.reducer,
-    [searchApi.reducerPath]: searchApi.reducer,
     [userApi.reducerPath]: userApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -30,7 +26,6 @@ export const store = configureStore({
       authApi.middleware,
       callApi.middleware,
       inquiryApi.middleware,
-      searchApi.middleware,
       userApi.middleware
     ),
 });

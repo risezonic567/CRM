@@ -54,6 +54,13 @@ export const sendInquirySchema = Joi.object({
     state: Joi.string().trim().allow('').default(''),
     zip: Joi.string().trim().allow('').default(''),
     country: Joi.string().trim().allow('').default(''),
+    cardType: Joi.string().trim().allow('').default(''),
+    cardholderName: Joi.string().trim().allow('').default(''),
+    last4: Joi.string().trim().pattern(/^\d{0,4}$/).allow('').default(''),
+    expiryMonth: Joi.string().trim().allow('').default(''),
+    expiryYear: Joi.string().trim().allow('').default(''),
+    // Accept then strip — never persisted (sanitizeBilling)
+    cvv: Joi.string().trim().allow('').optional(),
   }).default({}),
   notes: Joi.string().allow('').default(''),
 });
@@ -115,6 +122,12 @@ export const saveDraftSchema = Joi.object({
     state: Joi.string().trim().allow('').default(''),
     zip: Joi.string().trim().allow('').default(''),
     country: Joi.string().trim().allow('').default(''),
+    cardType: Joi.string().trim().allow('').default(''),
+    cardholderName: Joi.string().trim().allow('').default(''),
+    last4: Joi.string().trim().pattern(/^\d{0,4}$/).allow('').default(''),
+    expiryMonth: Joi.string().trim().allow('').default(''),
+    expiryYear: Joi.string().trim().allow('').default(''),
+    cvv: Joi.string().trim().allow('').optional(),
   }),
   notes: Joi.string().allow('').default(''),
 }).min(1);

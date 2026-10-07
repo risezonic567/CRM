@@ -3,16 +3,13 @@ import { verifyPublicToken } from '../../utils/signPublicToken.js';
 import { AppError } from '../../utils/apiResponse.js';
 import { INQUIRY_STATUSES } from '../../config/constants.js';
 import { getIO } from '../../socket/socket.js';
-import {
-  renderTemplate,
-  queueConfirmationEmail,
-} from '../notification/notification.service.js';
+import { renderTemplate } from '../notification/notification.service.js';
 import { parseClientMeta } from '../../utils/clientMeta.js';
 
 export async function loadConfirmPage(inquiryId, token) {
   const { inquiry, agency } = await verifyAndLoad(inquiryId, token);
 
-  if (inquiry.status === INQUIRY_STATUSES.CUSTOMER_CONFIRMED) {
+  if (inquiry.status === INQUIRY_STATUSES.AUTHORIZED) {
     return {
       alreadyConfirmed: true,
       html: await renderTemplate('thankYou.ejs', { inquiry, agency }),
@@ -24,7 +21,7 @@ export async function loadConfirmPage(inquiryId, token) {
   }
 
   if (inquiry.status !== INQUIRY_STATUSES.PREVIEW_SENT) {
-    throw new AppError('Inquiry is not awaiting confirmation', 400);
+    throw new AppError('Inquiry is not awaiting authorization', 400);
   }
 
   const html = await renderTemplate('confirmPage.ejs', {
@@ -38,16 +35,17 @@ export async function loadConfirmPage(inquiryId, token) {
 }
 
 /**
- * Idempotent confirm: first wins; second click still shows thank-you.
+ * Idempotent authorize: first wins; second click still shows thank-you.
+ * Does NOT send an automatic confirmation/receipt email — agent downloads or resends.
  */
 export async function confirmInquiry(inquiryId, { token, agreed }, meta) {
   if (agreed !== true && agreed !== 'true') {
-    throw new AppError('You must agree to the terms to confirm', 400);
+    throw new AppError('You must agree to the terms to authorize', 400);
   }
 
   const { inquiry, agency, decoded } = await verifyAndLoad(inquiryId, token);
 
-  if (inquiry.status === INQUIRY_STATUSES.CUSTOMER_CONFIRMED) {
+  if (inquiry.status === INQUIRY_STATUSES.AUTHORIZED) {
     const html = await renderTemplate('thankYou.ejs', { inquiry, agency });
     return { html, alreadyConfirmed: true };
   }
@@ -57,7 +55,7 @@ export async function confirmInquiry(inquiryId, { token, agreed }, meta) {
   }
 
   if (inquiry.status !== INQUIRY_STATUSES.PREVIEW_SENT) {
-    throw new AppError('Inquiry is not awaiting confirmation', 400);
+    throw new AppError('Inquiry is not awaiting authorization', 400);
   }
 
   const userAgent = meta.userAgent || '';
@@ -72,7 +70,7 @@ export async function confirmInquiry(inquiryId, { token, agreed }, meta) {
     },
     {
       $set: {
-        status: INQUIRY_STATUSES.CUSTOMER_CONFIRMED,
+        status: INQUIRY_STATUSES.AUTHORIZED,
         confirmedAt: new Date(),
         agreement: {
           agreedAt: new Date(),
@@ -88,33 +86,33 @@ export async function confirmInquiry(inquiryId, { token, agreed }, meta) {
   );
 
   if (!updated) {
-    // Race: another request confirmed first
+    // Race: another request authorized first
     const current = await Inquiry.findById(inquiry._id);
-    if (current?.status === INQUIRY_STATUSES.CUSTOMER_CONFIRMED) {
+    if (current?.status === INQUIRY_STATUSES.AUTHORIZED) {
       const html = await renderTemplate('thankYou.ejs', {
         inquiry: current,
         agency,
       });
       return { html, alreadyConfirmed: true };
     }
-    throw new AppError('Unable to confirm inquiry', 409);
+    throw new AppError('Unable to authorize inquiry', 409);
   }
 
   // Emit AFTER DB write
   try {
     const io = getIO();
-    io.to(`inquiry_${updated._id}`).emit('inquiry:confirmed', {
+    const payload = {
       inquiryId: updated._id.toString(),
       inquiryReference: updated.inquiryReference,
       status: updated.status,
       confirmedAt: updated.confirmedAt,
-    });
+    };
+    io.to(`inquiry_${updated._id}`).emit('inquiry:authorized', payload);
+    // Back-compat alias for any lingering listeners
+    io.to(`inquiry_${updated._id}`).emit('inquiry:confirmed', payload);
   } catch {
     // ignore if socket not ready
   }
-
-  // Fire-and-forget confirmation receipt — do not block thank-you page
-  queueConfirmationEmail({ inquiry: updated, agency }).catch(() => {});
 
   const html = await renderTemplate('thankYou.ejs', {
     inquiry: updated,
@@ -131,7 +129,7 @@ async function verifyAndLoad(inquiryId, token) {
   try {
     decoded = verifyPublicToken(token);
   } catch {
-    throw new AppError('Invalid or expired confirmation link', 401);
+    throw new AppError('Invalid or expired authorization link', 401);
   }
 
   if (decoded.inquiryId !== inquiryId) {
@@ -142,7 +140,7 @@ async function verifyAndLoad(inquiryId, token) {
   if (!inquiry) throw new AppError('Inquiry not found', 404);
 
   if (inquiry.publicTokenJti && inquiry.publicTokenJti !== decoded.jti) {
-    throw new AppError('Confirmation link is no longer valid', 401);
+    throw new AppError('Authorization link is no longer valid', 401);
   }
 
   const agency = await Agency.findById(inquiry.agencyId);

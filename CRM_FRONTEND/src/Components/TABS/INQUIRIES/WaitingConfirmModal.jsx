@@ -47,11 +47,11 @@ const WaitingConfirmModal = ({ open, inquiry, email, onClosed }) => {
             </div>
 
             <h2 className="text-lg font-bold text-slate-900 mb-1">
-              Awaiting Customer Confirmation
+              Awaiting Customer Authorization
             </h2>
 
             <p className="text-xs text-slate-500 mb-3">
-              Quotation & preview itinerary link dispatched to:
+              Authorization link dispatched to:
             </p>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 rounded-md font-semibold text-xs text-slate-800 mb-2">
               <Mail className="w-3.5 h-3.5 text-slate-500" />
@@ -86,7 +86,7 @@ const WaitingConfirmModal = ({ open, inquiry, email, onClosed }) => {
 
             <div className="p-4 sm:p-6 space-y-3">
               <p className="text-xs text-slate-500 leading-relaxed">
-                Agents cannot confirm on behalf of the customer. Please state why this session is ending.
+                Agents cannot authorize on behalf of the customer. Please state why this session is ending.
               </p>
 
               <InquiryCloseFormBody

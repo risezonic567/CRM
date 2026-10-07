@@ -23,7 +23,7 @@ export const INQUIRY_STATUSES = Object.freeze({
   SEARCHING: 'searching',
   SELECTED: 'selected',
   PREVIEW_SENT: 'preview_sent',
-  CUSTOMER_CONFIRMED: 'customer_confirmed',
+  AUTHORIZED: 'authorized',
   CANCELLED: 'cancelled',
   EXPIRED: 'expired',
 });

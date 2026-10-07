@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Inquiry, Agency, Call } from '../../models/index.js';
 import { AppError } from '../../utils/apiResponse.js';
 import { calculatePricing } from '../../utils/calculatePricing.js';
+import { sanitizeBilling } from '../../utils/sanitizeBilling.js';
 import { signPublicToken } from '../../utils/signPublicToken.js';
 import {
   INQUIRY_STATUSES,
@@ -16,6 +17,9 @@ import {
 } from '../notification/notification.service.js';
 import { enrichAgreement } from '../../utils/enrichAgreement.js';
 import { getIO } from '../../socket/socket.js';
+
+/** New authorize flow: customer total = cost + markup only (no merchant fee). */
+const AUTHORIZE_MERCHANT_FEE_PERCENT = 0;
 
 function buildInquiryScopeFilter(user, extra = {}) {
   const filter = { agencyId: user.agencyId, ...extra };
@@ -98,12 +102,12 @@ export async function listInquiries(user, query) {
 }
 
 /**
- * Confirmed inquiries only — sum real pricing.markup (agency fee / margin).
+ * Authorized inquiries only — sum real pricing.markup (agency fee / margin).
  * Does not include merchant fee estimates.
  */
 export async function getMarginStats(user) {
   const match = buildInquiryScopeFilter(user, {
-    status: INQUIRY_STATUSES.CUSTOMER_CONFIRMED,
+    status: INQUIRY_STATUSES.AUTHORIZED,
   });
 
   const rows = await Inquiry.aggregate([
@@ -205,15 +209,11 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
   const agency = await Agency.findById(user.agencyId);
   if (!agency) throw new AppError('Agency not found', 404);
 
-  // Merchant % from env only; amount = (cost + markup) * percent / 100 (staff-only)
-  const merchantFeePercent = config.pricing.merchantFeePercent;
-
-  // Never trust frontend sellingPrice — recompute
-  // Customer pays cost + markup; merchant fee is NOT deducted from pax total
+  // Never trust frontend sellingPrice — recompute (merchant fee stripped for authorize flow)
   const pricing = calculatePricing({
     costPrice: payload.costPrice,
     markup: payload.markup,
-    merchantFeePercent,
+    merchantFeePercent: AUTHORIZE_MERCHANT_FEE_PERCENT,
     currency: payload.currency || agency.currency || config.pricing.defaultCurrency,
   });
 
@@ -232,7 +232,7 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
   inquiry.selectedOffer = payload.selectedOffer;
   inquiry.pricing = pricing;
   inquiry.passengers = payload.passengers;
-  inquiry.billing = payload.billing || {};
+  inquiry.billing = sanitizeBilling(payload.billing || {});
   inquiry.notes = payload.notes || '';
   inquiry.wizardStep = 5;
   inquiry.status = INQUIRY_STATUSES.PREVIEW_SENT;
@@ -249,7 +249,7 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
 
   const confirmUrl = `${config.urls.api}/public/confirm/${inquiry._id}?token=${token}`;
 
-  // Fire-and-forget email — do not block response
+  // Fire-and-forget authorization email — do not block response
   queueInquiryEmail({
     inquiry,
     agency,
@@ -296,10 +296,10 @@ export async function saveDraft(user, inquiryId, payload) {
     inquiry.passengers = payload.passengers;
   }
   if (payload.billing) {
-    inquiry.billing = {
+    inquiry.billing = sanitizeBilling({
       ...(inquiry.billing?.toObject?.() ?? inquiry.billing ?? {}),
       ...payload.billing,
-    };
+    });
   }
   if (payload.notes !== undefined) {
     inquiry.notes = payload.notes;
@@ -328,7 +328,7 @@ export async function saveDraft(user, inquiryId, payload) {
     inquiry.pricing = calculatePricing({
       costPrice,
       markup,
-      merchantFeePercent: config.pricing.merchantFeePercent,
+      merchantFeePercent: AUTHORIZE_MERCHANT_FEE_PERCENT,
       currency,
     });
   }
@@ -349,8 +349,8 @@ export async function saveDraft(user, inquiryId, payload) {
 export async function closeInquiry(user, inquiryId, { reason, source }) {
   const inquiry = await findInquiryForUser(user, inquiryId);
 
-  if (inquiry.status === INQUIRY_STATUSES.CUSTOMER_CONFIRMED) {
-    throw new AppError('Inquiry already confirmed by customer', 400);
+  if (inquiry.status === INQUIRY_STATUSES.AUTHORIZED) {
+    throw new AppError('Inquiry already authorized by customer', 400);
   }
   if (inquiry.status === INQUIRY_STATUSES.CANCELLED) {
     throw new AppError('Inquiry already closed', 400);
@@ -380,14 +380,15 @@ export async function closeInquiry(user, inquiryId, { reason, source }) {
 }
 
 /**
- * Agent resends confirmation receipt email (customer_confirmed only).
+ * Agent resends authorization receipt email (authorized only).
+ * Does not auto-send on customer authorize — agent-triggered only.
  */
 export async function resendConfirmationEmail(user, inquiryId) {
   const inquiry = await findInquiryForUser(user, inquiryId);
 
-  if (inquiry.status !== INQUIRY_STATUSES.CUSTOMER_CONFIRMED) {
+  if (inquiry.status !== INQUIRY_STATUSES.AUTHORIZED) {
     throw new AppError(
-      'Confirmation email can only be resent for confirmed inquiries',
+      'Authorization receipt can only be resent for authorized inquiries',
       400
     );
   }
@@ -406,14 +407,14 @@ export async function resendConfirmationEmail(user, inquiryId) {
 }
 
 /**
- * HTML confirmation receipt for agent download (customer_confirmed only).
+ * HTML authorization receipt for agent download (authorized only).
  */
 export async function getConfirmationReceipt(user, inquiryId) {
   const inquiry = await findInquiryForUser(user, inquiryId);
 
-  if (inquiry.status !== INQUIRY_STATUSES.CUSTOMER_CONFIRMED) {
+  if (inquiry.status !== INQUIRY_STATUSES.AUTHORIZED) {
     throw new AppError(
-      'Confirmation receipt is only available for confirmed inquiries',
+      'Authorization receipt is only available for authorized inquiries',
       400
     );
   }
@@ -432,7 +433,7 @@ export async function getConfirmationReceipt(user, inquiryId) {
     /[^\w.-]+/g,
     '_'
   );
-  const filename = `Confirmed-${safeRef}.html`;
+  const filename = `Authorized-${safeRef}.html`;
 
   return { html, filename };
 }

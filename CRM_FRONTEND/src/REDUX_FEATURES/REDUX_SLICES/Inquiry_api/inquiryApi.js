@@ -91,6 +91,13 @@ export const inquiryApi = createApi({
       }),
       invalidatesTags: ['Inquiries', 'Inquiry', 'InquiryMargin'],
     }),
+    convertPnr: builder.mutation({
+      query: (body) => ({
+        url: '/pnr/convert',
+        method: 'POST',
+        data: body,
+      }),
+    }),
   }),
 });
 
@@ -105,4 +112,5 @@ export const {
   useCloseInquiryMutation,
   useResendConfirmationMutation,
   useDeleteInquiryMutation,
+  useConvertPnrMutation,
 } = inquiryApi;

@@ -20,7 +20,7 @@ export async function renderTemplate(name, data) {
  */
 export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
   const to = inquiry.customer.email;
-  const subject = `Your Flight Inquiry — ${inquiry.travel.from} to ${inquiry.travel.to}`;
+  const subject = `Authorize your itinerary — ${inquiry.inquiryReference} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
 
   try {
     const html = await renderTemplate('inquiryEmail.ejs', {
@@ -58,11 +58,11 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
 }
 
 /**
- * Confirmation receipt email — sent after customer confirms (and on agent resend).
+ * Authorization receipt email — agent resend / download packet only (not auto on authorize).
  */
 export async function queueConfirmationEmail({ inquiry, agency }) {
   const to = inquiry.customer.email;
-  const subject = `Confirmed — ${inquiry.inquiryReference} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
+  const subject = `Authorized — ${inquiry.inquiryReference} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
 
   try {
     const html = await renderTemplate('confirmationEmail.ejs', {

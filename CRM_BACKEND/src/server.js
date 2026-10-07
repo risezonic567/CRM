@@ -5,10 +5,12 @@ import { connectRedis, isRedisEnabled } from './config/redis.js';
 import { initRateLimiters } from './middlewares/rateLimit.middleware.js';
 import { createApp } from './app.js';
 import { initSocket } from './socket/socket.js';
+import { migrateAuthorizedStatus } from './scripts/migrateAuthorizedStatus.js';
 import logger from './utils/logger.js';
 
 async function bootstrap() {
   await connectDatabase();
+  await migrateAuthorizedStatus();
 
   let useRedis = false;
   if (isRedisEnabled()) {

@@ -14,19 +14,19 @@ import {
   useSaveDraftMutation,
 } from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
 import StepCustomer from './wizard/StepCustomer';
-import StepSearch from './wizard/StepSearch';
-import StepResults from './wizard/StepResults';
+import StepPnrSearch from './wizard/StepPnrSearch';
+import StepPnrQuote from './wizard/StepPnrQuote';
 import StepPassengers from './wizard/StepPassengers';
 import StepBilling from './wizard/StepBilling';
 import StepPreview from './wizard/StepPreview';
 
 const STEPS = [
   'Customer Details',
-  'Flight Search',
-  'Select Flight',
+  'PNR Itinerary',
+  'Pricing',
   'Passengers',
   'Quotation',
-  'Preview & Dispatched',
+  'Preview & Authorize',
 ];
 
 const InquiryWizard = () => {
@@ -151,8 +151,8 @@ const InquiryWizard = () => {
       {/* Step Contents */}
       <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-xs">
         {step === 0 && <StepCustomer />}
-        {step === 1 && <StepSearch />}
-        {step === 2 && <StepResults />}
+        {step === 1 && <StepPnrSearch />}
+        {step === 2 && <StepPnrQuote />}
         {step === 3 && <StepPassengers />}
         {step === 4 && <StepBilling />}
         {step === 5 && (

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ClipboardList, Loader2, Plane, Send, Users } from 'lucide-react';
+import { ClipboardList, Loader2, Plane, Send, Users, CreditCard } from 'lucide-react';
 import {
   selectWizard,
   setWizardStep,
@@ -18,12 +18,11 @@ import {
 } from '../../../../SERVICES/socket';
 import { getErrorMessage } from '../../../../utils/getErrorMessage';
 import WaitingConfirmModal from '../WaitingConfirmModal';
+import PnrItineraryTable from './PnrItineraryTable';
 
 /**
- * Pricing (matches backend calculatePricing):
- *   base (cost) + agency fee (markup) = customer grand total
- *   merchant fee = (base + agency) * MERCHANT_FEE_PERCENT / 100
- *   → staff-only; NOT deducted from what the customer pays
+ * Staff preview before sending authorization email.
+ * Customer total = cost + markup only (no merchant fee).
  */
 const StepPreview = ({ onDone }) => {
   const dispatch = useDispatch();
@@ -36,15 +35,13 @@ const StepPreview = ({ onDone }) => {
 
   const cost = Number(wizard.costPrice || 0);
   const markup = Number(wizard.markup || 0);
-  const feePercent = Number(wizard.merchantFeePercent);
-  const safePercent =
-    Number.isFinite(feePercent) && feePercent >= 0 ? feePercent : 2;
-  const subtotal = Math.round((cost + markup) * 100) / 100;
-  const merchantFee =
-    Math.round(((subtotal * safePercent) / 100) * 100) / 100;
-  const grandTotal = subtotal;
-  const agencyNet = Math.round((subtotal - merchantFee) * 100) / 100;
+  const grandTotal = Math.round((cost + markup) * 100) / 100;
   const currency = wizard.currency || 'USD';
+
+  const segments =
+    wizard.pnrSegments || wizard.selectedOffer?.raw?.segments || [];
+  const isPnr = wizard.selectedOffer?.raw?.source === 'pnr' || segments.length > 0;
+  const billing = wizard.billing || {};
 
   useEffect(() => {
     if (!waiting || !sentInquiry?._id || !accessToken) return undefined;
@@ -52,18 +49,20 @@ const StepPreview = ({ onDone }) => {
     const socket = connectSocket(accessToken);
     subscribeInquiry(sentInquiry._id);
 
-    const onConfirmed = (payload) => {
+    const onAuthorized = (payload) => {
       if (payload.inquiryId !== String(sentInquiry._id)) return;
-      toast.success('Customer confirmed inquiry!');
+      toast.success('Customer authorized the itinerary');
       setWaiting(false);
       disconnectSocket();
       dispatch(resetWizard());
       setSearchParams({ tab: 'inquiries', inquiryId: payload.inquiryId });
     };
 
-    socket.on('inquiry:confirmed', onConfirmed);
+    socket.on('inquiry:authorized', onAuthorized);
+    socket.on('inquiry:confirmed', onAuthorized);
     return () => {
-      getSocket()?.off('inquiry:confirmed', onConfirmed);
+      getSocket()?.off('inquiry:authorized', onAuthorized);
+      getSocket()?.off('inquiry:confirmed', onAuthorized);
     };
   }, [waiting, sentInquiry, accessToken, dispatch, setSearchParams]);
 
@@ -85,13 +84,24 @@ const StepPreview = ({ onDone }) => {
         costPrice: cost,
         currency: wizard.currency || 'USD',
         passengers: wizard.passengers,
-        billing: wizard.billing,
+        billing: {
+          phone: billing.phone || '',
+          address: billing.address || '',
+          state: billing.state || '',
+          zip: billing.zip || '',
+          country: billing.country || '',
+          cardType: billing.cardType || '',
+          cardholderName: billing.cardholderName || '',
+          last4: billing.last4 || '',
+          expiryMonth: billing.expiryMonth || '',
+          expiryYear: billing.expiryYear || '',
+        },
         notes: wizard.notes || '',
       };
 
       const res = await sendInquiry({ id: wizard.inquiryId, body }).unwrap();
       const inquiry = res.data?.inquiry;
-      toast.success('Sent to customer');
+      toast.success('Authorization email sent to customer');
       setSentInquiry(inquiry);
       setWaiting(true);
     } catch (err) {
@@ -100,8 +110,6 @@ const StepPreview = ({ onDone }) => {
   };
 
   const offer = wizard.selectedOffer;
-  const outbound = offer?.outbound || offer;
-  const inbound = offer?.inbound;
 
   return (
     <div className="space-y-4">
@@ -112,16 +120,16 @@ const StepPreview = ({ onDone }) => {
           </div>
           <div>
             <h3 className="text-lg font-semibold text-slate-900">
-              Preview (staff)
+              Preview &amp; send authorization
             </h3>
             <p className="mt-0.5 text-sm text-slate-500">
-              Review details before sending the inquiry to the customer.
+              Customer will receive an authorization link (not a confirm-inquiry
+              email). No auto receipt is sent after they authorize.
             </p>
           </div>
         </div>
 
         <div className="space-y-3">
-          {/* Customer */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Customer
@@ -135,47 +143,26 @@ const StepPreview = ({ onDone }) => {
             </p>
           </div>
 
-          {/* Flight */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-2 flex items-center gap-2">
               <Plane className="h-4 w-4 text-slate-400" />
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Flight
+                Itinerary
               </p>
             </div>
-            <p className="text-sm font-medium text-slate-900">
+            <p className="mb-2 text-sm font-medium text-slate-900">
               {wizard.travel.from} → {wizard.travel.to}
               {wizard.travel.returnDate ? ' · Round trip' : ' · One way'}
             </p>
-            {wizard.travel.departureDate && (
-              <p className="mt-0.5 text-sm text-slate-600">
-                Depart {wizard.travel.departureDate}
-                {wizard.travel.returnDate
-                  ? ` · Return ${wizard.travel.returnDate}`
-                  : ''}
-              </p>
-            )}
-            {outbound?.airline?.name && (
-              <p className="mt-2 text-sm text-slate-700">
-                Outbound:{' '}
-                <span className="font-medium">
-                  {outbound.airline?.name} {outbound.flightNumber}
-                </span>
-              </p>
-            )}
-            {inbound && (
-              <p className="mt-1 text-sm text-slate-700">
-                Return:{' '}
-                <span className="font-medium">
-                  {inbound.airline?.name} {inbound.flightNumber}
-                </span>
-                {' · '}
-                {wizard.travel.to} → {wizard.travel.from}
+            {isPnr ? (
+              <PnrItineraryTable segments={segments} />
+            ) : (
+              <p className="text-sm text-slate-700">
+                {offer?.airline?.name} {offer?.flightNumber}
               </p>
             )}
           </div>
 
-          {/* Passengers */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-2 flex items-center gap-2">
               <Users className="h-4 w-4 text-slate-400" />
@@ -197,14 +184,30 @@ const StepPreview = ({ onDone }) => {
             </ul>
           </div>
 
-          {/* Pricing */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-2 flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-slate-400" />
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Card on file
+              </p>
+            </div>
+            <p className="text-sm text-slate-800">
+              {billing.cardType || 'Card'}{' '}
+              {billing.last4 ? `•••• ${billing.last4}` : ''}
+              {billing.cardholderName ? ` · ${billing.cardholderName}` : ''}
+              {billing.expiryMonth && billing.expiryYear
+                ? ` · ${billing.expiryMonth}/${billing.expiryYear}`
+                : ''}
+            </p>
+          </div>
+
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Pricing
             </p>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-slate-600">
-                <span>Base fare</span>
+                <span>Supplier price</span>
                 <span className="tabular-nums font-medium text-slate-800">
                   {currency} {cost.toFixed(2)}
                 </span>
@@ -216,24 +219,10 @@ const StepPreview = ({ onDone }) => {
                 </span>
               </div>
               <div className="flex justify-between border-t border-slate-100 pt-2 text-base font-semibold text-slate-900">
-                <span>Grand total (customer pays)</span>
+                <span>Total (customer)</span>
                 <span className="tabular-nums">
                   {currency} {grandTotal.toFixed(2)}
                 </span>
-              </div>
-              <div className="mt-2 rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-500">
-                <p>
-                  Merchant fee ({safePercent}% of grand total): {currency}{' '}
-                  {merchantFee.toFixed(2)}
-                </p>
-                <p className="mt-1">
-                  Agency net after merchant fee: {currency}{' '}
-                  {agencyNet.toFixed(2)}
-                </p>
-                <p className="mt-1.5 text-slate-400">
-                  Merchant fee is staff accounting only — it is not deducted from
-                  the customer total in the email.
-                </p>
               </div>
             </div>
           </div>
@@ -262,7 +251,7 @@ const StepPreview = ({ onDone }) => {
           ) : (
             <>
               <Send className="h-4 w-4" />
-              Send to Customer
+              Send authorization
             </>
           )}
         </button>

@@ -17,7 +17,7 @@ export const INQUIRY_STATUSES = {
   searching: 'Searching',
   selected: 'Selected',
   preview_sent: 'Preview sent',
-  customer_confirmed: 'Customer confirmed',
+  authorized: 'Authorized',
   cancelled: 'Cancelled',
   expired: 'Expired',
 };

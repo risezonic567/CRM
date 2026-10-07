@@ -21,6 +21,11 @@ const emptyBilling = {
   state: '',
   zip: '',
   country: '',
+  cardType: '',
+  cardholderName: '',
+  last4: '',
+  expiryMonth: '',
+  expiryYear: '',
 };
 
 const initialState = {
@@ -38,10 +43,15 @@ const initialState = {
     markup: 50,
     costPrice: 0,
     currency: 'USD',
-    merchantFeePercent: 2,
+    merchantFeePercent: 0,
     passengers: [],
     billing: { ...emptyBilling },
     notes: '',
+    // PNR decode (wizard step 1) — also mirrored on selectedOffer.raw
+    pnrRaw: '',
+    pnrSegments: [],
+    pnrTripSummary: null,
+    pnrWarnings: [],
   },
 };
 
@@ -57,6 +67,8 @@ export function mapInquiryToWizard(inquiry) {
   if (!inquiry) return null;
   const travel = inquiry.travel || {};
   const pricing = inquiry.pricing || {};
+  const offer = inquiry.selectedOffer || null;
+  const pnrRawOffer = offer?.raw?.source === 'pnr' ? offer.raw : null;
   return {
     inquiryId: inquiry._id,
     step: typeof inquiry.wizardStep === 'number' ? inquiry.wizardStep : 0,
@@ -80,11 +92,11 @@ export function mapInquiryToWizard(inquiry) {
       infantsOnLap: travel.infantsOnLap ?? 0,
       cabinClass: travel.cabinClass || 'economy',
     },
-    selectedOffer: inquiry.selectedOffer || null,
+    selectedOffer: offer,
     markup: pricing.markup ?? 50,
     costPrice: pricing.costPrice ?? 0,
     currency: pricing.currency || 'USD',
-    merchantFeePercent: pricing.merchantFeePercent ?? 2,
+    merchantFeePercent: pricing.merchantFeePercent ?? 0,
     passengers: inquiry.passengers || [],
     billing: {
       phone: inquiry.billing?.phone || '',
@@ -92,8 +104,17 @@ export function mapInquiryToWizard(inquiry) {
       state: inquiry.billing?.state || '',
       zip: inquiry.billing?.zip || '',
       country: inquiry.billing?.country || '',
+      cardType: inquiry.billing?.cardType || '',
+      cardholderName: inquiry.billing?.cardholderName || '',
+      last4: inquiry.billing?.last4 || '',
+      expiryMonth: inquiry.billing?.expiryMonth || '',
+      expiryYear: inquiry.billing?.expiryYear || '',
     },
     notes: inquiry.notes || '',
+    pnrRaw: pnrRawOffer?.pnrRaw || '',
+    pnrSegments: Array.isArray(pnrRawOffer?.segments) ? pnrRawOffer.segments : [],
+    pnrTripSummary: pnrRawOffer?.tripSummary || null,
+    pnrWarnings: Array.isArray(pnrRawOffer?.warnings) ? pnrRawOffer.warnings : [],
   };
 }
 
