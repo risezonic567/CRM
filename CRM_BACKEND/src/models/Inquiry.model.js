@@ -132,6 +132,15 @@ const inquirySchema = new mongoose.Schema(
     notes: { type: String, default: '' },
     /** Agent-edited authorization paragraph sent to customer (one total amount). */
     authorizationText: { type: String, default: '' },
+    /** Snapshot of underlined fill phrases (name, agency, total, route) after Apply/send. */
+    authorizationFills: {
+      authorizerName: { type: String, default: '' },
+      agencyName: { type: String, default: '' },
+      amountLabel: { type: String, default: '' },
+      purpose: { type: String, default: '' },
+      currency: { type: String, default: '' },
+      amount: { type: String, default: '' },
+    },
     /** Optional supporting document uploaded by pax on authorize (no CVV). */
     supportDocument: {
       originalName: { type: String, default: '' },

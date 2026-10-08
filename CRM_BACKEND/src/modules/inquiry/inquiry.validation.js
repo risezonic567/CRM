@@ -64,6 +64,14 @@ export const sendInquirySchema = Joi.object({
   }).default({}),
   notes: Joi.string().allow('').default(''),
   authorizationText: Joi.string().trim().allow('').max(5000).default(''),
+  authorizationFills: Joi.object({
+    authorizerName: Joi.string().trim().allow('').default(''),
+    agencyName: Joi.string().trim().allow('').default(''),
+    amountLabel: Joi.string().trim().allow('').default(''),
+    purpose: Joi.string().trim().allow('').default(''),
+    currency: Joi.string().trim().allow('').default(''),
+    amount: Joi.string().trim().allow('').default(''),
+  }).optional(),
 });
 
 export const closeInquirySchema = Joi.object({
@@ -132,6 +140,14 @@ export const saveDraftSchema = Joi.object({
   }),
   notes: Joi.string().allow('').default(''),
   authorizationText: Joi.string().trim().allow('').max(5000),
+  authorizationFills: Joi.object({
+    authorizerName: Joi.string().trim().allow('').default(''),
+    agencyName: Joi.string().trim().allow('').default(''),
+    amountLabel: Joi.string().trim().allow('').default(''),
+    purpose: Joi.string().trim().allow('').default(''),
+    currency: Joi.string().trim().allow('').default(''),
+    amount: Joi.string().trim().allow('').default(''),
+  }).optional(),
 }).min(1);
 
 export const listInquiriesQuerySchema = Joi.object({

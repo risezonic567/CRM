@@ -6,6 +6,7 @@ import { calculatePricing } from '../../utils/calculatePricing.js';
 import { sanitizeBilling } from '../../utils/sanitizeBilling.js';
 import {
   buildAuthorizationText,
+  extractAuthFillsFromText,
   fillsFromInquiry,
   renderAuthorizationHtml,
 } from '../../utils/buildAuthorizationText.js';
@@ -257,15 +258,41 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
     .filter(Boolean)
     .join(' · ');
   const fromAgent = String(payload.authorizationText || '').trim();
-  inquiry.authorizationText =
-    fromAgent ||
-    buildAuthorizationText({
-      authorizerName,
-      agencyName: agency.name || 'DEMO Travel Agency',
-      currency: pricing.currency,
-      total: pricing.sellingPrice,
-      purpose,
-    });
+  const fallbackAuth = buildAuthorizationText({
+    authorizerName,
+    agencyName: agency.name || 'DEMO Travel Agency',
+    currency: pricing.currency,
+    total: pricing.sellingPrice,
+    purpose,
+  });
+  inquiry.authorizationText = fromAgent || fallbackAuth;
+
+  const payloadFills = payload.authorizationFills;
+  if (
+    payloadFills &&
+    typeof payloadFills === 'object' &&
+    (payloadFills.authorizerName || payloadFills.amountLabel)
+  ) {
+    inquiry.authorizationFills = {
+      authorizerName: String(payloadFills.authorizerName || '').trim(),
+      agencyName: String(payloadFills.agencyName || '').trim(),
+      amountLabel: String(payloadFills.amountLabel || '').trim(),
+      purpose: String(payloadFills.purpose || '').trim(),
+      currency: String(payloadFills.currency || '').trim(),
+      amount: String(payloadFills.amount || '').trim(),
+    };
+  } else {
+    inquiry.authorizationFills = extractAuthFillsFromText(
+      inquiry.authorizationText,
+      {
+        authorizerName,
+        agencyName: agency.name || 'DEMO Travel Agency',
+        currency: pricing.currency,
+        total: pricing.sellingPrice,
+        purpose,
+      }
+    );
+  }
 
   inquiry.wizardStep = 5;
   inquiry.status = INQUIRY_STATUSES.PREVIEW_SENT;
@@ -339,6 +366,17 @@ export async function saveDraft(user, inquiryId, payload) {
   }
   if (payload.authorizationText !== undefined) {
     inquiry.authorizationText = String(payload.authorizationText || '').trim();
+  }
+  if (payload.authorizationFills !== undefined) {
+    const f = payload.authorizationFills || {};
+    inquiry.authorizationFills = {
+      authorizerName: String(f.authorizerName || '').trim(),
+      agencyName: String(f.agencyName || '').trim(),
+      amountLabel: String(f.amountLabel || '').trim(),
+      purpose: String(f.purpose || '').trim(),
+      currency: String(f.currency || '').trim(),
+      amount: String(f.amount || '').trim(),
+    };
   }
   if (typeof payload.wizardStep === 'number') {
     inquiry.wizardStep = payload.wizardStep;

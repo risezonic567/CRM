@@ -28,6 +28,8 @@ import {
 import { getErrorMessage } from '../../../../utils/getErrorMessage';
 import {
   buildAuthorizationText,
+  extractAuthFillsFromText,
+  missingAuthFillLabels,
   renderAuthorizationHtml,
   resolveAuthFills,
 } from '../../../../utils/buildAuthorizationText';
@@ -77,7 +79,7 @@ const StepPreview = ({ onDone }) => {
     return 'the itinerary detailed above';
   }, [wizard.travel?.from, wizard.travel?.to]);
 
-  const authFills = useMemo(
+  const defaultFills = useMemo(
     () =>
       resolveAuthFills({
         authorizerName,
@@ -101,21 +103,55 @@ const StepPreview = ({ onDone }) => {
     [authorizerName, currency, grandTotal, purpose]
   );
 
+  /** Prefer applied/saved fills so underlines survive agent edits. */
+  const displayFills = useMemo(() => {
+    const saved = wizard.authorizationFills;
+    if (
+      saved &&
+      typeof saved === 'object' &&
+      (saved.authorizerName || saved.amountLabel || saved.agencyName)
+    ) {
+      return {
+        authorizerName: String(saved.authorizerName || '').trim(),
+        agencyName: String(saved.agencyName || '').trim(),
+        amountLabel: String(saved.amountLabel || '').trim(),
+        purpose: String(saved.purpose || '').trim(),
+        currency: String(saved.currency || '').trim(),
+        amount: String(saved.amount || '').trim(),
+      };
+    }
+    const plain = wizard.authorizationText || defaultAuthText;
+    if (authEditedRef.current && plain) {
+      return extractAuthFillsFromText(plain, defaultFills);
+    }
+    return defaultFills;
+  }, [
+    wizard.authorizationFills,
+    wizard.authorizationText,
+    defaultAuthText,
+    defaultFills,
+  ]);
+
   const authHtmlPreview = useMemo(
     () =>
       renderAuthorizationHtml(
         wizard.authorizationText || defaultAuthText,
-        authFills
+        displayFills
       ),
-    [wizard.authorizationText, defaultAuthText, authFills]
+    [wizard.authorizationText, defaultAuthText, displayFills]
   );
 
   // Seed / refresh auto text when inputs change, unless agent has edited it
   useEffect(() => {
     if (authEditedRef.current && wizard.authorizationText) return;
     if (wizard.authorizationText === defaultAuthText) return;
-    dispatch(patchWizard({ authorizationText: defaultAuthText }));
-  }, [defaultAuthText, dispatch, wizard.authorizationText]);
+    dispatch(
+      patchWizard({
+        authorizationText: defaultAuthText,
+        authorizationFills: defaultFills,
+      })
+    );
+  }, [defaultAuthText, defaultFills, dispatch, wizard.authorizationText]);
 
   useEffect(() => {
     if (!waiting || !sentInquiry?._id || !accessToken) return undefined;
@@ -140,6 +176,30 @@ const StepPreview = ({ onDone }) => {
     };
   }, [waiting, sentInquiry, accessToken, dispatch, setSearchParams]);
 
+  const handleApplyAuthChanges = () => {
+    const plain = (wizard.authorizationText || defaultAuthText).trim();
+    if (!plain) {
+      toast.error('Authorization text is empty');
+      return;
+    }
+    const fills = extractAuthFillsFromText(plain, defaultFills);
+    authEditedRef.current = true;
+    dispatch(
+      patchWizard({
+        authorizationText: plain,
+        authorizationFills: fills,
+      })
+    );
+    const missing = missingAuthFillLabels(plain, fills);
+    if (missing.length) {
+      toast.error(
+        `Applied, but could not underline: ${missing.join(', ')}. Keep the sentence shape (I, NAME, authorize AGENCY…).`
+      );
+      return;
+    }
+    toast.success('Underlines updated from your text');
+  };
+
   const handleSend = async () => {
     if (!wizard.inquiryId || !wizard.selectedOffer) {
       toast.error('Missing inquiry or offer');
@@ -152,6 +212,13 @@ const StepPreview = ({ onDone }) => {
       toast.error('Authorization text is required');
       return;
     }
+    const authorizationFills =
+      wizard.authorizationFills &&
+      (wizard.authorizationFills.authorizerName ||
+        wizard.authorizationFills.amountLabel)
+        ? wizard.authorizationFills
+        : extractAuthFillsFromText(authorizationText, defaultFills);
+
     try {
       const body = {
         customer: wizard.customer,
@@ -179,6 +246,7 @@ const StepPreview = ({ onDone }) => {
         },
         notes: wizard.notes || '',
         authorizationText,
+        authorizationFills,
       };
 
       const res = await sendInquiry({ id: wizard.inquiryId, body }).unwrap();
@@ -334,16 +402,20 @@ const StepPreview = ({ onDone }) => {
                 className="text-xs font-medium text-sky-700 hover:underline"
                 onClick={() => {
                   authEditedRef.current = false;
-                  dispatch(patchWizard({ authorizationText: defaultAuthText }));
+                  dispatch(
+                    patchWizard({
+                      authorizationText: defaultAuthText,
+                      authorizationFills: defaultFills,
+                    })
+                  );
                 }}
               >
                 Reset to auto-fill
               </button>
             </div>
             <p className="mb-2 text-xs text-slate-500">
-              Filled values are underlined (name, agency, total, route). Customer
-              email and authorize page use the same look. Edit plain text below if
-              needed.
+              Filled values are underlined (name, agency, total, route). After
+              editing plain text, click Apply changes so underlines update.
             </p>
             <div
               className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-relaxed text-slate-800 [&_.auth-fill]:border-b [&_.auth-fill]:border-slate-900 [&_.auth-fill]:font-semibold [&_.auth-fill]:px-0.5"
@@ -361,8 +433,17 @@ const StepPreview = ({ onDone }) => {
               }}
               spellCheck
             />
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                onClick={handleApplyAuthChanges}
+              >
+                Apply changes
+              </button>
+            </div>
             <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-center">
-              <p className="text-sm italic text-slate-700">
+              <p className="text-base font-medium text-slate-800">
                 {billing.cardholderName || authorizerName || '—'}
               </p>
               <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">

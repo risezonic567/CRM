@@ -80,4 +80,51 @@ export function renderAuthorizationHtml(plainText, fills = {}) {
   return html;
 }
 
+/**
+ * After agent edits plain text, re-detect fill slots from the sentence so
+ * underlines still work on email / confirm (exact phrases in the text).
+ */
+export function extractAuthFillsFromText(plainText, fallback = {}) {
+  const text = String(plainText || '');
+  const fb = resolveAuthFills(fallback);
+
+  const nameMatch = text.match(/I,\s*(.+?),\s*authorize/i);
+  const agencyMatch = text.match(/authorize\s+(.+?)\s+to charge/i);
+  const amountMatch = text.match(
+    /to charge my above card for\s+([A-Z]{3}\s+\d+(?:\.\d{1,2})?)\s+as per/i
+  );
+  const purposeMatch = text.match(
+    /as per given details for\s+(.+?)\.\s*I understand/i
+  );
+
+  const authorizerName = nameMatch?.[1]?.trim() || fb.authorizerName;
+  const agencyName = agencyMatch?.[1]?.trim() || fb.agencyName;
+  const amountLabel = amountMatch?.[1]?.trim() || fb.amountLabel;
+  const purpose = purposeMatch?.[1]?.trim() || fb.purpose;
+
+  const amountParts = amountLabel.match(/^([A-Z]{3})\s+(.+)$/);
+  return {
+    authorizerName,
+    agencyName,
+    amountLabel,
+    purpose,
+    currency: amountParts?.[1] || fb.currency,
+    amount: amountParts?.[2] || fb.amount,
+  };
+}
+
+/** Which expected fill phrases are missing from plain text (for Apply toast). */
+export function missingAuthFillLabels(plainText, fills = {}) {
+  const text = String(plainText || '');
+  const checks = [
+    ['name', fills.authorizerName],
+    ['agency', fills.agencyName],
+    ['total', fills.amountLabel],
+    ['route', fills.purpose],
+  ];
+  return checks
+    .filter(([, v]) => v && v !== '____________________' && !text.includes(v))
+    .map(([label]) => label);
+}
+
 export default buildAuthorizationText;

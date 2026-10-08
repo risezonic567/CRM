@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { CreditCard } from 'lucide-react';
@@ -13,7 +13,17 @@ const fieldClass =
 
 const labelClass = 'mb-1 block text-xs font-medium text-slate-500';
 
-const CARD_TYPES = ['Visa', 'Mastercard', 'Amex', 'Discover', 'Other'];
+const PRESET_CARD_TYPES = [
+  'Visa',
+  'Mastercard',
+  'American Express',
+  'Discover',
+];
+
+function isPresetCardType(cardType) {
+  const t = String(cardType || '').trim();
+  return t === 'Amex' || PRESET_CARD_TYPES.includes(t);
+}
 
 const StepBilling = () => {
   const dispatch = useDispatch();
@@ -21,13 +31,29 @@ const StepBilling = () => {
   const b = wizard.billing || {};
   // CVV is UI-only — never written to Redux / draft / send payload
   const [cvv, setCvv] = useState('');
+  // Keep Other selected even while the custom text field is still empty
+  const [otherMode, setOtherMode] = useState(() => {
+    const t = String(b.cardType || '').trim();
+    return Boolean(t) && !isPresetCardType(t);
+  });
+
+  const selectValue = useMemo(() => {
+    const t = String(b.cardType || '').trim();
+    if (otherMode) return 'Other';
+    if (!t) return '';
+    if (t === 'Amex') return 'American Express';
+    if (PRESET_CARD_TYPES.includes(t)) return t;
+    return 'Other';
+  }, [b.cardType, otherMode]);
+
+  const isOther = selectValue === 'Other';
 
   const set = (field) => (e) =>
     dispatch(patchWizard({ billing: { ...b, [field]: e.target.value } }));
 
   const handleNext = () => {
     if (!b.cardType?.trim()) {
-      toast.error('Select a card type');
+      toast.error(isOther ? 'Enter the card type' : 'Select a card type');
       return;
     }
     if (!b.cardholderName?.trim()) {
@@ -128,16 +154,42 @@ const StepBilling = () => {
                 <label className={labelClass}>Card type</label>
                 <select
                   className={fieldClass}
-                  value={b.cardType || ''}
-                  onChange={set('cardType')}
+                  value={selectValue}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === 'Other') {
+                      setOtherMode(true);
+                      if (isPresetCardType(b.cardType)) {
+                        dispatch(
+                          patchWizard({ billing: { ...b, cardType: '' } })
+                        );
+                      }
+                      return;
+                    }
+                    setOtherMode(false);
+                    dispatch(
+                      patchWizard({ billing: { ...b, cardType: v } })
+                    );
+                  }}
                 >
                   <option value="">Select…</option>
-                  {CARD_TYPES.map((t) => (
+                  {PRESET_CARD_TYPES.map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>
                   ))}
+                  <option value="Other">Other</option>
                 </select>
+                {isOther ? (
+                  <input
+                    className={`${fieldClass} mt-2`}
+                    placeholder="Enter card type"
+                    value={b.cardType || ''}
+                    onChange={set('cardType')}
+                    type="text"
+                    autoComplete="off"
+                  />
+                ) : null}
               </div>
               <div>
                 <label className={labelClass}>Cardholder name</label>
