@@ -17,8 +17,8 @@ Related: [pnrconverter.com](https://www.pnrconverter.com/) · [API intro](https:
 | Pax sees | **Total only** |
 | Card | type, holder, last4, expiry persisted; **CVV never stored** (optional UI-only) |
 | Preview / email | Editable `authorizationText` (one **total** only) + billing; email links to confirm page |
-| Confirm page | Full preview + **underlined** auth text + signature; **no checkbox**; optional support doc; **I Authorize** → thank you |
-| Document upload | Optional on confirm page (PDF/JPG/PNG ≤5MB); agent download via `/api/inquiries/:id/support-document` |
+| Confirm page | Full preview + **underlined** auth text + signature; **no checkbox**; optional multi-slot docs; **I Authorize** → thank you |
+| Document upload | **Plan B (now):** pax-only on confirm — slots = cardholder + each passenger (all optional); PDF/JPG/PNG ≤5MB; images compressed in browser; VPS disk `uploads/authorize/<inquiryId>/`; agent **View** (inline) + 3-day countdown (auto-delete cron later). **Future Plan A:** agent selects which slots via `docRequest` — same `supportDocuments[]` storage. |
 | Auth display | Plain `authorizationText` in DB; `renderAuthorizationHtml()` underlines fills on preview / email / confirm / receipt |
 | Status | **`authorized`** (migrates `customer_confirmed` on boot) |
 | After authorize | No auto receipt email; agent **Download** / **Resend**; signature = cardholder name |
@@ -59,7 +59,7 @@ Related: [pnrconverter.com](https://www.pnrconverter.com/) · [API intro](https:
 | Adapter | `CRM_BACKEND/src/integrations/pnr/pnrConverterAdapter.js` |
 | Billing sanitize | `CRM_BACKEND/src/utils/sanitizeBilling.js` |
 | Status migrate | `CRM_BACKEND/src/scripts/migrateAuthorizedStatus.js` (boot) |
-| DEMO T&Cs | `CRM_BACKEND/src/templates/partials/gotoflyerTerms.ejs` |
+| Gotoflyer T&Cs | `CRM_BACKEND/src/templates/partials/gotoflyerTerms.ejs` (confirm, below I Authorize) |
 | Email / public | `inquiryEmail.ejs`, `confirmPage.ejs`, `thankYou.ejs`, `confirmationEmail.ejs` |
 | HTTP | `POST /api/pnr/convert` |
 | FE convert | `inquiryApi.convertPnr` |
@@ -84,16 +84,20 @@ selectedOffer.raw = {
 
 1. Agent StepPreview → editable authorization text (auto-fill, **one total**) + staff price breakdown  
 2. Send → email: itinerary + passengers + **billing** + total + auth text + **Review & Authorize** link  
-3. Confirm page (`/public/confirm/:id`) → full preview + read-only auth text + signature + **I Authorize** (no checkbox)  
-4. POST → status `authorized` + agreement meta (IP/UA); socket `inquiry:authorized`  
+3. Confirm page (`/public/confirm/:id`) → full preview + read-only auth text + signature + optional **doc slots** (cardholder + passengers) + **I Authorize** (no checkbox)  
+4. POST multipart → status `authorized` + `supportDocuments[]` + agreement meta (IP/UA); socket `inquiry:authorized`  
 5. `thankYou.ejs` — **no** auto confirmation email  
-6. Agent download / resend receipt  
+6. Agent download / resend receipt; **View** supporting docs (no download) + countdown  
 
 ### Auth text helper
 
 - FE/BE: `buildAuthorizationText.js` — `buildAuthorizationText`, `renderAuthorizationHtml`, `fillsFromInquiry`  
 - Field: `Inquiry.authorizationText` (plain); HTML only at render time  
-- Upload: `authorizeUpload.middleware.js` → `Inquiry.supportDocument`
+- Upload: `authorizeUpload.middleware.js` + `utils/supportDocuments.js` → `Inquiry.supportDocuments[]` (legacy `supportDocument` still readable)  
+
+### Future Plan A (docs only — not built yet)
+
+Agent StepPreview will set `docRequest.mode = 'agent_selected'` + slot list; confirm page shows **only** those slots. Storage shape unchanged.
 
 ---
 
@@ -112,9 +116,9 @@ Without key → local parser (working flow). With key → richer logos/duration 
 
 ---
 
-## DEMO T&Cs
+## Gotoflyer T&Cs
 
-`gotoflyerTerms.ejs` uses **DEMO Travel Agency** placeholder. Replace with final Gotoflyer legal copy before production.
+`gotoflyerTerms.ejs` — full Gotoflyer Terms & Conditions on confirm page **below** I Authorize (collapsed + Read more / Show less). Not mixed with auth paragraph or docs.
 
 ---
 

@@ -9,6 +9,7 @@ import {
   fillsFromInquiry,
   renderAuthorizationHtml,
 } from '../../utils/buildAuthorizationText.js';
+import { buildDocSlots } from '../../utils/supportDocuments.js';
 
 function authorizationLocals(inquiry, agency) {
   const fills = fillsFromInquiry(inquiry, agency);
@@ -17,6 +18,7 @@ function authorizationLocals(inquiry, agency) {
       inquiry.authorizationText || '',
       fills
     ),
+    docSlots: buildDocSlots(inquiry),
   };
 }
 
@@ -55,14 +57,23 @@ export async function loadConfirmPage(inquiryId, token) {
  * Does NOT send an automatic confirmation/receipt email — agent downloads or resends.
  */
 /**
- * @param {{ token: string, supportDocument?: object|null }} payload
+ * @param {{
+ *   token: string,
+ *   supportDocuments?: object[],
+ *   supportDocument?: object|null
+ * }} payload
+ * @returns {{ html: string, alreadyConfirmed: boolean, savedDocuments: boolean }}
  */
-export async function confirmInquiry(inquiryId, { token, supportDocument }, meta) {
+export async function confirmInquiry(
+  inquiryId,
+  { token, supportDocuments, supportDocument },
+  meta
+) {
   const { inquiry, agency, decoded } = await verifyAndLoad(inquiryId, token);
 
   if (inquiry.status === INQUIRY_STATUSES.AUTHORIZED) {
     const html = await renderTemplate('thankYou.ejs', { inquiry, agency });
-    return { html, alreadyConfirmed: true };
+    return { html, alreadyConfirmed: true, savedDocuments: false };
   }
 
   if (inquiry.status === INQUIRY_STATUSES.CANCELLED) {
@@ -75,6 +86,10 @@ export async function confirmInquiry(inquiryId, { token, supportDocument }, meta
 
   const userAgent = meta.userAgent || '';
   const parsed = parseClientMeta(userAgent);
+
+  const docs = Array.isArray(supportDocuments)
+    ? supportDocuments.filter((d) => d?.relativePath)
+    : [];
 
   const $set = {
     status: INQUIRY_STATUSES.AUTHORIZED,
@@ -89,7 +104,10 @@ export async function confirmInquiry(inquiryId, { token, supportDocument }, meta
     },
   };
 
-  if (supportDocument) {
+  if (docs.length) {
+    $set.supportDocuments = docs;
+  } else if (supportDocument?.relativePath) {
+    // Legacy single-file path
     $set.supportDocument = supportDocument;
   }
 
@@ -105,14 +123,14 @@ export async function confirmInquiry(inquiryId, { token, supportDocument }, meta
   );
 
   if (!updated) {
-    // Race: another request authorized first
+    // Race: another request authorized first — caller should orphan-clean uploads
     const current = await Inquiry.findById(inquiry._id);
     if (current?.status === INQUIRY_STATUSES.AUTHORIZED) {
       const html = await renderTemplate('thankYou.ejs', {
         inquiry: current,
         agency,
       });
-      return { html, alreadyConfirmed: true };
+      return { html, alreadyConfirmed: true, savedDocuments: false };
     }
     throw new AppError('Unable to authorize inquiry', 409);
   }
@@ -138,7 +156,9 @@ export async function confirmInquiry(inquiryId, { token, supportDocument }, meta
     agency,
   });
 
-  return { html, alreadyConfirmed: false };
+  const savedDocuments =
+    docs.length > 0 || Boolean(supportDocument?.relativePath);
+  return { html, alreadyConfirmed: false, savedDocuments };
 }
 
 async function verifyAndLoad(inquiryId, token) {

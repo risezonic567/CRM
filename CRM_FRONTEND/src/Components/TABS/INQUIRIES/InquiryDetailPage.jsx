@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft,
@@ -13,6 +13,7 @@ import {
   Loader2,
   Mail,
   Download,
+  Eye,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -25,6 +26,12 @@ import { CLOSE_SOURCES } from '../../../constants/dispositions';
 import StatusBadge from '../../shared/StatusBadge';
 import { getErrorMessage } from '../../../utils/getErrorMessage';
 import PnrItineraryTable from './wizard/PnrItineraryTable';
+import {
+  docRoleLabel,
+  formatDocCountdown,
+  listInquirySupportDocs,
+  resolveDocExpiresAt,
+} from '../../../utils/docExpiryCountdown';
 
 const CLOSE_SOURCE_LABELS = {
   [CLOSE_SOURCES.WAITING_MODAL]: 'Waiting modal',
@@ -98,11 +105,15 @@ const Section = ({ icon: Icon, title, children }) => (
 const InquiryDetailPage = ({ inquiryId, onBack }) => {
   const { data, isFetching, isError } = useGetInquiryQuery(inquiryId, {
     skip: !inquiryId,
+    // After authorize (or any external status change), avoid showing wizard-era cache
+    refetchOnMountOrArgChange: true,
   });
   const [resendConfirmation, { isLoading: isResending }] =
     useResendConfirmationMutation();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [viewingDocId, setViewingDocId] = useState(null);
   const [showRawUserAgent, setShowRawUserAgent] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const inq = data?.data?.inquiry;
   const offer = inq?.selectedOffer || {};
   const outbound = offer.outbound || offer;
@@ -113,6 +124,13 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
       : [];
   const currency = inq?.pricing?.currency || 'USD';
   const isConfirmed = inq?.status === 'authorized';
+  const supportDocs = useMemo(() => listInquirySupportDocs(inq), [inq]);
+
+  useEffect(() => {
+    if (!supportDocs.length) return undefined;
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [supportDocs.length]);
 
   const handleResendConfirmation = async () => {
     if (!inquiryId) return;
@@ -152,27 +170,27 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
     }
   };
 
-  const handleDownloadSupportDocument = async () => {
-    if (!inquiryId) return;
+  const handleViewSupportDocument = async (doc) => {
+    if (!inquiryId || !doc) return;
+    const docId = doc.id || 'legacy';
+    setViewingDocId(docId);
     try {
       const res = await axiosInstance.get(
-        `/inquiries/${inquiryId}/support-document`,
+        `/inquiries/${inquiryId}/support-documents/${encodeURIComponent(docId)}`,
         { responseType: 'blob' }
       );
-      const name =
-        inq?.supportDocument?.originalName ||
-        `support-${inq?.inquiryReference || inquiryId}`;
-      const url = URL.createObjectURL(res.data);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = name;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      toast.success('Supporting document downloaded');
+      const mime =
+        doc.mimeType ||
+        res.headers?.['content-type'] ||
+        'application/octet-stream';
+      const blob = new Blob([res.data], { type: mime });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to download supporting document'));
+      toast.error(getErrorMessage(err, 'Failed to open supporting document'));
+    } finally {
+      setViewingDocId(null);
     }
   };
 
@@ -231,16 +249,6 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
               )}
               Resend authorization receipt
             </button>
-            {inq?.supportDocument?.relativePath ? (
-              <button
-                type="button"
-                onClick={handleDownloadSupportDocument}
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50"
-              >
-                <FileText className="h-4 w-4" />
-                Download supporting doc
-              </button>
-            ) : null}
           </div>
         )}
       </div>
@@ -414,6 +422,67 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
               <p className="text-sm text-slate-500">No passengers recorded</p>
             )}
           </Section>
+
+          {supportDocs.length > 0 && (
+            <Section icon={FileText} title="Supporting documents">
+              <ul className="space-y-2">
+                {supportDocs.map((doc) => {
+                  const expiresAt = resolveDocExpiresAt(doc);
+                  const countdown = formatDocCountdown(
+                    expiresAt,
+                    new Date(nowTick)
+                  );
+                  const expired = countdown === 'Expired';
+                  const docId = doc.id || 'legacy';
+                  return (
+                    <li
+                      key={docId}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">
+                          {docRoleLabel(doc)}
+                          {doc.label ? ` — ${doc.label}` : ''}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {doc.docKind || 'passport'}
+                          {doc.originalName ? ` · ${doc.originalName}` : ''}
+                        </p>
+                        {countdown ? (
+                          <p
+                            className={`mt-0.5 text-xs font-medium tabular-nums ${
+                              expired ? 'text-rose-600' : 'text-amber-700'
+                            }`}
+                          >
+                            {expired
+                              ? 'Expired (pending cleanup)'
+                              : `Expires in ${countdown}`}
+                          </p>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={viewingDocId === docId}
+                        onClick={() => handleViewSupportDocument(doc)}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        {viewingDocId === docId ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5" />
+                        )}
+                        View
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-2 text-[11px] text-slate-400">
+                Documents are stored on this server only and shown for viewing
+                (not downloaded). Retention target: 3 days.
+              </p>
+            </Section>
+          )}
 
           <Section icon={FileText} title="Billing">
             <div className="grid gap-3 sm:grid-cols-2">

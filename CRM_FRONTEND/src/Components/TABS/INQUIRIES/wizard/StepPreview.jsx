@@ -17,7 +17,10 @@ import {
   resetWizard,
   patchWizard,
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
-import { useSendInquiryMutation } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
+import {
+  inquiryApi,
+  useSendInquiryMutation,
+} from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
 import { selectAccessToken } from '../../../../REDUX_FEATURES/REDUX_SLICES/Auth_api/authSlice';
 import {
   connectSocket,
@@ -162,6 +165,13 @@ const StepPreview = ({ onDone }) => {
     const onAuthorized = (payload) => {
       if (payload.inquiryId !== String(sentInquiry._id)) return;
       toast.success('Customer authorized the itinerary');
+      // Drop stale wizard/list cache so detail shows authorized + docs immediately
+      dispatch(
+        inquiryApi.util.invalidateTags([
+          { type: 'Inquiry', id: payload.inquiryId },
+          'Inquiries',
+        ])
+      );
       setWaiting(false);
       disconnectSocket();
       dispatch(resetWizard());

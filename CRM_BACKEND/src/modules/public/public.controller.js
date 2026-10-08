@@ -7,7 +7,12 @@ import {
   fillsFromInquiry,
   renderAuthorizationHtml,
 } from '../../utils/buildAuthorizationText.js';
-import { supportDocumentMetaFromFile } from '../../middlewares/authorizeUpload.middleware.js';
+import {
+  buildDocSlots,
+  supportDocumentsFromUpload,
+  unlinkUploadedFiles,
+} from '../../utils/supportDocuments.js';
+import { supportDocumentMetaFromFile as legacyMetaFromFile } from '../../middlewares/authorizeUpload.middleware.js';
 
 export async function showConfirm(req, res, next) {
   try {
@@ -21,22 +26,41 @@ export async function showConfirm(req, res, next) {
 }
 
 export async function submitConfirm(req, res, next) {
+  const uploaded = Array.isArray(req.files) ? req.files : [];
   try {
     const token = req.body.token || req.query.token;
-    const supportDocument = supportDocumentMetaFromFile(req.file);
+
+    // Load inquiry once for slot mapping (token verified again inside service)
+    const inquiry = await Inquiry.findById(req.params.inquiryId);
+    let supportDocuments = supportDocumentsFromUpload(uploaded, inquiry);
+
+    // Legacy single field fallback
+    let supportDocument = null;
+    if (!supportDocuments.length && uploaded.length === 1) {
+      const only = uploaded[0];
+      if (only.fieldname === 'supportDocument') {
+        supportDocument = legacyMetaFromFile(only);
+      }
+    }
 
     const result = await publicService.confirmInquiry(
       req.params.inquiryId,
-      { token, supportDocument },
+      { token, supportDocuments, supportDocument },
       {
         ip: resolveClientIp(req),
         userAgent: req.headers['user-agent'] || '',
       }
     );
 
+    // Already authorized / race — do not keep this request's uploads
+    if (!result.savedDocuments && uploaded.length) {
+      unlinkUploadedFiles(uploaded);
+    }
+
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(result.html);
   } catch (err) {
+    unlinkUploadedFiles(uploaded);
     if (err instanceof AppError && err.statusCode === 400) {
       return renderConfirmError(req, res, next, err);
     }
@@ -60,6 +84,7 @@ export async function renderConfirmError(req, res, next, err) {
       token,
       error: err.message || 'Unable to authorize',
       authorizationHtml,
+      docSlots: inquiry ? buildDocSlots(inquiry) : [],
     });
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(err.statusCode || 400).send(html);

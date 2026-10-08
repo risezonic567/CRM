@@ -22,15 +22,30 @@
     .auth-box { margin:16px 0; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; line-height:1.65; color:#334155; }
     .auth-fill { border-bottom:1px solid #0f172a; font-weight:600; padding:0 2px; white-space:nowrap; }
     .upload-box { margin:20px 0 0; padding:14px 16px; background:#fff; border:1px dashed #cbd5e1; border-radius:8px; }
-    .upload-box h3 { margin:0 0 6px; font-size:12px; }
-    .upload-box p { margin:0 0 10px; font-size:12px; color:#64748b; line-height:1.45; }
-    .upload-box input[type=file] { font-size:13px; width:100%; }
+    .upload-box > h3 { margin:0 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
+    .upload-box > p { margin:0 0 12px; font-size:12px; color:#64748b; line-height:1.45; }
+    .slot { margin:0 0 12px; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; }
+    .slot:last-child { margin-bottom:0; }
+    .slot-label { font-size:13px; font-weight:600; color:#0f172a; margin:0 0 2px; }
+    .slot-meta { font-size:11px; color:#64748b; margin:0 0 8px; }
+    .slot input[type=file] { font-size:13px; width:100%; }
     .sig { margin-top:14px; padding-top:12px; border-top:1px dashed #e2e8f0; text-align:center; }
     .sig .name { font-family:system-ui, -apple-system, 'Segoe UI', sans-serif; font-style:normal; font-weight:600; font-size:18px; color:#0f172a; }
     .sig .label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-top:4px; }
-    button { width:100%; border:0; background:#0f172a; color:#fff; padding:14px; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; margin-top:20px; }
+    button#authorizeBtn { width:100%; border:0; background:#0f172a; color:#fff; padding:14px; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; margin-top:20px; }
+    button#authorizeBtn:disabled { opacity:.55; cursor:not-allowed; }
     .error { color:#b91c1c; font-size:14px; margin-bottom:12px; }
+    #uploadStatus { display:none; margin-top:10px; font-size:12px; color:#64748b; text-align:center; }
+    .terms-block { margin:24px 0 0; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; color:#334155; line-height:1.55; }
+    .terms-title { margin:0 0 10px; font-weight:bold; color:#0f172a; font-size:13px; text-transform:uppercase; letter-spacing:.04em; }
+    .terms-block p { margin:0 0 8px; }
+    .terms-block p:last-child { margin-bottom:0; }
+    .terms-h { margin:14px 0 6px !important; font-weight:bold; color:#0f172a; font-size:12px; }
+    .terms-block ul { margin:0 0 10px; padding-left:18px; }
+    .terms-block li { margin:0 0 4px; }
+    .terms-toggle { margin-top:10px; border:0; background:transparent; color:#0369a1; font-size:12px; font-weight:600; cursor:pointer; padding:0; text-decoration:underline; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
 </head>
 <body>
   <%
@@ -74,6 +89,7 @@
     var signature = billing.cardholderName
       || [inquiry.customer?.firstName, inquiry.customer?.lastName].filter(Boolean).join(' ')
       || '—';
+    var slots = Array.isArray(docSlots) ? docSlots : [];
   %>
   <div class="card">
     <h1>Authorize your itinerary</h1>
@@ -178,23 +194,129 @@
       <div class="label">Customer signature (cardholder)</div>
     </div>
 
-    <form method="POST" action="/public/confirm/<%= inquiry._id %>" enctype="multipart/form-data">
+    <form id="authorizeForm" method="POST" action="/public/confirm/<%= inquiry._id %>" enctype="multipart/form-data">
       <input type="hidden" name="token" value="<%= token %>" />
 
       <div class="upload-box">
-        <h3>Supporting document (optional)</h3>
+        <h3>Supporting documents (optional)</h3>
         <p>
-          Passport / ID / payment proof — optional. You can authorize without uploading.
-          Accepted: PDF, JPG, PNG · max 5&nbsp;MB.
+          Upload only what your agent asked for (usually passport). You can authorize without uploading.
+          Accepted: PDF, JPG, PNG · max 5&nbsp;MB each. Photos are compressed before send.
         </p>
-        <input type="file" name="supportDocument" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" />
+        <% if (slots.length) { %>
+          <% slots.forEach(function(slot) { %>
+          <div class="slot">
+            <p class="slot-label">
+              <%= slot.role === 'cardholder' ? 'Cardholder' : 'Passenger' %> — <%= slot.label %>
+            </p>
+            <p class="slot-meta">Passport (optional)</p>
+            <input
+              type="file"
+              name="<%= slot.key %>"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              data-slot-key="<%= slot.key %>"
+            />
+          </div>
+          <% }) %>
+        <% } else { %>
+          <input type="file" name="supportDocument" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" />
+        <% } %>
       </div>
 
-      <button type="submit">I Authorize</button>
+      <button type="submit" id="authorizeBtn">I Authorize</button>
+      <p id="uploadStatus">Preparing documents…</p>
     </form>
     <p class="muted" style="margin-top:12px;text-align:center;font-size:12px;">
       Clicking I Authorize records your authorization for this itinerary and card on file.
     </p>
+
+    <%- include('partials/gotoflyerTerms') %>
   </div>
+  <script>
+    (function () {
+      var form = document.getElementById('authorizeForm');
+      var btn = document.getElementById('authorizeBtn');
+      var statusEl = document.getElementById('uploadStatus');
+      if (!form || !btn) return;
+
+      var submitting = false;
+      var MAX_BYTES = 5 * 1024 * 1024;
+
+      function setBusy(on, msg) {
+        submitting = on;
+        btn.disabled = on;
+        btn.textContent = on ? 'Please wait…' : 'I Authorize';
+        if (statusEl) {
+          statusEl.style.display = on ? 'block' : 'none';
+          if (msg) statusEl.textContent = msg;
+        }
+      }
+
+      async function compressIfImage(file) {
+        if (!file) return file;
+        if (!/^image\/(jpeg|png)$/i.test(file.type)) return file;
+        if (typeof imageCompression !== 'function') return file;
+        try {
+          var out = await imageCompression(file, {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 2000,
+            useWebWorker: true,
+            fileType: file.type,
+          });
+          return out;
+        } catch (e) {
+          return file;
+        }
+      }
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (submitting) return;
+
+        var inputs = form.querySelectorAll('input[type=file]');
+        for (var i = 0; i < inputs.length; i++) {
+          var f = inputs[i].files && inputs[i].files[0];
+          if (f && f.size > MAX_BYTES) {
+            alert('Each file must be 5 MB or smaller: ' + (f.name || 'file'));
+            return;
+          }
+        }
+
+        setBusy(true, 'Compressing photos…');
+        try {
+          var fd = new FormData();
+          fd.append('token', form.querySelector('input[name=token]').value);
+
+          for (var j = 0; j < inputs.length; j++) {
+            var input = inputs[j];
+            var file = input.files && input.files[0];
+            if (!file) continue;
+            var ready = await compressIfImage(file);
+            if (ready.size > MAX_BYTES) {
+              throw new Error('File still too large after compress: ' + file.name);
+            }
+            fd.append(input.name, ready, ready.name || file.name);
+          }
+
+          setBusy(true, 'Submitting authorization…');
+          var res = await fetch(form.action, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+          });
+          var html = await res.text();
+          document.open();
+          document.write(html);
+          document.close();
+        } catch (err) {
+          setBusy(false);
+          alert(
+            (err && err.message) ||
+              'Upload failed. Check your connection and try again.'
+          );
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

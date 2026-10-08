@@ -11,6 +11,7 @@ import {
   renderAuthorizationHtml,
 } from '../../utils/buildAuthorizationText.js';
 import { resolveSupportDocumentAbsolutePath } from '../../middlewares/authorizeUpload.middleware.js';
+import { findSupportDocument } from '../../utils/supportDocuments.js';
 import { signPublicToken } from '../../utils/signPublicToken.js';
 import {
   INQUIRY_STATUSES,
@@ -520,11 +521,12 @@ export async function getConfirmationReceipt(user, inquiryId) {
 }
 
 /**
- * Stream optional pax-uploaded supporting document (authorized inquiries).
+ * Stream one pax-uploaded supporting document for in-browser view (inline).
+ * @param {string} [docId] — supportDocuments[].id; omit / "legacy" for first/legacy
  */
-export async function getSupportDocument(user, inquiryId) {
+export async function getSupportDocument(user, inquiryId, docId) {
   const inquiry = await findInquiryForUser(user, inquiryId);
-  const doc = inquiry.supportDocument;
+  const doc = findSupportDocument(inquiry, docId);
   if (!doc?.relativePath) {
     throw new AppError('No supporting document on this inquiry', 404);
   }

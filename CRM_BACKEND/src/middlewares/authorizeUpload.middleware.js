@@ -25,6 +25,9 @@ const EXT_BY_MIME = {
   'image/png': '.png',
 };
 
+const MAX_FILES = 10;
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
@@ -56,20 +59,34 @@ function fileFilter(_req, file, cb) {
       new AppError('Only PDF, JPG, or PNG files are allowed (max 5 MB)', 400)
     );
   }
+  // Plan B field names: doc__cardholder | doc__passenger_<id>
+  // Legacy: supportDocument
+  const name = String(file.fieldname || '');
+  const ok =
+    name === 'supportDocument' ||
+    name === 'doc__cardholder' ||
+    name.startsWith('doc__passenger__');
+  if (!ok) {
+    return cb(new AppError('Unexpected upload field', 400));
+  }
   return cb(null, true);
 }
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  limits: { fileSize: MAX_FILE_BYTES, files: MAX_FILES },
   fileFilter,
 });
 
-/** Optional single file field `supportDocument` on authorize POST. */
-export const optionalSupportDocumentUpload = upload.single('supportDocument');
+/**
+ * Optional multi-slot docs on authorize POST (Plan B).
+ * Also accepts legacy single field `supportDocument`.
+ */
+export const optionalSupportDocumentUpload = upload.any();
 
 /**
  * Map multer file → persistable meta (relative path under uploads/authorize).
+ * @deprecated Prefer supportDocuments utils for multi-slot; kept for legacy single.
  */
 export function supportDocumentMetaFromFile(file) {
   if (!file) return null;

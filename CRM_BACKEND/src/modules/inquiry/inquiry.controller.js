@@ -122,19 +122,26 @@ export async function downloadConfirmationReceipt(req, res, next) {
   }
 }
 
-export async function downloadSupportDocument(req, res, next) {
+/** Inline view (not attachment) — agent opens in browser / new tab. */
+export async function viewSupportDocument(req, res, next) {
   try {
+    const docId = req.params.docId;
     const { absolutePath, mimeType, downloadName } =
-      await inquiryService.getSupportDocument(req.user, req.params.id);
+      await inquiryService.getSupportDocument(req.user, req.params.id, docId);
     res.setHeader('Content-Type', mimeType);
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="${downloadName.replace(/"/g, '')}"`
+      `inline; filename="${downloadName.replace(/"/g, '')}"`
     );
     return res.sendFile(absolutePath);
   } catch (err) {
     return next(err);
   }
+}
+
+/** @deprecated Prefer viewSupportDocument — kept for old single-doc clients. */
+export async function downloadSupportDocument(req, res, next) {
+  return viewSupportDocument(req, res, next);
 }
 
 export async function remove(req, res, next) {

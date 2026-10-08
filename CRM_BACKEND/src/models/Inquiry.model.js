@@ -141,7 +141,10 @@ const inquirySchema = new mongoose.Schema(
       currency: { type: String, default: '' },
       amount: { type: String, default: '' },
     },
-    /** Optional supporting document uploaded by pax on authorize (no CVV). */
+    /**
+     * Legacy single support doc (pre multi-slot). Prefer supportDocuments[].
+     * Kept so old inquiries remain readable.
+     */
     supportDocument: {
       originalName: { type: String, default: '' },
       storedName: { type: String, default: '' },
@@ -149,6 +152,50 @@ const inquirySchema = new mongoose.Schema(
       size: { type: Number, default: 0 },
       relativePath: { type: String, default: '' },
       uploadedAt: { type: Date },
+    },
+    /**
+     * Plan B: pax uploads on confirm — cardholder + per-passenger slots (optional).
+     * Future Plan A: agent selects which slots via docRequest (same array shape).
+     */
+    supportDocuments: {
+      type: [
+        {
+          id: { type: String, default: '' },
+          role: {
+            type: String,
+            enum: ['cardholder', 'passenger', 'other'],
+            default: 'other',
+          },
+          passengerId: { type: String, default: null },
+          label: { type: String, trim: true, default: '' },
+          docKind: { type: String, trim: true, default: 'passport' },
+          originalName: { type: String, default: '' },
+          storedName: { type: String, default: '' },
+          mimeType: { type: String, default: '' },
+          size: { type: Number, default: 0 },
+          relativePath: { type: String, default: '' },
+          uploadedAt: { type: Date },
+          expiresAt: { type: Date },
+          uploadedBy: {
+            type: String,
+            enum: ['customer', 'agent'],
+            default: 'customer',
+          },
+        },
+      ],
+      default: [],
+    },
+    /**
+     * Future Plan A (not enforced yet): agent-selected slots for confirm page.
+     * mode 'all_slots' = Plan B behavior.
+     */
+    docRequest: {
+      mode: {
+        type: String,
+        enum: ['all_slots', 'agent_selected'],
+        default: 'all_slots',
+      },
+      slots: { type: [Object], default: [] },
     },
     publicTokenJti: { type: String, default: null, select: false },
   },
