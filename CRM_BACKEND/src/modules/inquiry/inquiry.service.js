@@ -1,9 +1,15 @@
 import crypto from 'crypto';
+import fs from 'fs';
 import { Inquiry, Agency, Call } from '../../models/index.js';
 import { AppError } from '../../utils/apiResponse.js';
 import { calculatePricing } from '../../utils/calculatePricing.js';
 import { sanitizeBilling } from '../../utils/sanitizeBilling.js';
-import { buildAuthorizationText } from '../../utils/buildAuthorizationText.js';
+import {
+  buildAuthorizationText,
+  fillsFromInquiry,
+  renderAuthorizationHtml,
+} from '../../utils/buildAuthorizationText.js';
+import { resolveSupportDocumentAbsolutePath } from '../../middlewares/authorizeUpload.middleware.js';
 import { signPublicToken } from '../../utils/signPublicToken.js';
 import {
   INQUIRY_STATUSES,
@@ -452,11 +458,18 @@ export async function getConfirmationReceipt(user, inquiryId) {
   const agency = await Agency.findById(inquiry.agencyId);
   if (!agency) throw new AppError('Agency not found', 404);
 
+  const fills = fillsFromInquiry(inquiry, agency);
+  const authorizationHtml = renderAuthorizationHtml(
+    inquiry.authorizationText || '',
+    fills
+  );
+
   const html = await renderTemplate('confirmationEmail.ejs', {
     agency,
     inquiry,
     grandTotal: inquiry.pricing.sellingPrice,
     currency: inquiry.pricing.currency,
+    authorizationHtml,
   });
 
   const safeRef = String(inquiry.inquiryReference || inquiryId).replace(
@@ -466,6 +479,32 @@ export async function getConfirmationReceipt(user, inquiryId) {
   const filename = `Authorized-${safeRef}.html`;
 
   return { html, filename };
+}
+
+/**
+ * Stream optional pax-uploaded supporting document (authorized inquiries).
+ */
+export async function getSupportDocument(user, inquiryId) {
+  const inquiry = await findInquiryForUser(user, inquiryId);
+  const doc = inquiry.supportDocument;
+  if (!doc?.relativePath) {
+    throw new AppError('No supporting document on this inquiry', 404);
+  }
+
+  const abs = resolveSupportDocumentAbsolutePath(doc.relativePath);
+  if (!abs || !fs.existsSync(abs)) {
+    throw new AppError('Supporting document file not found', 404);
+  }
+
+  const safeName = String(doc.originalName || doc.storedName || 'document')
+    .replace(/[^\w.\- ()]+/g, '_')
+    .slice(0, 180);
+
+  return {
+    absolutePath: abs,
+    mimeType: doc.mimeType || 'application/octet-stream',
+    downloadName: safeName,
+  };
 }
 
 /**

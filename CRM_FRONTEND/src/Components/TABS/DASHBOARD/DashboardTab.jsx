@@ -126,7 +126,7 @@ const DashboardTab = ({ onSwitchTab }) => {
             </span>
           </h1>
           <p className="text-[13px] text-slate-500 mt-1">
-            Welcome back, {CURRENT_USER.name || 'Agent'} • Logged in as {CURRENT_USER.role || 'Admin'} • {todayStr}
+            Welcome Back, <span className="font-semibold text-slate-900 uppercase">{CURRENT_USER.name || 'Agent'}</span>
           </p>
         </div>
 

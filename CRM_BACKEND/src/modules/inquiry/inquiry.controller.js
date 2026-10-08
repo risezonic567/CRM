@@ -122,6 +122,21 @@ export async function downloadConfirmationReceipt(req, res, next) {
   }
 }
 
+export async function downloadSupportDocument(req, res, next) {
+  try {
+    const { absolutePath, mimeType, downloadName } =
+      await inquiryService.getSupportDocument(req.user, req.params.id);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${downloadName.replace(/"/g, '')}"`
+    );
+    return res.sendFile(absolutePath);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 export async function remove(req, res, next) {
   try {
     const inquiry = await inquiryService.deleteInquiry(req.user, req.params.id);

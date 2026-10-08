@@ -5,6 +5,20 @@ import { INQUIRY_STATUSES } from '../../config/constants.js';
 import { getIO } from '../../socket/socket.js';
 import { renderTemplate } from '../notification/notification.service.js';
 import { parseClientMeta } from '../../utils/clientMeta.js';
+import {
+  fillsFromInquiry,
+  renderAuthorizationHtml,
+} from '../../utils/buildAuthorizationText.js';
+
+function authorizationLocals(inquiry, agency) {
+  const fills = fillsFromInquiry(inquiry, agency);
+  return {
+    authorizationHtml: renderAuthorizationHtml(
+      inquiry.authorizationText || '',
+      fills
+    ),
+  };
+}
 
 export async function loadConfirmPage(inquiryId, token) {
   const { inquiry, agency } = await verifyAndLoad(inquiryId, token);
@@ -29,6 +43,7 @@ export async function loadConfirmPage(inquiryId, token) {
     agency,
     token,
     error: null,
+    ...authorizationLocals(inquiry, agency),
   });
 
   return { alreadyConfirmed: false, html };
@@ -39,7 +54,10 @@ export async function loadConfirmPage(inquiryId, token) {
  * No checkbox — POST with valid token is the authorization action.
  * Does NOT send an automatic confirmation/receipt email — agent downloads or resends.
  */
-export async function confirmInquiry(inquiryId, { token }, meta) {
+/**
+ * @param {{ token: string, supportDocument?: object|null }} payload
+ */
+export async function confirmInquiry(inquiryId, { token, supportDocument }, meta) {
   const { inquiry, agency, decoded } = await verifyAndLoad(inquiryId, token);
 
   if (inquiry.status === INQUIRY_STATUSES.AUTHORIZED) {
@@ -58,6 +76,23 @@ export async function confirmInquiry(inquiryId, { token }, meta) {
   const userAgent = meta.userAgent || '';
   const parsed = parseClientMeta(userAgent);
 
+  const $set = {
+    status: INQUIRY_STATUSES.AUTHORIZED,
+    confirmedAt: new Date(),
+    agreement: {
+      agreedAt: new Date(),
+      agreedIp: meta.ip || '',
+      agreedUserAgent: userAgent,
+      browser: parsed.browser,
+      os: parsed.os,
+      deviceType: parsed.deviceType,
+    },
+  };
+
+  if (supportDocument) {
+    $set.supportDocument = supportDocument;
+  }
+
   // Atomic update — only one request can flip from preview_sent
   const updated = await Inquiry.findOneAndUpdate(
     {
@@ -65,20 +100,7 @@ export async function confirmInquiry(inquiryId, { token }, meta) {
       status: INQUIRY_STATUSES.PREVIEW_SENT,
       publicTokenJti: decoded.jti,
     },
-    {
-      $set: {
-        status: INQUIRY_STATUSES.AUTHORIZED,
-        confirmedAt: new Date(),
-        agreement: {
-          agreedAt: new Date(),
-          agreedIp: meta.ip || '',
-          agreedUserAgent: userAgent,
-          browser: parsed.browser,
-          os: parsed.os,
-          deviceType: parsed.deviceType,
-        },
-      },
-    },
+    { $set },
     { new: true }
   );
 

@@ -3,6 +3,11 @@ import { AppError } from '../../utils/apiResponse.js';
 import { renderTemplate } from '../notification/notification.service.js';
 import { Inquiry, Agency } from '../../models/index.js';
 import { resolveClientIp } from '../../utils/clientMeta.js';
+import {
+  fillsFromInquiry,
+  renderAuthorizationHtml,
+} from '../../utils/buildAuthorizationText.js';
+import { supportDocumentMetaFromFile } from '../../middlewares/authorizeUpload.middleware.js';
 
 export async function showConfirm(req, res, next) {
   try {
@@ -18,10 +23,11 @@ export async function showConfirm(req, res, next) {
 export async function submitConfirm(req, res, next) {
   try {
     const token = req.body.token || req.query.token;
+    const supportDocument = supportDocumentMetaFromFile(req.file);
 
     const result = await publicService.confirmInquiry(
       req.params.inquiryId,
-      { token },
+      { token, supportDocument },
       {
         ip: resolveClientIp(req),
         userAgent: req.headers['user-agent'] || '',
@@ -32,25 +38,33 @@ export async function submitConfirm(req, res, next) {
     return res.status(200).send(result.html);
   } catch (err) {
     if (err instanceof AppError && err.statusCode === 400) {
-      try {
-        const token = req.body.token || req.query.token;
-        const inquiry = await Inquiry.findById(req.params.inquiryId);
-        const agency = inquiry
-          ? await Agency.findById(inquiry.agencyId)
-          : null;
-        const html = await renderTemplate('confirmPage.ejs', {
-          inquiry,
-          agency,
-          token,
-          error: err.message,
-        });
-        res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        return res.status(400).send(html);
-      } catch (inner) {
-        return renderError(res, inner, next);
-      }
+      return renderConfirmError(req, res, next, err);
     }
     return renderError(res, err, next);
+  }
+}
+
+/** Re-show confirm page with error (upload / validation). */
+export async function renderConfirmError(req, res, next, err) {
+  try {
+    const token = req.body?.token || req.query?.token;
+    const inquiry = await Inquiry.findById(req.params.inquiryId);
+    const agency = inquiry ? await Agency.findById(inquiry.agencyId) : null;
+    const fills = inquiry ? fillsFromInquiry(inquiry, agency) : {};
+    const authorizationHtml = inquiry
+      ? renderAuthorizationHtml(inquiry.authorizationText || '', fills)
+      : '';
+    const html = await renderTemplate('confirmPage.ejs', {
+      inquiry,
+      agency,
+      token,
+      error: err.message || 'Unable to authorize',
+      authorizationHtml,
+    });
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.status(err.statusCode || 400).send(html);
+  } catch (inner) {
+    return renderError(res, inner, next);
   }
 }
 

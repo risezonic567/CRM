@@ -1,5 +1,5 @@
 // src/Components/SideBarDashboard/SideBarDashboard.jsx
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useMemo, memo, Suspense } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { TAB_REGISTRY } from "../TabRegistry";
@@ -37,6 +37,67 @@ const SIDEBAR_NAV = {
   subActive: `bg-white/[0.12] text-white font-medium ${SIDEBAR_NAV_FOCUS}`,
   subIdle: `text-white/70 hover:bg-white/[0.05] hover:text-white ${SIDEBAR_NAV_FOCUS}`,
 };
+
+// Reusable date & time formatters
+const timeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: true,
+});
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+});
+
+/**
+ * Isolated LiveHeaderClock component:
+ * Ticking state lives exclusively here, preventing SideBarDashboard
+ * and its child components from re-rendering every second.
+ */
+const LiveHeaderClock = memo(() => {
+  const [currentDateTime, setCurrentDateTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const { timeString, ampmString } = useMemo(() => {
+    const parts = timeFormatter.format(currentDateTime).split(" ");
+    return {
+      timeString: parts[0] || "",
+      ampmString: parts[1] || "",
+    };
+  }, [currentDateTime]);
+
+  const dayKey = `${currentDateTime.getFullYear()}-${currentDateTime.getMonth()}-${currentDateTime.getDate()}`;
+  const formattedDate = useMemo(() => {
+    return dateFormatter.format(currentDateTime);
+  }, [dayKey]);
+
+  return (
+    <div className="hidden sm:flex absolute left-1/2 -translate-x-1/2 flex-col items-center justify-center text-center select-none pointer-events-none">
+      <div className="flex items-baseline gap-1 leading-tight">
+        <span className="text-sm font-bold text-gray-800 tabular-nums tracking-wide">
+          {timeString}
+        </span>
+        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+          {ampmString}
+        </span>
+      </div>
+      <span className="text-[11px] font-medium text-gray-500 tracking-tight leading-tight">
+        {formattedDate}
+      </span>
+    </div>
+  );
+});
+
+LiveHeaderClock.displayName = "LiveHeaderClock";
 
 const SideBarDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -436,7 +497,7 @@ const SideBarDashboard = () => {
       {/* Main Content Area: offset with ml-16 (64px) so it stays adjacent to collapsed sidebar */}
       <main className="ml-0 md:ml-16 flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden h-screen">
         {/* Header bar */}
-        <header className="bg-white h-12 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-10 shadow-xs">
+        <header className="relative bg-white h-12 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-10 shadow-xs">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -461,6 +522,9 @@ const SideBarDashboard = () => {
               {headerTitle}
             </h2>
           </div>
+
+          {/* Center: Live Time, Day & Date (Isolated & Memoized) */}
+          <LiveHeaderClock />
 
           <div className="flex items-center gap-3 text-xs text-gray-500 shrink-0">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">

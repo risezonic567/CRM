@@ -172,12 +172,12 @@
         Reference: <%= inquiry.inquiryReference %>
       </p>
 
-      <% if (authText) { %>
+      <% if (authText || authorizationHtml) { %>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
       <h3 style="margin:0 0 12px;">Authorization</h3>
-      <p style="font-size:13px;line-height:1.55;color:#334155;margin:0;">
-        <%= esc(authText) %>
-      </p>
+      <div style="font-size:13px;line-height:1.65;color:#334155;margin:0;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+        <%- authorizationHtml || esc(authText) %>
+      </div>
       <p style="margin:16px 0 0;font-size:12px;color:#64748b;">Customer signature</p>
       <p style="margin:4px 0 0;font-size:16px;font-family:Georgia, serif;font-style:italic;"><%= esc(signature) %></p>
       <% } %>

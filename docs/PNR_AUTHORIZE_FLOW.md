@@ -17,8 +17,9 @@ Related: [pnrconverter.com](https://www.pnrconverter.com/) · [API intro](https:
 | Pax sees | **Total only** |
 | Card | type, holder, last4, expiry persisted; **CVV never stored** (optional UI-only) |
 | Preview / email | Editable `authorizationText` (one **total** only) + billing; email links to confirm page |
-| Confirm page | Full preview + auth text + signature; **no checkbox**; **I Authorize** → thank you |
-| Document upload | Deferred (optional later) |
+| Confirm page | Full preview + **underlined** auth text + signature; **no checkbox**; optional support doc; **I Authorize** → thank you |
+| Document upload | Optional on confirm page (PDF/JPG/PNG ≤5MB); agent download via `/api/inquiries/:id/support-document` |
+| Auth display | Plain `authorizationText` in DB; `renderAuthorizationHtml()` underlines fills on preview / email / confirm / receipt |
 | Status | **`authorized`** (migrates `customer_confirmed` on boot) |
 | After authorize | No auto receipt email; agent **Download** / **Resend**; signature = cardholder name |
 | Timestamp field | `confirmedAt` kept (means authorized-at) |
@@ -90,9 +91,9 @@ selectedOffer.raw = {
 
 ### Auth text helper
 
-- FE: `CRM_FRONTEND/src/utils/buildAuthorizationText.js`  
-- BE fallback: `CRM_BACKEND/src/utils/buildAuthorizationText.js`  
-- Field: `Inquiry.authorizationText`
+- FE/BE: `buildAuthorizationText.js` — `buildAuthorizationText`, `renderAuthorizationHtml`, `fillsFromInquiry`  
+- Field: `Inquiry.authorizationText` (plain); HTML only at render time  
+- Upload: `authorizeUpload.middleware.js` → `Inquiry.supportDocument`
 
 ---
 

@@ -165,10 +165,12 @@
         <%= currency %> <%= Number(grandTotal).toFixed(2) %>
       </p>
 
-      <% if (inquiry.authorizationText) { %>
+      <% if (inquiry.authorizationText || authorizationHtml) { %>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
       <h3 style="margin:0 0 12px;">Authorization</h3>
-      <p style="font-size:13px;line-height:1.55;color:#334155;white-space:pre-wrap;"><%= inquiry.authorizationText %></p>
+      <div style="font-size:13px;line-height:1.65;color:#334155;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+        <%- authorizationHtml || inquiry.authorizationText %>
+      </div>
       <% } %>
 
       <div style="margin:28px 0 8px;padding-top:20px;border-top:1px solid #e2e8f0;">

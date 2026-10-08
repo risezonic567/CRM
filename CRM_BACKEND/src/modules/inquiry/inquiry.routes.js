@@ -22,6 +22,7 @@ router.get('/', validate(listInquiriesQuerySchema, 'query'), inquiryController.l
 router.get('/lookup', validate(lookupQuerySchema, 'query'), inquiryController.lookup);
 router.get('/stats/margin', inquiryController.marginStats);
 router.get('/:id/confirmation-receipt', inquiryController.downloadConfirmationReceipt);
+router.get('/:id/support-document', inquiryController.downloadSupportDocument);
 router.get('/:id', inquiryController.getById);
 router.patch('/:id/draft', validate(saveDraftSchema), inquiryController.saveDraft);
 router.post('/:id/send', validate(sendInquirySchema), inquiryController.send);

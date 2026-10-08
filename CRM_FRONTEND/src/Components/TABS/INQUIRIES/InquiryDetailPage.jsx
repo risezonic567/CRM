@@ -152,6 +152,30 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
     }
   };
 
+  const handleDownloadSupportDocument = async () => {
+    if (!inquiryId) return;
+    try {
+      const res = await axiosInstance.get(
+        `/inquiries/${inquiryId}/support-document`,
+        { responseType: 'blob' }
+      );
+      const name =
+        inq?.supportDocument?.originalName ||
+        `support-${inq?.inquiryReference || inquiryId}`;
+      const url = URL.createObjectURL(res.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Supporting document downloaded');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to download supporting document'));
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4 text-slate-900">
       <div className="flex flex-wrap items-center gap-3">
@@ -207,6 +231,16 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
               )}
               Resend authorization receipt
             </button>
+            {inq?.supportDocument?.relativePath ? (
+              <button
+                type="button"
+                onClick={handleDownloadSupportDocument}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50"
+              >
+                <FileText className="h-4 w-4" />
+                Download supporting doc
+              </button>
+            ) : null}
           </div>
         )}
       </div>

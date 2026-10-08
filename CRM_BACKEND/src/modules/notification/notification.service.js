@@ -4,6 +4,10 @@ import ejs from 'ejs';
 import { sendMail } from '../../integrations/nodemailer/nodemailer.client.js';
 import { NotificationLog } from '../../models/index.js';
 import logger from '../../utils/logger.js';
+import {
+  fillsFromInquiry,
+  renderAuthorizationHtml,
+} from '../../utils/buildAuthorizationText.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,12 +27,18 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
   const subject = `Authorize your itinerary — ${inquiry.inquiryReference} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
 
   try {
+    const fills = fillsFromInquiry(inquiry, agency);
+    const authorizationHtml = renderAuthorizationHtml(
+      inquiry.authorizationText || '',
+      fills
+    );
     const html = await renderTemplate('inquiryEmail.ejs', {
       agency,
       inquiry,
       confirmUrl,
       grandTotal: inquiry.pricing.sellingPrice,
       currency: inquiry.pricing.currency,
+      authorizationHtml,
     });
 
     const info = await sendMail({ to, subject, html });
@@ -65,11 +75,17 @@ export async function queueConfirmationEmail({ inquiry, agency }) {
   const subject = `Authorized — ${inquiry.inquiryReference} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
 
   try {
+    const fills = fillsFromInquiry(inquiry, agency);
+    const authorizationHtml = renderAuthorizationHtml(
+      inquiry.authorizationText || '',
+      fills
+    );
     const html = await renderTemplate('confirmationEmail.ejs', {
       agency,
       inquiry,
       grandTotal: inquiry.pricing.sellingPrice,
       currency: inquiry.pricing.currency,
+      authorizationHtml,
     });
 
     const info = await sendMail({ to, subject, html });

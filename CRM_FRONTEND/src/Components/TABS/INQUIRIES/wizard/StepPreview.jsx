@@ -26,7 +26,11 @@ import {
   getSocket,
 } from '../../../../SERVICES/socket';
 import { getErrorMessage } from '../../../../utils/getErrorMessage';
-import { buildAuthorizationText } from '../../../../utils/buildAuthorizationText';
+import {
+  buildAuthorizationText,
+  renderAuthorizationHtml,
+  resolveAuthFills,
+} from '../../../../utils/buildAuthorizationText';
 import WaitingConfirmModal from '../WaitingConfirmModal';
 import PnrItineraryTable from './PnrItineraryTable';
 
@@ -73,6 +77,18 @@ const StepPreview = ({ onDone }) => {
     return 'the itinerary detailed above';
   }, [wizard.travel?.from, wizard.travel?.to]);
 
+  const authFills = useMemo(
+    () =>
+      resolveAuthFills({
+        authorizerName,
+        agencyName: 'DEMO Travel Agency',
+        currency,
+        total: grandTotal,
+        purpose,
+      }),
+    [authorizerName, currency, grandTotal, purpose]
+  );
+
   const defaultAuthText = useMemo(
     () =>
       buildAuthorizationText({
@@ -83,6 +99,15 @@ const StepPreview = ({ onDone }) => {
         purpose,
       }),
     [authorizerName, currency, grandTotal, purpose]
+  );
+
+  const authHtmlPreview = useMemo(
+    () =>
+      renderAuthorizationHtml(
+        wizard.authorizationText || defaultAuthText,
+        authFills
+      ),
+    [wizard.authorizationText, defaultAuthText, authFills]
   );
 
   // Seed / refresh auto text when inputs change, unless agent has edited it
@@ -316,12 +341,19 @@ const StepPreview = ({ onDone }) => {
               </button>
             </div>
             <p className="mb-2 text-xs text-slate-500">
-              Auto-filled with a single total ({currency} {grandTotal.toFixed(2)}
-              ). Editable before send. Customer sees this on email and authorize
-              page.
+              Filled values are underlined (name, agency, total, route). Customer
+              email and authorize page use the same look. Edit plain text below if
+              needed.
             </p>
+            <div
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-relaxed text-slate-800 [&_.auth-fill]:border-b [&_.auth-fill]:border-slate-900 [&_.auth-fill]:font-semibold [&_.auth-fill]:px-0.5"
+              dangerouslySetInnerHTML={{ __html: authHtmlPreview }}
+            />
+            <label className="mt-3 mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
+              Edit plain text (optional)
+            </label>
             <textarea
-              className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="min-h-[110px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               value={wizard.authorizationText || ''}
               onChange={(e) => {
                 authEditedRef.current = true;
