@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Minus,
   Plus,
+  Trash2,
   Users,
 } from 'lucide-react';
 import {
@@ -23,6 +24,8 @@ import {
 import AirportAutocomplete from './AirportAutocomplete';
 import FlightDatePicker from './FlightDatePicker';
 import PnrItineraryTable from './PnrItineraryTable';
+
+const MAX_CONNECTIONS = 3; // max segments per direction (direct + 2 stops)
 
 function todayLocalISO() {
   const n = new Date();
@@ -65,7 +68,11 @@ function useMenu() {
   return { open, setOpen, ref };
 }
 
-const emptyLeg = () => ({
+const emptySegment = () => ({
+  from: '',
+  fromLabel: '',
+  to: '',
+  toLabel: '',
   airlineCode: '',
   airlineName: '',
   flightNumber: '',
@@ -74,11 +81,21 @@ const emptyLeg = () => ({
   arrivalTime: '',
   arrivalDate: '',
   duration: '',
+  layover: '',
 });
 
-function legFromSegment(seg) {
-  if (!seg) return emptyLeg();
+function segmentFromSaved(seg) {
+  if (!seg) return emptySegment();
+  const layover =
+    seg.layoverLabel ||
+    (String(seg.operatingInfo || '').startsWith('Layover ')
+      ? String(seg.operatingInfo).replace(/^Layover\s+/i, '')
+      : '');
   return {
+    from: seg.from || '',
+    fromLabel: seg.from || '',
+    to: seg.to || '',
+    toLabel: seg.to || '',
     airlineCode: seg.airlineCode || '',
     airlineName: seg.airlineName || '',
     flightNumber: seg.flightNumber || '',
@@ -93,22 +110,116 @@ function legFromSegment(seg) {
             seg.durationMinutes % 60
           ).padStart(2, '0')}m`
         : ''),
+    layover,
   };
 }
 
-function FlightLegFields({ title, leg, onChange }) {
-  const set = (field) => (e) => onChange({ ...leg, [field]: e.target.value });
+function wizardOutboundCount(segs, travel, tripType) {
+  if (tripType !== 'round' || !travel?.returnDate) return segs.length;
+  const byDate = segs.filter((s) => s.departureDate !== travel.returnDate);
+  const ret = segs.filter((s) => s.departureDate === travel.returnDate);
+  if (byDate.length && ret.length) return byDate.length;
+  const dest = String(travel.to || '').toUpperCase();
+  if (dest) {
+    for (let i = 0; i < segs.length; i += 1) {
+      if (String(segs[i].to || '').toUpperCase() === dest) return i + 1;
+    }
+  }
+  return Math.max(1, Math.ceil(segs.length / 2));
+}
+
+function FlightSegmentFields({
+  title,
+  segment,
+  onChange,
+  showLayover,
+  canRemove,
+  onRemove,
+  lockFrom,
+  lockTo,
+  fromHint,
+  toHint,
+}) {
+  const set = (field) => (e) => onChange({ ...segment, [field]: e.target.value });
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-      <p className="mb-2 text-xs font-semibold text-slate-800">{title}</p>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-slate-800">{title}</p>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-red-600 hover:text-red-700"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Remove
+          </button>
+        )}
+      </div>
+
+      <div className="mb-2 grid gap-2 sm:grid-cols-2">
+        <AirportAutocomplete
+          id={`seg-from-${title}`}
+          label={lockFrom ? 'From (trip origin)' : 'From *'}
+          placeholder={fromHint || 'Airport'}
+          valueIata={segment.from || (lockFrom ? fromHint : '') || ''}
+          valueLabel={
+            segment.fromLabel ||
+            segment.from ||
+            (lockFrom ? fromHint : '') ||
+            ''
+          }
+          inputClassName={legFieldClass}
+          onSelect={(p) =>
+            onChange({
+              ...segment,
+              from: p.iataCode,
+              fromLabel: p.label,
+            })
+          }
+          onClear={() =>
+            onChange({
+              ...segment,
+              from: lockFrom ? segment.from : '',
+              fromLabel: lockFrom ? segment.fromLabel : '',
+            })
+          }
+        />
+        <AirportAutocomplete
+          id={`seg-to-${title}`}
+          label={lockTo ? 'To (trip destination)' : 'To *'}
+          placeholder={toHint || 'Airport'}
+          valueIata={segment.to || (lockTo ? toHint : '') || ''}
+          valueLabel={
+            segment.toLabel || segment.to || (lockTo ? toHint : '') || ''
+          }
+          inputClassName={legFieldClass}
+          onSelect={(p) =>
+            onChange({
+              ...segment,
+              to: p.iataCode,
+              toLabel: p.label,
+            })
+          }
+          onClear={() =>
+            onChange({
+              ...segment,
+              to: lockTo ? segment.to : '',
+              toLabel: lockTo ? segment.toLabel : '',
+            })
+          }
+        />
+      </div>
+
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className={labelClass}>Airline code *</label>
           <input
             className={legFieldClass}
             maxLength={3}
-            placeholder="NZ"
-            value={leg.airlineCode}
+            placeholder="F9"
+            value={segment.airlineCode}
             onChange={set('airlineCode')}
           />
         </div>
@@ -116,8 +227,8 @@ function FlightLegFields({ title, leg, onChange }) {
           <label className={labelClass}>Airline name</label>
           <input
             className={legFieldClass}
-            placeholder="Air New Zealand"
-            value={leg.airlineName}
+            placeholder="Frontier"
+            value={segment.airlineName}
             onChange={set('airlineName')}
           />
         </div>
@@ -125,8 +236,8 @@ function FlightLegFields({ title, leg, onChange }) {
           <label className={labelClass}>Flight # *</label>
           <input
             className={legFieldClass}
-            placeholder="456"
-            value={leg.flightNumber}
+            placeholder="2135"
+            value={segment.flightNumber}
             onChange={set('flightNumber')}
           />
         </div>
@@ -136,7 +247,7 @@ function FlightLegFields({ title, leg, onChange }) {
             className={legFieldClass}
             maxLength={2}
             placeholder="Y"
-            value={leg.bookingClass}
+            value={segment.bookingClass}
             onChange={set('bookingClass')}
           />
         </div>
@@ -144,8 +255,8 @@ function FlightLegFields({ title, leg, onChange }) {
           <label className={labelClass}>Dep time *</label>
           <input
             className={legFieldClass}
-            placeholder="19:45"
-            value={leg.departureTime}
+            placeholder="09:47"
+            value={segment.departureTime}
             onChange={set('departureTime')}
           />
         </div>
@@ -153,8 +264,8 @@ function FlightLegFields({ title, leg, onChange }) {
           <label className={labelClass}>Arr time *</label>
           <input
             className={legFieldClass}
-            placeholder="20:50"
-            value={leg.arrivalTime}
+            placeholder="12:19"
+            value={segment.arrivalTime}
             onChange={set('arrivalTime')}
           />
         </div>
@@ -163,7 +274,7 @@ function FlightLegFields({ title, leg, onChange }) {
           <input
             type="date"
             className={legFieldClass}
-            value={leg.arrivalDate}
+            value={segment.arrivalDate}
             onChange={set('arrivalDate')}
           />
         </div>
@@ -171,12 +282,109 @@ function FlightLegFields({ title, leg, onChange }) {
           <label className={labelClass}>Duration *</label>
           <input
             className={legFieldClass}
-            placeholder="1h 05m"
-            value={leg.duration}
+            placeholder="3h 32m"
+            value={segment.duration}
             onChange={set('duration')}
           />
         </div>
+        {showLayover && (
+          <div className="sm:col-span-2 lg:col-span-4">
+            <label className={labelClass}>Layover before next flight</label>
+            <input
+              className={legFieldClass}
+              placeholder="1h 19m"
+              value={segment.layover}
+              onChange={set('layover')}
+            />
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function DirectionBlock({
+  title,
+  segments,
+  onChange,
+  tripFrom,
+  tripTo,
+  tripFromLabel,
+  tripToLabel,
+}) {
+  const updateAt = (index, next) => {
+    onChange(segments.map((s, i) => (i === index ? next : s)));
+  };
+
+  const addConnection = () => {
+    if (segments.length >= MAX_CONNECTIONS) {
+      toast.error(`Max ${MAX_CONNECTIONS} flights per direction`);
+      return;
+    }
+    const last = segments[segments.length - 1] || emptySegment();
+    // previous last was going to trip destination — new last takes destination;
+    // new middle inherits previous "to" as its from if set
+    const inserted = {
+      ...emptySegment(),
+      from: last.to || '',
+      fromLabel: last.toLabel || last.to || '',
+    };
+    const prevLast = {
+      ...last,
+      to: last.to && last.to !== tripTo ? last.to : '',
+      toLabel: last.to && last.to !== tripTo ? last.toLabel : '',
+    };
+    onChange([
+      ...segments.slice(0, -1),
+      prevLast,
+      inserted,
+    ]);
+  };
+
+  const removeAt = (index) => {
+    if (segments.length <= 1) return;
+    onChange(segments.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50/50 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold text-slate-900">{title}</h4>
+        <button
+          type="button"
+          onClick={addConnection}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add connection
+        </button>
+      </div>
+      <p className="text-[11px] text-slate-500">
+        Direct = one flight. Connecting = add stop (e.g. MIA→DFW then DFW→LAX).
+      </p>
+      {segments.map((seg, index) => {
+        const isFirst = index === 0;
+        const isLast = index === segments.length - 1;
+        return (
+          <FlightSegmentFields
+            key={`${title}-${index}`}
+            title={
+              segments.length === 1
+                ? 'Flight'
+                : `Flight ${index + 1}${isLast ? ' (to destination)' : ''}`
+            }
+            segment={seg}
+            onChange={(next) => updateAt(index, next)}
+            showLayover={!isLast}
+            canRemove={segments.length > 1}
+            onRemove={() => removeAt(index)}
+            lockFrom={isFirst}
+            lockTo={isLast}
+            fromHint={isFirst ? tripFromLabel || tripFrom : ''}
+            toHint={isLast ? tripToLabel || tripTo : ''}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -190,10 +398,35 @@ const StepManualFlight = () => {
       ? wizard.selectedOffer.raw.segments || []
       : wizard.pnrSegments || [];
 
-  const [tripType, setTripType] = useState(t.returnDate ? 'round' : 'oneway');
-  const [outbound, setOutbound] = useState(() => legFromSegment(savedSegs[0]));
-  const [inbound, setInbound] = useState(() =>
-    savedSegs.length > 1 ? legFromSegment(savedSegs[1]) : emptyLeg()
+  const initialTrip = t.returnDate ? 'round' : 'oneway';
+  const savedSplit = (() => {
+    if (!savedSegs.length) {
+      return { outbound: [emptySegment()], inbound: [emptySegment()] };
+    }
+    const summaryCount =
+      wizard.pnrTripSummary?.outboundSegmentCount ??
+      wizard.selectedOffer?.raw?.tripSummary?.outboundSegmentCount;
+    let outCount;
+    if (summaryCount && summaryCount > 0) {
+      outCount = summaryCount;
+    } else {
+      outCount = wizardOutboundCount(savedSegs, t, initialTrip);
+    }
+    return {
+      outbound: savedSegs.slice(0, outCount).map(segmentFromSaved),
+      inbound:
+        initialTrip === 'round' && savedSegs.length > outCount
+          ? savedSegs.slice(outCount).map(segmentFromSaved)
+          : [emptySegment()],
+    };
+  })();
+
+  const [tripType, setTripType] = useState(initialTrip);
+  const [outboundSegments, setOutboundSegments] = useState(
+    () => savedSplit.outbound
+  );
+  const [inboundSegments, setInboundSegments] = useState(
+    () => savedSplit.inbound
   );
   const [preview, setPreview] = useState(() =>
     savedSegs.length
@@ -255,6 +488,32 @@ const StepManualFlight = () => {
     });
   };
 
+  const validateSegment = (seg, label, { needFrom, needTo, tripFrom, tripTo }) => {
+    const from = (seg.from || (needFrom ? tripFrom : '') || '').trim();
+    const to = (seg.to || (needTo ? tripTo : '') || '').trim();
+    if (!from || !to) {
+      toast.error(`${label}: from / to airports required`);
+      return false;
+    }
+    if (from.toUpperCase() === to.toUpperCase()) {
+      toast.error(`${label}: from and to must differ`);
+      return false;
+    }
+    if (!seg.airlineCode?.trim() || !seg.flightNumber?.trim()) {
+      toast.error(`${label}: airline code and flight number required`);
+      return false;
+    }
+    if (!seg.departureTime?.trim() || !seg.arrivalTime?.trim()) {
+      toast.error(`${label}: departure and arrival times required`);
+      return false;
+    }
+    if (!seg.duration?.trim()) {
+      toast.error(`${label}: duration required`);
+      return false;
+    }
+    return true;
+  };
+
   const validate = () => {
     const adults = t.adults ?? t.passengers ?? 1;
     if (!t.from || !t.to || !t.departureDate) {
@@ -273,42 +532,66 @@ const StepManualFlight = () => {
       toast.error('Select a return date for round trip');
       return false;
     }
-    if (!outbound.airlineCode?.trim() || !outbound.flightNumber?.trim()) {
-      toast.error('Outbound: airline code and flight number required');
-      return false;
+
+    for (let i = 0; i < outboundSegments.length; i += 1) {
+      const ok = validateSegment(outboundSegments[i], `Outbound flight ${i + 1}`, {
+        needFrom: i === 0,
+        needTo: i === outboundSegments.length - 1,
+        tripFrom: t.from,
+        tripTo: t.to,
+      });
+      if (!ok) return false;
     }
-    if (!outbound.departureTime?.trim() || !outbound.arrivalTime?.trim()) {
-      toast.error('Outbound: departure and arrival times required');
-      return false;
-    }
-    if (!outbound.duration?.trim()) {
-      toast.error('Outbound: duration required');
-      return false;
-    }
+
     if (tripType === 'round') {
-      if (!inbound.airlineCode?.trim() || !inbound.flightNumber?.trim()) {
-        toast.error('Return: airline code and flight number required');
-        return false;
-      }
-      if (!inbound.departureTime?.trim() || !inbound.arrivalTime?.trim()) {
-        toast.error('Return: departure and arrival times required');
-        return false;
-      }
-      if (!inbound.duration?.trim()) {
-        toast.error('Return: duration required');
-        return false;
+      for (let i = 0; i < inboundSegments.length; i += 1) {
+        const ok = validateSegment(inboundSegments[i], `Return flight ${i + 1}`, {
+          needFrom: i === 0,
+          needTo: i === inboundSegments.length - 1,
+          tripFrom: t.to,
+          tripTo: t.from,
+        });
+        if (!ok) return false;
       }
     }
     return true;
   };
 
-  const buildItinerary = () =>
-    buildManualItineraryFromLegs({
+  /** Apply locked trip endpoints onto first/last segment for mapping. */
+  const withLockedAirports = (list, start, end) =>
+    list.map((seg, i) => {
+      const isFirst = i === 0;
+      const isLast = i === list.length - 1;
+      return {
+        ...seg,
+        from: isFirst ? start.iata || seg.from : seg.from,
+        fromLabel: isFirst ? start.label || seg.fromLabel : seg.fromLabel,
+        to: isLast ? end.iata || seg.to : seg.to,
+        toLabel: isLast ? end.label || seg.toLabel : seg.toLabel,
+      };
+    });
+
+  const buildItinerary = () => {
+    const out = withLockedAirports(
+      outboundSegments,
+      { iata: t.from, label: t.fromLabel },
+      { iata: t.to, label: t.toLabel }
+    );
+    const inn =
+      tripType === 'round'
+        ? withLockedAirports(
+            inboundSegments,
+            { iata: t.to, label: t.toLabel },
+            { iata: t.from, label: t.fromLabel }
+          )
+        : [];
+    return buildManualItineraryFromLegs({
       travel: t,
       tripType,
-      outbound,
-      inbound: tripType === 'round' ? inbound : null,
+      outboundSegments: out,
+      inboundSegments: inn,
     });
+  };
 
   const handlePreview = () => {
     if (!validate()) return;
@@ -323,9 +606,7 @@ const StepManualFlight = () => {
         itineraryEntryMode: 'manual',
       })
     );
-    toast.success(
-      tripType === 'round' ? 'Outbound + return ready' : 'Outbound ready'
-    );
+    toast.success(`Preview · ${built.segments.length} flight(s)`);
   };
 
   const handleContinue = () => {
@@ -364,8 +645,8 @@ const StepManualFlight = () => {
           Flight details
         </h3>
         <p className="mt-0.5 text-xs text-slate-500">
-          Choose route and dates, then enter airline times and duration. Price
-          is set on the next step.
+          Choose route and dates, then enter each flight. Use Add connection for
+          stops. Price is set on the next step.
         </p>
       </div>
 
@@ -605,22 +886,30 @@ const StepManualFlight = () => {
       </div>
 
       <div className="flex flex-col gap-3">
-        <FlightLegFields
-          title="Outbound flight"
-          leg={outbound}
+        <DirectionBlock
+          title="Outbound"
+          segments={outboundSegments}
           onChange={(next) => {
             setPreview(null);
-            setOutbound(next);
+            setOutboundSegments(next);
           }}
+          tripFrom={t.from}
+          tripTo={t.to}
+          tripFromLabel={t.fromLabel}
+          tripToLabel={t.toLabel}
         />
         {tripType === 'round' && (
-          <FlightLegFields
-            title="Return flight"
-            leg={inbound}
+          <DirectionBlock
+            title="Return"
+            segments={inboundSegments}
             onChange={(next) => {
               setPreview(null);
-              setInbound(next);
+              setInboundSegments(next);
             }}
+            tripFrom={t.to}
+            tripTo={t.from}
+            tripFromLabel={t.toLabel}
+            tripToLabel={t.fromLabel}
           />
         )}
       </div>
@@ -659,6 +948,7 @@ const StepManualFlight = () => {
               </span>
               {summary.departureDate ? ` · dep ${summary.departureDate}` : ''}
               {summary.returnDate ? ` · ret ${summary.returnDate}` : ''}
+              {` · ${tableSegs.length} flight(s)`}
             </p>
           )}
           <PnrItineraryTable segments={tableSegs} />

@@ -22,10 +22,10 @@ export function parseDurationToMinutes(raw) {
   return null;
 }
 
-export function buildTripSummaryFromSegments(segments, travel = {}) {
+export function buildTripSummaryFromSegments(segments, travel = {}, meta = {}) {
   const list = Array.isArray(segments) ? segments : [];
   const origin = travel.from || list[0]?.from || null;
-  const destination = travel.to || (list.length ? list[0]?.to : null);
+  const destination = travel.to || null;
   const departureDate = travel.departureDate || list[0]?.departureDate || null;
   const returnDate = travel.returnDate || null;
 
@@ -35,6 +35,7 @@ export function buildTripSummaryFromSegments(segments, travel = {}) {
     departureDate,
     returnDate: returnDate || null,
     segmentCount: list.length,
+    outboundSegmentCount: meta.outboundSegmentCount ?? list.length,
   };
 }
 
@@ -51,6 +52,7 @@ function normalizeLeg(leg, index, defaults = {}) {
   const departureDate = leg.departureDate || defaults.departureDate || '';
   const arrivalDate = String(leg.arrivalDate || '').trim() || departureDate;
   const durationMinutes = parseDurationToMinutes(leg.duration);
+  const layoverLabel = String(leg.layover || '').trim() || null;
 
   return {
     lineNumber: index + 1,
@@ -70,53 +72,71 @@ function normalizeLeg(leg, index, defaults = {}) {
     arrivalDate,
     arrivalDayOfWeek: null,
     equipmentOrSuffix: null,
-    operatingInfo: null,
+    operatingInfo: layoverLabel ? `Layover ${layoverLabel}` : null,
     durationMinutes,
     durationLabel: String(leg.duration || '').trim() || null,
+    layoverLabel,
   };
 }
 
 /**
- * Build itinerary from Google-Flights-style travel + outbound/return legs.
+ * Build itinerary from Google-Flights-style travel + outbound/return segment arrays.
+ * Each direction can have 1+ segments (connections).
  */
 export function buildManualItineraryFromLegs({
   travel = {},
   tripType = 'oneway',
-  outbound = {},
-  inbound = null,
+  outboundSegments = [],
+  inboundSegments = [],
 } = {}) {
-  const segments = [
-    normalizeLeg(outbound, 0, {
-      from: travel.from,
-      to: travel.to,
-      departureDate: travel.departureDate,
-    }),
-  ];
+  const outList = Array.isArray(outboundSegments) ? outboundSegments : [];
+  const inList =
+    tripType === 'round' && Array.isArray(inboundSegments)
+      ? inboundSegments
+      : [];
 
-  if (tripType === 'round' && inbound) {
+  const segments = [];
+
+  outList.forEach((leg, i) => {
+    const isFirst = i === 0;
+    const isLast = i === outList.length - 1;
     segments.push(
-      normalizeLeg(inbound, 1, {
-        from: travel.to,
-        to: travel.from,
+      normalizeLeg(leg, segments.length, {
+        from: isFirst ? travel.from : undefined,
+        to: isLast ? travel.to : undefined,
+        departureDate: travel.departureDate,
+      })
+    );
+  });
+
+  inList.forEach((leg, i) => {
+    const isFirst = i === 0;
+    const isLast = i === inList.length - 1;
+    segments.push(
+      normalizeLeg(leg, segments.length, {
+        from: isFirst ? travel.to : undefined,
+        to: isLast ? travel.from : undefined,
         departureDate: travel.returnDate,
       })
     );
-  }
+  });
 
   return {
     segments,
-    tripSummary: buildTripSummaryFromSegments(segments, travel),
+    tripSummary: buildTripSummaryFromSegments(segments, travel, {
+      outboundSegmentCount: outList.length,
+    }),
     warnings: [],
   };
 }
 
 export function mapManualToOffer(itinerary, { costPrice = 0, currency = 'USD' } = {}) {
   const segments = Array.isArray(itinerary?.segments) ? itinerary.segments : [];
-  const first = segments[0] || {};
-  const lastOutbound =
-    segments.length > 1 && itinerary?.tripSummary?.returnDate
-      ? segments[0]
-      : segments[segments.length - 1] || first;
+  const outboundCount =
+    itinerary?.tripSummary?.outboundSegmentCount ?? segments.length;
+  const outboundSegs = segments.slice(0, outboundCount);
+  const first = outboundSegs[0] || segments[0] || {};
+  const lastOutbound = outboundSegs[outboundSegs.length - 1] || first;
   const airlineName =
     first.airlineName || first.airlineCode || 'Manual itinerary';
   const id = `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -155,7 +175,7 @@ export function mapManualToOffer(itinerary, { costPrice = 0, currency = 'USD' } 
       city: '',
     },
     duration,
-    stops: 0,
+    stops: Math.max(0, outboundSegs.length - 1),
     cabinClass: first.bookingClass || '',
     costPrice: Number(costPrice) || 0,
     currency,

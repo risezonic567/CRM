@@ -6,6 +6,7 @@ import { initRateLimiters } from './middlewares/rateLimit.middleware.js';
 import { createApp } from './app.js';
 import { initSocket } from './socket/socket.js';
 import { migrateAuthorizedStatus } from './scripts/migrateAuthorizedStatus.js';
+import { verifyMail } from './integrations/nodemailer/nodemailer.client.js';
 import logger from './utils/logger.js';
 
 async function bootstrap() {
@@ -38,6 +39,7 @@ async function bootstrap() {
       api: config.urls.api,
       client: config.urls.client,
     });
+    verifyMail();
   });
 }
 

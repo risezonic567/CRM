@@ -89,12 +89,15 @@ const config = {
   },
 
   smtp: {
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: process.env.SMTP_SECURE === 'true',
+    host: process.env.SMTP_HOST || 'smtp.titan.email',
+    port: Number(process.env.SMTP_PORT) || 465,
+    secure:
+      process.env.SMTP_SECURE !== undefined && process.env.SMTP_SECURE !== ''
+        ? process.env.SMTP_SECURE === 'true'
+        : (Number(process.env.SMTP_PORT) || 465) === 465,
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
-    from: process.env.SMTP_FROM ,
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
   },
 
   seed: {
