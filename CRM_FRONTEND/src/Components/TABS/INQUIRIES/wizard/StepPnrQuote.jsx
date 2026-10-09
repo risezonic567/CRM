@@ -30,7 +30,7 @@ const StepPnrQuote = () => {
 
   const handleContinue = () => {
     if (!segments.length) {
-      toast.error('No itinerary — go back and convert a PNR first');
+      toast.error('No itinerary — go back and enter or decode flights first');
       return;
     }
     const costPrice = Number(supplier);

@@ -45,7 +45,7 @@
           });
         }
         var offer = inquiry.selectedOffer || {};
-        var pnrSegments = (offer.raw && offer.raw.source === 'pnr' && Array.isArray(offer.raw.segments))
+        var pnrSegments = (offer.raw && Array.isArray(offer.raw.segments) && offer.raw.segments.length)
           ? offer.raw.segments
           : [];
         var outbound = offer.outbound || offer;

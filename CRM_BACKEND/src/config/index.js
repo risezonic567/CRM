@@ -66,6 +66,14 @@ const config = {
       'https://api.pnrconverter.com/api',
   },
 
+  /** Duffel Places — airport autocomplete only on this branch */
+  duffel: {
+    apiKey: process.env.DUFFEL_API_KEY || '',
+    env: process.env.DUFFEL_ENV || 'test',
+    baseUrl: process.env.DUFFEL_BASE_URL || 'https://api.duffel.com',
+    useMock: process.env.USE_MOCK_DUFFEL === 'true',
+  },
+
   pricing: {
     defaultMarkup: Number(process.env.DEFAULT_MARKUP),
     // Empty MERCHANT_FEE_PERCENT → Number('') === 0; treat as unset and fall back to 2

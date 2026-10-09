@@ -78,7 +78,8 @@
       return s;
     }
     var offer = inquiry.selectedOffer || {};
-    var pnrSegments = (offer.raw && offer.raw.source === 'pnr' && Array.isArray(offer.raw.segments))
+    // Prefer segment table whenever segments exist (same trustworthy look as email)
+    var pnrSegments = (offer.raw && Array.isArray(offer.raw.segments) && offer.raw.segments.length)
       ? offer.raw.segments
       : [];
     var outbound = offer.outbound || offer;
@@ -105,7 +106,7 @@
       <div class="row"><strong>Return date:</strong> <%= fmtDateOnly(inquiry.travel.returnDate) %></div>
     <% } %>
 
-    <h3>Itinerary</h3>
+    <h3>Flight details</h3>
     <% if (pnrSegments.length) { %>
     <table class="segs">
       <thead>
@@ -117,6 +118,7 @@
           <th>Route</th>
           <th>Dep</th>
           <th>Arr</th>
+          <th>Class</th>
         </tr>
       </thead>
       <tbody>
@@ -125,7 +127,7 @@
           <td><%= seg.lineNumber || '—' %></td>
           <td><%= seg.airlineName || seg.airlineCode || '—' %></td>
           <td><%= [seg.airlineCode, seg.flightNumber].filter(Boolean).join(' ') %></td>
-          <td><%= fmtDateOnly(seg.departureDate) %></td>
+          <td style="white-space:nowrap;"><%= fmtDateOnly(seg.departureDate) %></td>
           <td><%= seg.from %> → <%= seg.to %></td>
           <td><%= seg.departureTime || '—' %></td>
           <td>
@@ -134,29 +136,45 @@
               <span class="muted"><%= fmtDateOnly(seg.arrivalDate) %></span>
             <% } %>
           </td>
+          <td><%= seg.bookingClass || '—' %></td>
         </tr>
         <% }) %>
       </tbody>
     </table>
     <% } else { %>
-    <div class="leg">
-      <div><%= outbound.airline?.name || offer.airline?.name || '—' %> <%= outbound.flightNumber || offer.flightNumber || '' %></div>
-      <div><%= inquiry.travel.from %> <%= fmtWhen(outbound.departure?.at || offer.departure?.at) %> → <%= inquiry.travel.to %> <%= fmtWhen(outbound.arrival?.at || offer.arrival?.at) %></div>
-    </div>
-    <% if (inbound) { %>
-    <div class="leg">
-      <div><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber || '' %></div>
-      <div><%= inquiry.travel.to %> <%= fmtWhen(inbound.departure?.at) %> → <%= inquiry.travel.from %> <%= fmtWhen(inbound.arrival?.at) %></div>
-    </div>
-    <% } %>
+    <table class="info">
+      <tr>
+        <td class="k">Airline</td>
+        <td>
+          <%= outbound.airline?.name || offer.airline?.name || '—' %>
+          <% if (outbound.flightNumber || offer.flightNumber) { %>
+            (<%= outbound.flightNumber || offer.flightNumber %>)
+          <% } %>
+        </td>
+      </tr>
+      <tr>
+        <td class="k">From</td>
+        <td><%= inquiry.travel.from %> — <%= fmtWhen(outbound.departure?.at || offer.departure?.at) %></td>
+      </tr>
+      <tr>
+        <td class="k">To</td>
+        <td><%= inquiry.travel.to %> — <%= fmtWhen(outbound.arrival?.at || offer.arrival?.at) %></td>
+      </tr>
+      <% if (inbound) { %>
+      <tr>
+        <td class="k">Return</td>
+        <td><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber || '' %></td>
+      </tr>
+      <% } %>
+    </table>
     <% } %>
 
     <h3>Passengers</h3>
-    <div class="row">
-      <% (inquiry.passengers || []).forEach(function(p, i) { %>
-        <%= p.firstName %> <%= p.lastName %> (<%= p.type %>)<%= i < inquiry.passengers.length - 1 ? ', ' : '' %>
+    <ul style="margin:0;padding-left:18px;font-size:14px;">
+      <% (inquiry.passengers || []).forEach(function(p) { %>
+        <li><%= p.firstName %> <%= p.lastName %> (<%= p.type %>)</li>
       <% }) %>
-    </div>
+    </ul>
 
     <h3>Billing</h3>
     <table class="info">

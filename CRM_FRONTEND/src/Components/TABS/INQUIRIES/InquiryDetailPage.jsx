@@ -119,7 +119,8 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
   const outbound = offer.outbound || offer;
   const inbound = offer.inbound || null;
   const pnrSegments =
-    offer?.raw?.source === 'pnr' && Array.isArray(offer.raw.segments)
+    (offer?.raw?.source === 'pnr' || offer?.raw?.source === 'manual') &&
+    Array.isArray(offer.raw.segments)
       ? offer.raw.segments
       : [];
   const currency = inq?.pricing?.currency || 'USD';

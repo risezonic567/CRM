@@ -54,6 +54,8 @@ const initialState = {
     pnrSegments: [],
     pnrTripSummary: null,
     pnrWarnings: [],
+    /** This branch is manual-entry only */
+    itineraryEntryMode: 'manual',
   },
 };
 
@@ -70,7 +72,13 @@ export function mapInquiryToWizard(inquiry) {
   const travel = inquiry.travel || {};
   const pricing = inquiry.pricing || {};
   const offer = inquiry.selectedOffer || null;
-  const pnrRawOffer = offer?.raw?.source === 'pnr' ? offer.raw : null;
+  const raw = offer?.raw;
+  const pnrRawOffer = raw?.source === 'pnr' ? raw : null;
+  const segmentRawOffer =
+    (raw?.source === 'pnr' || raw?.source === 'manual') &&
+    Array.isArray(raw?.segments)
+      ? raw
+      : null;
   return {
     inquiryId: inquiry._id,
     step: typeof inquiry.wizardStep === 'number' ? inquiry.wizardStep : 0,
@@ -116,9 +124,14 @@ export function mapInquiryToWizard(inquiry) {
     authorizationText: inquiry.authorizationText || '',
     authorizationFills: inquiry.authorizationFills || null,
     pnrRaw: pnrRawOffer?.pnrRaw || '',
-    pnrSegments: Array.isArray(pnrRawOffer?.segments) ? pnrRawOffer.segments : [],
-    pnrTripSummary: pnrRawOffer?.tripSummary || null,
-    pnrWarnings: Array.isArray(pnrRawOffer?.warnings) ? pnrRawOffer.warnings : [],
+    pnrSegments: Array.isArray(segmentRawOffer?.segments)
+      ? segmentRawOffer.segments
+      : [],
+    pnrTripSummary: segmentRawOffer?.tripSummary || null,
+    pnrWarnings: Array.isArray(segmentRawOffer?.warnings)
+      ? segmentRawOffer.warnings
+      : [],
+    itineraryEntryMode: raw?.source === 'pnr' ? 'pnr' : 'manual',
   };
 }
 
