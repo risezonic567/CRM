@@ -85,6 +85,7 @@ const StepPnrSearch = () => {
         pnrSegments: itinerary.segments,
         pnrTripSummary: itinerary.tripSummary || null,
         pnrWarnings: itinerary.warnings || [],
+        itineraryEntryMode: 'pnr',
       })
     );
     dispatch(setWizardStep(2));

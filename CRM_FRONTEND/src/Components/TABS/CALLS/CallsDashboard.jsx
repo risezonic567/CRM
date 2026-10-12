@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, X, RefreshCw } from 'lucide-react';
 import CallsTable from './CallsTable';
 import CallDispositionModal from './CallDispositionModal';
+import CallNotesModal from './CallNotesModal';
 import PaginationBar from '../../shared/PaginationBar';
 import { useListCallsQuery } from '../../../REDUX_FEATURES/REDUX_SLICES/Call_api/callApi';
 import {
@@ -20,6 +21,7 @@ const CallsDashboard = () => {
   const dispatch = useDispatch();
   const [, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
+  const [notesCallId, setNotesCallId] = useState(null);
   const [page, setPage] = useState(1);
   const filters = useSelector(selectCallFilters);
 
@@ -40,6 +42,10 @@ const CallsDashboard = () => {
   const meta = data?.meta || {};
   const totalCount = meta.total ?? items.length;
   const totalPages = meta.pages ?? 1;
+  /** Keep modal in sync after list refetch (e.g. new note added). */
+  const notesCall = notesCallId
+    ? items.find((c) => c._id === notesCallId) || null
+    : null;
 
   const handleSearchChange = (e) => {
     setPage(1);
@@ -166,6 +172,7 @@ const CallsDashboard = () => {
         isLoading={isFetching}
         onOpenCreate={() => setOpen(true)}
         onOpenInquiry={openInquiryFromCall}
+        onOpenNotes={(call) => setNotesCallId(call._id)}
         footer={
           <PaginationBar
             page={page}
@@ -180,6 +187,12 @@ const CallsDashboard = () => {
 
       {/* Call Disposition Modal */}
       <CallDispositionModal open={open} onClose={() => setOpen(false)} />
+
+      <CallNotesModal
+        open={Boolean(notesCallId)}
+        call={notesCall}
+        onClose={() => setNotesCallId(null)}
+      />
     </div>
   );
 };

@@ -112,6 +112,8 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
     useResendConfirmationMutation();
   const [isDownloading, setIsDownloading] = useState(false);
   const [viewingDocId, setViewingDocId] = useState(null);
+  /** Doc ids known removed after a 410 (backup if available flag lagged). */
+  const [removedDocIds, setRemovedDocIds] = useState(() => new Set());
   const [showRawUserAgent, setShowRawUserAgent] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const inq = data?.data?.inquiry;
@@ -126,6 +128,10 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
   const currency = inq?.pricing?.currency || 'USD';
   const isConfirmed = inq?.status === 'authorized';
   const supportDocs = useMemo(() => listInquirySupportDocs(inq), [inq]);
+
+  useEffect(() => {
+    setRemovedDocIds(new Set());
+  }, [inquiryId]);
 
   useEffect(() => {
     if (!supportDocs.length) return undefined;
@@ -189,7 +195,13 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
       window.open(url, '_blank', 'noopener,noreferrer');
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to open supporting document'));
+      const status = err?.response?.status ?? err?.status;
+      if (status === 410) {
+        setRemovedDocIds((prev) => new Set(prev).add(docId));
+        toast.error('Document removed from server (retention period ended)');
+      } else {
+        toast.error(getErrorMessage(err, 'Failed to open supporting document'));
+      }
     } finally {
       setViewingDocId(null);
     }
@@ -435,6 +447,8 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                   );
                   const expired = countdown === 'Expired';
                   const docId = doc.id || 'legacy';
+                  const removed =
+                    doc.available === false || removedDocIds.has(docId);
                   return (
                     <li
                       key={docId}
@@ -449,7 +463,11 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                           {doc.docKind || 'passport'}
                           {doc.originalName ? ` · ${doc.originalName}` : ''}
                         </p>
-                        {countdown ? (
+                        {removed ? (
+                          <p className="mt-0.5 text-xs font-medium text-rose-600">
+                            Removed from server
+                          </p>
+                        ) : countdown ? (
                           <p
                             className={`mt-0.5 text-xs font-medium tabular-nums ${
                               expired ? 'text-rose-600' : 'text-amber-700'
@@ -461,19 +479,25 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                           </p>
                         ) : null}
                       </div>
-                      <button
-                        type="button"
-                        disabled={viewingDocId === docId}
-                        onClick={() => handleViewSupportDocument(doc)}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
-                      >
-                        {viewingDocId === docId ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Eye className="h-3.5 w-3.5" />
-                        )}
-                        View
-                      </button>
+                      {removed ? (
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500">
+                          Removed
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={viewingDocId === docId}
+                          onClick={() => handleViewSupportDocument(doc)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+                        >
+                          {viewingDocId === docId ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5" />
+                          )}
+                          View
+                        </button>
+                      )}
                     </li>
                   );
                 })}
@@ -497,6 +521,12 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                 <p className="text-[11px] font-medium text-slate-500">Address</p>
                 <p className="text-sm font-semibold text-slate-900">
                   {inq.billing?.address || '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium text-slate-500">City</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {inq.billing?.city || '—'}
                 </p>
               </div>
               <div>

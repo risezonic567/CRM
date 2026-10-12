@@ -52,6 +52,8 @@ const StepPreview = ({ onDone }) => {
   const [sendInquiry, { isLoading }] = useSendInquiryMutation();
   const [waiting, setWaiting] = useState(false);
   const [sentInquiry, setSentInquiry] = useState(null);
+  /** null = all slots selected (Plan B / all_slots on send) */
+  const [selectedDocKeys, setSelectedDocKeys] = useState(null);
   const authEditedRef = useRef(false);
 
   const cost = Number(wizard.costPrice || 0);
@@ -74,6 +76,64 @@ const StepPreview = ({ onDone }) => {
         .trim()
     );
   }, [billing.cardholderName, wizard.customer?.firstName, wizard.customer?.lastName]);
+
+  /** Candidate slots for Plan A picker (confirm page uses same roles). */
+  const docSlotCandidates = useMemo(() => {
+    const cardLabel =
+      String(billing.cardholderName || '').trim() ||
+      [wizard.customer?.firstName, wizard.customer?.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+      'Cardholder';
+    const list = [
+      {
+        key: 'doc__cardholder',
+        role: 'cardholder',
+        passengerId: null,
+        passengerIndex: null,
+        label: cardLabel,
+      },
+    ];
+    (wizard.passengers || []).forEach((p, i) => {
+      const id = p?._id ? String(p._id) : null;
+      const name =
+        [p?.firstName, p?.lastName].filter(Boolean).join(' ').trim() ||
+        `Passenger ${i + 1}`;
+      list.push({
+        key: id ? `doc__passenger__${id}` : `pax_idx_${i}`,
+        role: 'passenger',
+        passengerId: id,
+        passengerIndex: i,
+        label: name,
+      });
+    });
+    return list;
+  }, [
+    billing.cardholderName,
+    wizard.customer?.firstName,
+    wizard.customer?.lastName,
+    wizard.passengers,
+  ]);
+
+  const effectiveDocKeys = useMemo(() => {
+    if (selectedDocKeys == null) {
+      return new Set(docSlotCandidates.map((s) => s.key));
+    }
+    return selectedDocKeys;
+  }, [selectedDocKeys, docSlotCandidates]);
+
+  const toggleDocSlot = (key) => {
+    setSelectedDocKeys((prev) => {
+      const base =
+        prev == null
+          ? new Set(docSlotCandidates.map((s) => s.key))
+          : new Set(prev);
+      if (base.has(key)) base.delete(key);
+      else base.add(key);
+      return base;
+    });
+  };
 
   const purpose = useMemo(() => {
     if (wizard.travel?.from && wizard.travel?.to) {
@@ -229,6 +289,26 @@ const StepPreview = ({ onDone }) => {
         ? wizard.authorizationFills
         : extractAuthFillsFromText(authorizationText, defaultFills);
 
+    const allDocsSelected =
+      docSlotCandidates.length > 0 &&
+      docSlotCandidates.every((s) => effectiveDocKeys.has(s.key));
+    const docRequest = allDocsSelected
+      ? { mode: 'all_slots', slots: [] }
+      : {
+          mode: 'agent_selected',
+          slots: docSlotCandidates
+            .filter((s) => effectiveDocKeys.has(s.key))
+            .map((s) => ({
+              key: s.key.startsWith('pax_idx_') ? '' : s.key,
+              role: s.role,
+              passengerId: s.passengerId || null,
+              passengerIndex:
+                s.role === 'passenger' ? s.passengerIndex : undefined,
+              label: s.label,
+              docKind: 'passport',
+            })),
+        };
+
     try {
       const body = {
         customer: wizard.customer,
@@ -245,6 +325,7 @@ const StepPreview = ({ onDone }) => {
         billing: {
           phone: billing.phone || '',
           address: billing.address || '',
+          city: billing.city || '',
           state: billing.state || '',
           zip: billing.zip || '',
           country: billing.country || '',
@@ -257,6 +338,7 @@ const StepPreview = ({ onDone }) => {
         notes: wizard.notes || '',
         authorizationText,
         authorizationFills,
+        docRequest,
       };
 
       const res = await sendInquiry({ id: wizard.inquiryId, body }).unwrap();
@@ -346,6 +428,66 @@ const StepPreview = ({ onDone }) => {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-slate-400" />
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Documents to request
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="text-[11px] font-medium text-sky-700 hover:underline"
+                  onClick={() =>
+                    setSelectedDocKeys(
+                      new Set(docSlotCandidates.map((s) => s.key))
+                    )
+                  }
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  className="text-[11px] font-medium text-slate-500 hover:underline"
+                  onClick={() => setSelectedDocKeys(new Set())}
+                >
+                  None
+                </button>
+              </div>
+            </div>
+            <p className="mb-3 text-xs text-slate-500">
+              Customer confirm page shows only checked slots (optional upload).
+              Default is all — same as before.
+            </p>
+            <ul className="space-y-2">
+              {docSlotCandidates.map((slot) => {
+                const checked = effectiveDocKeys.has(slot.key);
+                return (
+                  <li key={slot.key}>
+                    <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 text-sm text-slate-800 hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        checked={checked}
+                        onChange={() => toggleDocSlot(slot.key)}
+                      />
+                      <span className="min-w-0">
+                        <span className="font-medium">
+                          {slot.role === 'cardholder'
+                            ? 'Cardholder'
+                            : 'Passenger'}
+                        </span>
+                        <span className="text-slate-500"> — {slot.label}</span>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-2 flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-slate-400" />
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -358,7 +500,7 @@ const StepPreview = ({ onDone }) => {
                 {billing.address ? ` · ${billing.address}` : ''}
               </p>
               <p className="text-slate-600">
-                {[billing.state, billing.zip, billing.country]
+                {[billing.city, billing.state, billing.zip, billing.country]
                   .filter(Boolean)
                   .join(', ') || '—'}
               </p>

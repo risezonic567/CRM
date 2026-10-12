@@ -18,6 +18,7 @@ const emptyTravel = {
 const emptyBilling = {
   phone: '',
   address: '',
+  city: '',
   state: '',
   zip: '',
   country: '',
@@ -111,6 +112,7 @@ export function mapInquiryToWizard(inquiry) {
     billing: {
       phone: inquiry.billing?.phone || '',
       address: inquiry.billing?.address || '',
+      city: inquiry.billing?.city || '',
       state: inquiry.billing?.state || '',
       zip: inquiry.billing?.zip || '',
       country: inquiry.billing?.country || '',

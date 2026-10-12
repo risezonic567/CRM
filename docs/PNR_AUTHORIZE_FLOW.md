@@ -18,7 +18,7 @@ Related: [pnrconverter.com](https://www.pnrconverter.com/) · [API intro](https:
 | Card | type, holder, last4, expiry persisted; **CVV never stored** (optional UI-only) |
 | Preview / email | Editable `authorizationText` (one **total** only) + billing; email links to confirm page |
 | Confirm page | Full preview + **underlined** auth text + signature; **no checkbox**; optional multi-slot docs; **I Authorize** → thank you |
-| Document upload | **Plan B (now):** pax-only on confirm — slots = cardholder + each passenger (all optional); PDF/JPG/PNG ≤5MB; images compressed in browser; VPS disk `uploads/authorize/<inquiryId>/`; agent **View** (inline) + 3-day countdown (auto-delete cron later). **Future Plan A:** agent selects which slots via `docRequest` — same `supportDocuments[]` storage. |
+| Document upload | **Plan B (now):** pax-only on confirm — slots = cardholder + each passenger (all optional); PDF/JPG/PNG ≤5MB; images compressed in browser; VPS/local disk `uploads/authorize/<inquiryId>/`; agent **View** (inline) + countdown from `expiresAt`. **Disk cleanup job** (`src/jobs/cleanupSupportDocuments.js`): deletes files by **mtime** older than `SUPPORT_DOC_TTL_DAYS` (default 3); does **not** touch Mongo (ghost meta OK → View **410 Document removed**). Safety: root must end with `uploads/authorize`, no symlink follow, never delete root, `SUPPORT_DOC_CLEANUP_DRY_RUN=true` for first verify. Interval: every 60m + once after boot (`server.js` like `verifyMail`). **Future:** manual Delete / DB `$pull`. **Future Plan A:** agent `docRequest` slots — same `supportDocuments[]`. |
 | Auth display | Plain `authorizationText` in DB; `renderAuthorizationHtml()` underlines fills on preview / email / confirm / receipt |
 | Status | **`authorized`** (migrates `customer_confirmed` on boot) |
 | After authorize | No auto receipt email; agent **Download** / **Resend**; signature = cardholder name |
@@ -88,6 +88,23 @@ selectedOffer.raw = {
 4. POST multipart → status `authorized` + `supportDocuments[]` + agreement meta (IP/UA); socket `inquiry:authorized`  
 5. `thankYou.ejs` — **no** auto confirmation email  
 6. Agent download / resend receipt; **View** supporting docs (no download) + countdown  
+7. After TTL, disk job removes files; agent View → **410 Document removed** (DB meta may still list the card)
+
+### Support doc disk cleanup (dev + VPS)
+
+| Env | Meaning |
+|-----|---------|
+| `SUPPORT_DOC_TTL_DAYS` | File mtime older than this → delete (default **3**) |
+| `SUPPORT_DOC_CLEANUP_DRY_RUN` | `true` = log only; first run on each machine |
+
+| File | Role |
+|------|------|
+| `src/jobs/cleanupSupportDocuments.js` | Scan `AUTHORIZE_UPLOAD_ROOT`, unlink old files, empty subdirs |
+| `src/server.js` | `startCleanupJob()` after listen (no await) |
+| `src/config/index.js` | `config.supportDocs` |
+| `utils/supportDocuments.js` | `expiresAt` uses same TTL for UI countdown on **new** uploads |
+
+Does **not** `$pull` Mongo. Upload / confirm / wizard / mail unchanged.
 
 ### Auth text helper
 
@@ -95,9 +112,10 @@ selectedOffer.raw = {
 - Field: `Inquiry.authorizationText` (plain); HTML only at render time  
 - Upload: `authorizeUpload.middleware.js` + `utils/supportDocuments.js` → `Inquiry.supportDocuments[]` (legacy `supportDocument` still readable)  
 
-### Future Plan A (docs only — not built yet)
+### Plan A (agent-selected doc slots)
 
-Agent StepPreview will set `docRequest.mode = 'agent_selected'` + slot list; confirm page shows **only** those slots. Storage shape unchanged.
+Agent StepPreview → checkboxes → send saves `docRequest`.  
+`buildDocSlots()` filters confirm uploads. Default / untouched = `all_slots` (Plan B). Storage `supportDocuments[]` unchanged.
 
 ---
 
@@ -140,3 +158,5 @@ Without key → local parser (working flow). With key → richer logos/duration 
 - [x] Authorize / download / resend  
 - [x] Old search removed  
 - [ ] Manual E2E: paste sample → authorize → download  
+- [x] Support doc disk cleanup job (mtime + env TTL; dry-run flag)  
+

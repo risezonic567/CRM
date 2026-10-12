@@ -7,6 +7,7 @@ import { createApp } from './app.js';
 import { initSocket } from './socket/socket.js';
 import { migrateAuthorizedStatus } from './scripts/migrateAuthorizedStatus.js';
 import { verifyMail } from './integrations/nodemailer/nodemailer.client.js';
+import { startCleanupJob } from './jobs/cleanupSupportDocuments.js';
 import logger from './utils/logger.js';
 
 async function bootstrap() {
@@ -40,6 +41,7 @@ async function bootstrap() {
       client: config.urls.client,
     });
     verifyMail();
+    startCleanupJob();
   });
 }
 

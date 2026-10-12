@@ -114,6 +114,22 @@ const config = {
     authMax: Number(process.env.AUTH_RATE_LIMIT_MAX) || 20,
     publicMax: Number(process.env.PUBLIC_RATE_LIMIT_MAX) || 30,
   },
+
+  /**
+   * Support docs on disk (uploads/authorize). Cleanup job uses ttlDays + mtime.
+   * DRY_RUN=true → log only (use for first live/dev verification).
+   */
+  supportDocs: (() => {
+    const rawDays = Number(process.env.SUPPORT_DOC_TTL_DAYS);
+    const ttlDays =
+      Number.isFinite(rawDays) && rawDays >= 0 ? rawDays : 3;
+    return {
+      ttlDays,
+      ttlMs: ttlDays * 24 * 60 * 60 * 1000,
+      cleanupDryRun: process.env.SUPPORT_DOC_CLEANUP_DRY_RUN === 'true',
+      cleanupIntervalMs: 60 * 60 * 1000,
+    };
+  })(),
 };
 
 export default config;

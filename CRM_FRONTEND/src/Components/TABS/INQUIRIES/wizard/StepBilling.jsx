@@ -1,12 +1,18 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, Loader2 } from 'lucide-react';
 import {
   patchWizard,
   selectWizard,
   setWizardStep,
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
+import { useDebounce } from '../../../../hooks/useDebounce';
+import {
+  isValidUsZipFormat,
+  lookupUsZip,
+  normalizeUsZip,
+} from '../../../../utils/usZipLookup';
 
 const fieldClass =
   'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
@@ -36,6 +42,68 @@ const StepBilling = () => {
     const t = String(b.cardType || '').trim();
     return Boolean(t) && !isPresetCardType(t);
   });
+  const [zipLookupLoading, setZipLookupLoading] = useState(false);
+  const [zipHint, setZipHint] = useState('');
+  const lastLookedUpZip = useRef('');
+  const billingRef = useRef(b);
+  billingRef.current = b;
+
+  const debouncedZip = useDebounce(b.zip || '', 450);
+
+  // US ZIP → autofill state + country (editable; never blocks Continue)
+  useEffect(() => {
+    const zip5 = normalizeUsZip(debouncedZip);
+    if (!zip5 || !isValidUsZipFormat(debouncedZip)) {
+      setZipHint('');
+      return undefined;
+    }
+    if (lastLookedUpZip.current === zip5) return undefined;
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    (async () => {
+      setZipLookupLoading(true);
+      try {
+        const result = await lookupUsZip(zip5, { signal: controller.signal });
+        if (cancelled) return;
+        lastLookedUpZip.current = result.zip;
+        const current = billingRef.current || {};
+        dispatch(
+          patchWizard({
+            billing: {
+              ...current,
+              zip: result.zip,
+              city: result.city || current.city || '',
+              state: result.state || current.state || '',
+              country: result.country || 'United States',
+            },
+          })
+        );
+        setZipHint(
+          result.city
+            ? `Filled · ${result.city}, ${result.stateAbbr || result.state}`
+            : ''
+        );
+      } catch (err) {
+        if (cancelled || err?.name === 'AbortError') return;
+        lastLookedUpZip.current = '';
+        setZipHint('');
+        if (err?.code === 'NOT_FOUND') {
+          toast.error('ZIP not found — enter state / country manually');
+        } else if (err?.code !== 'INVALID_FORMAT') {
+          toast.error('ZIP lookup unavailable — enter state / country manually');
+        }
+      } finally {
+        if (!cancelled) setZipLookupLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [debouncedZip, dispatch]);
 
   const selectValue = useMemo(() => {
     const t = String(b.cardType || '').trim();
@@ -114,33 +182,64 @@ const StepBilling = () => {
               />
             </div>
             <div>
-              <label className={labelClass}>State</label>
+              <label className={labelClass}>
+                Zip{' '}
+                <span className="font-normal text-slate-400">(US — autofills city / state)</span>
+              </label>
+              <div className="relative">
+                <input
+                  className={`${fieldClass} ${zipLookupLoading ? 'pr-10' : ''}`}
+                  placeholder="90210"
+                  value={b.zip || ''}
+                  onChange={(e) => {
+                    lastLookedUpZip.current = '';
+                    const raw = e.target.value;
+                    const cleaned = raw.replace(/[^\d-]/g, '').slice(0, 10);
+                    dispatch(patchWizard({ billing: { ...b, zip: cleaned } }));
+                  }}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                />
+                {zipLookupLoading ? (
+                  <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
+                ) : null}
+              </div>
+              {zipHint ? (
+                <p className="mt-1 text-[11px] text-slate-500">{zipHint}</p>
+              ) : null}
+            </div>
+            <div>
+              <label className={labelClass}>City</label>
               <input
                 className={fieldClass}
-                placeholder="State / province"
-                value={b.state || ''}
-                onChange={set('state')}
+                placeholder="Beverly Hills"
+                value={b.city || ''}
+                onChange={set('city')}
                 type="text"
+                autoComplete="address-level2"
               />
             </div>
             <div>
-              <label className={labelClass}>Zip</label>
+              <label className={labelClass}>State</label>
               <input
                 className={fieldClass}
-                placeholder="ZIP / postal code"
-                value={b.zip || ''}
-                onChange={set('zip')}
+                placeholder="CA"
+                value={b.state || ''}
+                onChange={set('state')}
                 type="text"
+                autoComplete="address-level1"
               />
             </div>
             <div>
               <label className={labelClass}>Country</label>
               <input
                 className={fieldClass}
-                placeholder="Country"
+                placeholder="United States"
                 value={b.country || ''}
                 onChange={set('country')}
                 type="text"
+                autoComplete="country-name"
               />
             </div>
           </div>

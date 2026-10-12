@@ -135,12 +135,11 @@ function FlightSegmentFields({
   showLayover,
   canRemove,
   onRemove,
-  lockFrom,
-  lockTo,
-  fromHint,
-  toHint,
+  showFrom,
+  showTo,
 }) {
   const set = (field) => (e) => onChange({ ...segment, [field]: e.target.value });
+  const showAirports = showFrom || showTo;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -158,59 +157,58 @@ function FlightSegmentFields({
         )}
       </div>
 
-      <div className="mb-2 grid gap-2 sm:grid-cols-2">
-        <AirportAutocomplete
-          id={`seg-from-${title}`}
-          label={lockFrom ? 'From (trip origin)' : 'From *'}
-          placeholder={fromHint || 'Airport'}
-          valueIata={segment.from || (lockFrom ? fromHint : '') || ''}
-          valueLabel={
-            segment.fromLabel ||
-            segment.from ||
-            (lockFrom ? fromHint : '') ||
-            ''
-          }
-          inputClassName={legFieldClass}
-          onSelect={(p) =>
-            onChange({
-              ...segment,
-              from: p.iataCode,
-              fromLabel: p.label,
-            })
-          }
-          onClear={() =>
-            onChange({
-              ...segment,
-              from: lockFrom ? segment.from : '',
-              fromLabel: lockFrom ? segment.fromLabel : '',
-            })
-          }
-        />
-        <AirportAutocomplete
-          id={`seg-to-${title}`}
-          label={lockTo ? 'To (trip destination)' : 'To *'}
-          placeholder={toHint || 'Airport'}
-          valueIata={segment.to || (lockTo ? toHint : '') || ''}
-          valueLabel={
-            segment.toLabel || segment.to || (lockTo ? toHint : '') || ''
-          }
-          inputClassName={legFieldClass}
-          onSelect={(p) =>
-            onChange({
-              ...segment,
-              to: p.iataCode,
-              toLabel: p.label,
-            })
-          }
-          onClear={() =>
-            onChange({
-              ...segment,
-              to: lockTo ? segment.to : '',
-              toLabel: lockTo ? segment.toLabel : '',
-            })
-          }
-        />
-      </div>
+      {showAirports && (
+        <div className="mb-2 grid gap-2 sm:grid-cols-2">
+          {showFrom && (
+            <AirportAutocomplete
+              id={`seg-from-${title}`}
+              label="From (connection) *"
+              placeholder="Stop airport"
+              valueIata={segment.from || ''}
+              valueLabel={segment.fromLabel || segment.from || ''}
+              inputClassName={legFieldClass}
+              onSelect={(p) =>
+                onChange({
+                  ...segment,
+                  from: p.iataCode,
+                  fromLabel: p.label,
+                })
+              }
+              onClear={() =>
+                onChange({
+                  ...segment,
+                  from: '',
+                  fromLabel: '',
+                })
+              }
+            />
+          )}
+          {showTo && (
+            <AirportAutocomplete
+              id={`seg-to-${title}`}
+              label="To (connection stop) *"
+              placeholder="Stop airport"
+              valueIata={segment.to || ''}
+              valueLabel={segment.toLabel || segment.to || ''}
+              inputClassName={legFieldClass}
+              onSelect={(p) =>
+                onChange({
+                  ...segment,
+                  to: p.iataCode,
+                  toLabel: p.label,
+                })
+              }
+              onClear={() =>
+                onChange({
+                  ...segment,
+                  to: '',
+                  toLabel: '',
+                })
+              }
+            />
+          )}
+        </div>
+      )}
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <div>
@@ -365,6 +363,7 @@ function DirectionBlock({
       {segments.map((seg, index) => {
         const isFirst = index === 0;
         const isLast = index === segments.length - 1;
+        const multi = segments.length > 1;
         return (
           <FlightSegmentFields
             key={`${title}-${index}`}
@@ -378,10 +377,8 @@ function DirectionBlock({
             showLayover={!isLast}
             canRemove={segments.length > 1}
             onRemove={() => removeAt(index)}
-            lockFrom={isFirst}
-            lockTo={isLast}
-            fromHint={isFirst ? tripFromLabel || tripFrom : ''}
-            toHint={isLast ? tripToLabel || tripTo : ''}
+            showFrom={multi && !isFirst}
+            showTo={multi && !isLast}
           />
         );
       })}
@@ -488,9 +485,13 @@ const StepManualFlight = () => {
     });
   };
 
-  const validateSegment = (seg, label, { needFrom, needTo, tripFrom, tripTo }) => {
-    const from = (seg.from || (needFrom ? tripFrom : '') || '').trim();
-    const to = (seg.to || (needTo ? tripTo : '') || '').trim();
+  const validateSegment = (
+    seg,
+    label,
+    { tripFrom, tripTo, segFromRequired, segToRequired }
+  ) => {
+    const from = (segFromRequired ? seg.from : tripFrom || '').trim();
+    const to = (segToRequired ? seg.to : tripTo || '').trim();
     if (!from || !to) {
       toast.error(`${label}: from / to airports required`);
       return false;
@@ -533,23 +534,27 @@ const StepManualFlight = () => {
       return false;
     }
 
-    for (let i = 0; i < outboundSegments.length; i += 1) {
+    const outN = outboundSegments.length;
+    for (let i = 0; i < outN; i += 1) {
+      const multi = outN > 1;
       const ok = validateSegment(outboundSegments[i], `Outbound flight ${i + 1}`, {
-        needFrom: i === 0,
-        needTo: i === outboundSegments.length - 1,
         tripFrom: t.from,
         tripTo: t.to,
+        segFromRequired: multi && i > 0,
+        segToRequired: multi && i < outN - 1,
       });
       if (!ok) return false;
     }
 
     if (tripType === 'round') {
-      for (let i = 0; i < inboundSegments.length; i += 1) {
+      const inN = inboundSegments.length;
+      for (let i = 0; i < inN; i += 1) {
+        const multi = inN > 1;
         const ok = validateSegment(inboundSegments[i], `Return flight ${i + 1}`, {
-          needFrom: i === 0,
-          needTo: i === inboundSegments.length - 1,
           tripFrom: t.to,
           tripTo: t.from,
+          segFromRequired: multi && i > 0,
+          segToRequired: multi && i < inN - 1,
         });
         if (!ok) return false;
       }

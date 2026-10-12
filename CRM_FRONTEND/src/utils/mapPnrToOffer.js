@@ -29,14 +29,25 @@ export function mapPnrToOffer(itinerary, { costPrice = 0, currency = 'USD' } = {
   const last = segments[segments.length - 1] || first;
   const airlineName = first.airlineName || first.airlineCode || 'PNR itinerary';
   const id = `pnr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const logo =
+    first.logoUrl ||
+    first.airlineLogo?.png ||
+    first.airlineLogo?.svg ||
+    '';
+  const durationLabel =
+    first.durationMinutes != null
+      ? `${Math.floor(first.durationMinutes / 60)}h ${String(
+          first.durationMinutes % 60
+        ).padStart(2, '0')}m`
+      : '';
 
   return {
     id,
     airline: {
       name: airlineName,
       iataCode: first.airlineCode || '',
-      logoLockupUrl: first.logoUrl || '',
-      logoSymbolUrl: first.logoUrl || '',
+      logoLockupUrl: logo,
+      logoSymbolUrl: logo,
     },
     flightNumber: first.flightNumber
       ? `${first.airlineCode || ''} ${first.flightNumber}`.trim()
@@ -46,18 +57,18 @@ export function mapPnrToOffer(itinerary, { costPrice = 0, currency = 'USD' } = {
         .filter(Boolean)
         .join('T'),
       airport: first.from || '',
-      city: '',
+      city: first.departureAirport?.city || '',
     },
     arrival: {
       at: [last.arrivalDate || last.departureDate, last.arrivalTime]
         .filter(Boolean)
         .join('T'),
       airport: last.to || '',
-      city: '',
+      city: last.arrivalAirport?.city || '',
     },
-    duration: '',
+    duration: durationLabel,
     stops: Math.max(0, segments.length - 1),
-    cabinClass: first.bookingClass || '',
+    cabinClass: first.cabin || first.bookingClass || '',
     costPrice: Number(costPrice) || 0,
     currency,
     expiresAt: null,

@@ -77,6 +77,7 @@ export async function listCalls(user, query) {
       .skip(skip)
       .limit(limit)
       .populate('loggedBy', 'firstName lastName email')
+      .populate('followUpNotes.addedBy', 'firstName lastName')
       .populate(
         'inquiryId',
         'inquiryReference status customer.firstName customer.lastName customer.phone'
@@ -98,10 +99,31 @@ export async function getCall(user, callId) {
 
   const call = await Call.findOne(filter)
     .populate('loggedBy', 'firstName lastName email')
+    .populate('followUpNotes.addedBy', 'firstName lastName')
     .populate(
       'inquiryId',
       'inquiryReference status customer.firstName customer.lastName customer.phone'
     );
   if (!call) throw new AppError('Call not found', 404);
   return call;
+}
+
+/** Append-only follow-up note — does not change remarks or disposition. */
+export async function addCallNote(user, callId, text) {
+  const filter = { _id: callId, agencyId: user.agencyId };
+  if (user.role !== ROLES.ADMIN) {
+    filter.loggedBy = user._id;
+  }
+
+  const call = await Call.findOne(filter);
+  if (!call) throw new AppError('Call not found', 404);
+
+  call.followUpNotes.push({
+    text: String(text).trim(),
+    addedBy: user._id,
+    createdAt: new Date(),
+  });
+  await call.save();
+
+  return getCall(user, callId);
 }

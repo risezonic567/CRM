@@ -140,7 +140,7 @@
         </tr>
         <tr>
           <td style="color:#64748b;">State / Zip</td>
-          <td><%= [billing.state, billing.zip].filter(Boolean).join(' ') || '—' %></td>
+          <td><%= [billing.city, billing.state, billing.zip].filter(Boolean).join(', ') || '—' %></td>
         </tr>
         <tr>
           <td style="color:#64748b;">Country</td>

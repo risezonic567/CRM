@@ -28,6 +28,14 @@ export const callApi = createApi({
       }),
       invalidatesTags: ['Calls'],
     }),
+    addCallNote: builder.mutation({
+      query: ({ id, text }) => ({
+        url: `/calls/${id}/notes`,
+        method: 'POST',
+        data: { text },
+      }),
+      invalidatesTags: ['Calls'],
+    }),
   }),
 });
 
@@ -35,4 +43,5 @@ export const {
   useListCallsQuery,
   useGetCallQuery,
   useCreateCallMutation,
+  useAddCallNoteMutation,
 } = callApi;

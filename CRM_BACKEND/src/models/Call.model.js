@@ -11,6 +11,18 @@ const callSchema = new mongoose.Schema(
       required: true,
     },
     remarks: { type: String, trim: true, default: '' },
+    /** Append-only late notes — original remarks stay immutable */
+    followUpNotes: [
+      {
+        text: { type: String, trim: true, required: true },
+        addedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     inquiryId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Inquiry',

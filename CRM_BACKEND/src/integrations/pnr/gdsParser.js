@@ -88,6 +88,10 @@ const ORIGIN_DEST_RE = /^([A-Z]{3})([A-Z]{3})$/;
 const AIRLINE_CODE_RE = /^[A-Z0-9]{2}$/;
 const FLIGHT_NUMBER_RE = /^\d{1,4}[A-Z]?$/;
 
+// Chat apps / terminals sometimes flatten newlines into spaces.
+const SEGMENT_START_RE =
+  /\s+(?=\d{1,2}\s+[A-Z0-9]{2}\s+\d{1,4}[A-Z]?\s+[A-Z]\s+\d{2}[A-Z]{3}\b)/;
+
 function parseLine(rawLine, anchor) {
   const tokens = tokenize(rawLine);
 
@@ -211,7 +215,44 @@ function parseLine(rawLine, anchor) {
 }
 
 /**
- * Parse pasted GDS air-segment lines into a structured itinerary.
+ * Derive origin / destination / dates from segments (local or API-adapted).
+ */
+export function buildTripSummary(segments) {
+  const list = Array.isArray(segments) ? segments : [];
+  const origin = list[0]?.from ?? null;
+  const destination = list.length ? list[list.length - 1].to : null;
+  const departureDate = list[0]?.departureDate ?? null;
+
+  let returnDate = null;
+  if (origin && list.length > 1) {
+    for (let i = list.length - 1; i >= 1; i -= 1) {
+      if (list[i].to === origin) {
+        returnDate = list[i].departureDate;
+        break;
+      }
+    }
+  }
+
+  return {
+    origin,
+    destination,
+    departureDate,
+    returnDate,
+    segmentCount: list.length,
+  };
+}
+
+/** Split paste into one string per segment (newline or squashed single line). */
+export function splitIntoSegmentLines(rawText) {
+  return String(rawText || '')
+    .split(/\r?\n/)
+    .flatMap((l) => l.trim().split(SEGMENT_START_RE))
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+}
+
+/**
+ * Parse one or more pasted GDS air-segment lines into a structured itinerary.
  * @param {string} rawText
  * @param {{ now?: Date }} [options]
  */
@@ -221,10 +262,7 @@ export function parseGdsAirSegments(rawText, options = {}) {
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
   );
 
-  const lines = String(rawText || '')
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+  const lines = splitIntoSegmentLines(rawText);
 
   const segments = [];
   const warnings = [];
@@ -242,32 +280,10 @@ export function parseGdsAirSegments(rawText, options = {}) {
     }
   }
 
-  const origin = segments[0]?.from ?? null;
-  const destination = segments.length
-    ? segments[segments.length - 1].to
-    : null;
-  const departureDate = segments[0]?.departureDate ?? null;
-
-  let returnDate = null;
-  if (origin && segments.length > 1) {
-    for (let i = segments.length - 1; i >= 1; i -= 1) {
-      if (segments[i].to === origin) {
-        returnDate = segments[i].departureDate;
-        break;
-      }
-    }
-  }
-
   return {
     rawText: String(rawText || ''),
     segments,
-    tripSummary: {
-      origin,
-      destination,
-      departureDate,
-      returnDate,
-      segmentCount: segments.length,
-    },
+    tripSummary: buildTripSummary(segments),
     warnings,
     source: 'local-parser',
   };

@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import fs from 'fs';
+import mongoose from 'mongoose';
 import { Inquiry, Agency, Call } from '../../models/index.js';
 import { AppError } from '../../utils/apiResponse.js';
 import { calculatePricing } from '../../utils/calculatePricing.js';
@@ -11,7 +12,11 @@ import {
   renderAuthorizationHtml,
 } from '../../utils/buildAuthorizationText.js';
 import { resolveSupportDocumentAbsolutePath } from '../../middlewares/authorizeUpload.middleware.js';
-import { findSupportDocument } from '../../utils/supportDocuments.js';
+import {
+  findSupportDocument,
+  attachSupportDocAvailability,
+  resolveDocRequest,
+} from '../../utils/supportDocuments.js';
 import { signPublicToken } from '../../utils/signPublicToken.js';
 import {
   INQUIRY_STATUSES,
@@ -171,7 +176,7 @@ export async function getInquiry(user, inquiryId) {
   if (doc.agreement) {
     doc.agreement = enrichAgreement(doc.agreement);
   }
-  return doc;
+  return attachSupportDocAvailability(doc);
 }
 
 export async function lookupInquiries(user, q) {
@@ -240,9 +245,17 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
   };
   inquiry.selectedOffer = payload.selectedOffer;
   inquiry.pricing = pricing;
-  inquiry.passengers = payload.passengers;
+  // Ensure passenger subdocs have _ids so docRequest slots resolve stably
+  inquiry.passengers = (payload.passengers || []).map((p) => {
+    const row = { ...(p && typeof p === 'object' ? p : {}) };
+    if (!row._id) {
+      row._id = new mongoose.Types.ObjectId();
+    }
+    return row;
+  });
   inquiry.billing = sanitizeBilling(payload.billing || {});
   inquiry.notes = payload.notes || '';
+  inquiry.docRequest = resolveDocRequest(payload.docRequest, inquiry);
 
   const authorizerName =
     payload.billing?.cardholderName ||
@@ -533,7 +546,7 @@ export async function getSupportDocument(user, inquiryId, docId) {
 
   const abs = resolveSupportDocumentAbsolutePath(doc.relativePath);
   if (!abs || !fs.existsSync(abs)) {
-    throw new AppError('Supporting document file not found', 404);
+    throw new AppError('Document removed', 410);
   }
 
   const safeName = String(doc.originalName || doc.storedName || 'document')

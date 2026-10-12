@@ -86,6 +86,7 @@ const inquirySchema = new mongoose.Schema(
     billing: {
       phone: { type: String, trim: true, default: '' },
       address: { type: String, trim: true, default: '' },
+      city: { type: String, trim: true, default: '' },
       state: { type: String, trim: true, default: '' },
       zip: { type: String, trim: true, default: '' },
       country: { type: String, trim: true, default: '' },
@@ -186,8 +187,8 @@ const inquirySchema = new mongoose.Schema(
       default: [],
     },
     /**
-     * Future Plan A (not enforced yet): agent-selected slots for confirm page.
-     * mode 'all_slots' = Plan B behavior.
+     * Plan A: agent-selected slots for confirm page (set on send).
+     * mode 'all_slots' = Plan B (show cardholder + all passengers).
      */
     docRequest: {
       mode: {

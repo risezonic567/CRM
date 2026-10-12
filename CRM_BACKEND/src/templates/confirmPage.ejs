@@ -180,7 +180,7 @@
     <table class="info">
       <tr><td class="k">Phone</td><td><%= billing.phone || '—' %></td></tr>
       <tr><td class="k">Address</td><td><%= billing.address || '—' %></td></tr>
-      <tr><td class="k">State / Zip</td><td><%= [billing.state, billing.zip].filter(Boolean).join(' ') || '—' %></td></tr>
+      <tr><td class="k">City / State / Zip</td><td><%= [billing.city, billing.state, billing.zip].filter(Boolean).join(', ') || '—' %></td></tr>
       <tr><td class="k">Country</td><td><%= billing.country || '—' %></td></tr>
       <tr>
         <td class="k">Card</td>

@@ -1,22 +1,22 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import config from '../config/index.js';
 import {
   AUTHORIZE_UPLOAD_ROOT,
   resolveSupportDocumentAbsolutePath,
 } from '../middlewares/authorizeUpload.middleware.js';
 
-/** Plan B retention window (UI countdown now; cron delete later). */
-export const SUPPORT_DOC_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+/** Retention window from env SUPPORT_DOC_TTL_DAYS (default 3). */
+export const SUPPORT_DOC_TTL_MS = config.supportDocs.ttlMs;
 
 export const DOC_FIELD_CARDHOLDER = 'doc__cardholder';
 export const DOC_FIELD_PASSENGER_PREFIX = 'doc__passenger__';
 
 /**
- * Plan B slots for confirm page: cardholder + each passenger (all optional).
- * Future Plan A: filter by inquiry.docRequest.slots.
+ * Full slot list (Plan B): cardholder + each passenger with _id.
  */
-export function buildDocSlots(inquiry) {
+export function buildAllDocSlots(inquiry) {
   const billing = inquiry?.billing || {};
   const cardholderName =
     String(billing.cardholderName || '').trim() ||
@@ -51,6 +51,93 @@ export function buildDocSlots(inquiry) {
   }
 
   return slots;
+}
+
+/**
+ * Confirm-page slots. Plan A: filter by inquiry.docRequest when mode is
+ * agent_selected. Missing/all_slots → full list (Plan B, backward compatible).
+ */
+export function buildDocSlots(inquiry) {
+  const all = buildAllDocSlots(inquiry);
+  const mode = inquiry?.docRequest?.mode;
+  if (mode !== 'agent_selected') return all;
+
+  const wanted = Array.isArray(inquiry.docRequest?.slots)
+    ? inquiry.docRequest.slots
+    : [];
+  if (!wanted.length) return [];
+
+  const keys = new Set(wanted.map((s) => s?.key).filter(Boolean));
+  const paxIds = new Set(
+    wanted
+      .filter((s) => s?.role === 'passenger' && s?.passengerId)
+      .map((s) => String(s.passengerId))
+  );
+  const wantCard = wanted.some(
+    (s) => s?.role === 'cardholder' || s?.key === DOC_FIELD_CARDHOLDER
+  );
+
+  return all.filter((s) => {
+    if (keys.has(s.key)) return true;
+    if (s.role === 'cardholder' && wantCard) return true;
+    if (
+      s.role === 'passenger' &&
+      s.passengerId &&
+      paxIds.has(String(s.passengerId))
+    ) {
+      return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * Resolve agent payload → persisted docRequest after passengers have _ids.
+ * Uses passengerId and/or passengerIndex (order in passengers array).
+ */
+export function resolveDocRequest(raw, inquiry) {
+  if (!raw || raw.mode !== 'agent_selected') {
+    return { mode: 'all_slots', slots: [] };
+  }
+
+  const all = buildAllDocSlots(inquiry);
+  const paxSlots = all.filter((s) => s.role === 'passenger');
+  const out = [];
+
+  for (const r of raw.slots || []) {
+    if (!r || typeof r !== 'object') continue;
+
+    if (r.role === 'cardholder' || r.key === DOC_FIELD_CARDHOLDER) {
+      const s = all.find((x) => x.role === 'cardholder');
+      if (s) out.push({ ...s });
+      continue;
+    }
+
+    if (r.role === 'passenger') {
+      let s = null;
+      if (r.passengerId) {
+        s = all.find((x) => x.passengerId === String(r.passengerId));
+      }
+      if (
+        !s &&
+        Number.isInteger(r.passengerIndex) &&
+        r.passengerIndex >= 0 &&
+        r.passengerIndex < paxSlots.length
+      ) {
+        s = paxSlots[r.passengerIndex];
+      }
+      if (s) out.push({ ...s });
+    }
+  }
+
+  const seen = new Set();
+  const slots = out.filter((s) => {
+    if (!s?.key || seen.has(s.key)) return false;
+    seen.add(s.key);
+    return true;
+  });
+
+  return { mode: 'agent_selected', slots };
 }
 
 export function expiresAtFromUpload(uploadedAt = new Date()) {
@@ -141,6 +228,43 @@ export function findSupportDocument(inquiry, docId) {
   const docs = listSupportDocuments(inquiry);
   if (!docId) return docs[0] || null;
   return docs.find((d) => String(d.id) === String(docId)) || null;
+}
+
+/** True if the file still exists under AUTHORIZE_UPLOAD_ROOT. */
+export function isSupportDocFileAvailable(relativePath) {
+  if (!relativePath) return false;
+  try {
+    const abs = resolveSupportDocumentAbsolutePath(relativePath);
+    return Boolean(abs && fs.existsSync(abs));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Attach non-persisted `available` on doc meta for agent UI (disk cleanup may
+ * have removed the file while Mongo meta remains).
+ */
+export function attachSupportDocAvailability(inquiryPlain) {
+  if (!inquiryPlain || typeof inquiryPlain !== 'object') return inquiryPlain;
+
+  if (Array.isArray(inquiryPlain.supportDocuments)) {
+    inquiryPlain.supportDocuments = inquiryPlain.supportDocuments.map((d) => ({
+      ...d,
+      available: isSupportDocFileAvailable(d?.relativePath),
+    }));
+  }
+
+  if (inquiryPlain.supportDocument?.relativePath) {
+    inquiryPlain.supportDocument = {
+      ...inquiryPlain.supportDocument,
+      available: isSupportDocFileAvailable(
+        inquiryPlain.supportDocument.relativePath
+      ),
+    };
+  }
+
+  return inquiryPlain;
 }
 
 /** Best-effort delete of uploaded files (orphan cleanup). */

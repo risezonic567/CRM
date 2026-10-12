@@ -38,3 +38,19 @@ export async function getById(req, res, next) {
     return next(err);
   }
 }
+
+export async function addNote(req, res, next) {
+  try {
+    const call = await callService.addCallNote(
+      req.user,
+      req.params.id,
+      req.body.text
+    );
+    return success(res, {
+      message: 'Follow-up note added',
+      data: { call },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}

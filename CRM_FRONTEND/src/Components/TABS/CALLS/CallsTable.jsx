@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, PhoneOff, Plus, Loader2, Eye } from 'lucide-react';
+import { Phone, PhoneOff, Plus, Loader2, Eye, StickyNote } from 'lucide-react';
 import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
 import Can from '../../shared/Can';
 
@@ -64,6 +64,7 @@ const CallsTable = ({
   isLoading,
   onOpenCreate,
   onOpenInquiry,
+  onOpenNotes,
   footer = null,
 }) => {
   if (isLoading) {
@@ -116,6 +117,7 @@ const CallsTable = ({
               <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Phone</th>
               <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Disposition</th>
               <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Remarks</th>
+              <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Notes</th>
               <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Inquiry Ref</th>
               <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Logged By</th>
             </tr>
@@ -209,6 +211,28 @@ const CallsTable = ({
                     <div className="max-w-[240px] truncate text-slate-600" title={call.remarks || ''}>
                       {call.remarks || '—'}
                     </div>
+                  </td>
+
+                  <td className="py-3 px-4">
+                    {onOpenNotes ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded hover:bg-slate-100 hover:border-slate-300 transition-colors cursor-pointer"
+                        title="View / add follow-up notes"
+                        aria-label="Open call notes"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenNotes(call);
+                        }}
+                      >
+                        <StickyNote className="w-3 h-3 shrink-0 opacity-70" strokeWidth={2} />
+                        {(call.followUpNotes?.length || 0) > 0
+                          ? `${call.followUpNotes.length}`
+                          : 'Add'}
+                      </button>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
 
                   <td className="py-3 px-4">

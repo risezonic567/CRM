@@ -10,6 +10,7 @@ export function sanitizeBilling(billing = {}) {
   return {
     phone: String(src.phone || '').trim(),
     address: String(src.address || '').trim(),
+    city: String(src.city || '').trim(),
     state: String(src.state || '').trim(),
     zip: String(src.zip || '').trim(),
     country: String(src.country || '').trim(),

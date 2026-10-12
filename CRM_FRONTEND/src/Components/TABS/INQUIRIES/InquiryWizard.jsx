@@ -8,12 +8,14 @@ import {
   hydrateWizard,
   mapInquiryToWizard,
   buildDraftPayload,
+  patchWizard,
 } from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
 import {
   useGetInquiryQuery,
   useSaveDraftMutation,
 } from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
 import StepCustomer from './wizard/StepCustomer';
+import StepPnrSearch from './wizard/StepPnrSearch';
 import StepManualFlight from './wizard/StepManualFlight';
 import StepPnrQuote from './wizard/StepPnrQuote';
 import StepPassengers from './wizard/StepPassengers';
@@ -151,7 +153,39 @@ const InquiryWizard = () => {
       {/* Step Contents */}
       <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-xs">
         {step === 0 && <StepCustomer />}
-        {step === 1 && <StepManualFlight />}
+        {step === 1 && (
+          <div className="flex flex-col gap-4">
+            <div className="inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+              <button
+                type="button"
+                onClick={() => dispatch(patchWizard({ itineraryEntryMode: 'pnr' }))}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  wizard.itineraryEntryMode !== 'manual'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                GDS decode
+              </button>
+              <button
+                type="button"
+                onClick={() => dispatch(patchWizard({ itineraryEntryMode: 'manual' }))}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  wizard.itineraryEntryMode === 'manual'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Manual entry
+              </button>
+            </div>
+            {wizard.itineraryEntryMode === 'manual' ? (
+              <StepManualFlight />
+            ) : (
+              <StepPnrSearch />
+            )}
+          </div>
+        )}
         {step === 2 && <StepPnrQuote />}
         {step === 3 && <StepPassengers />}
         {step === 4 && <StepBilling />}

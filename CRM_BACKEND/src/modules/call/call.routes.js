@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import * as callController from './call.controller.js';
-import { createCallSchema, listCallsQuerySchema } from './call.validation.js';
+import {
+  createCallSchema,
+  listCallsQuerySchema,
+  addCallNoteSchema,
+} from './call.validation.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { authenticate } from '../../middlewares/auth.middleware.js';
 import { authorize, blockViewerWrites } from '../../middlewares/role.middleware.js';
@@ -14,6 +18,11 @@ router.use(blockViewerWrites);
 
 router.get('/', validate(listCallsQuerySchema, 'query'), callController.list);
 router.post('/', validate(createCallSchema), callController.create);
+router.post(
+  '/:id/notes',
+  validate(addCallNoteSchema),
+  callController.addNote
+);
 router.get('/:id', callController.getById);
 
 export default router;

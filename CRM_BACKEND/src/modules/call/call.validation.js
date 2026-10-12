@@ -22,3 +22,7 @@ export const listCallsQuerySchema = Joi.object({
   search: Joi.string().trim().allow(''),
   loggedBy: Joi.string().hex().length(24),
 });
+
+export const addCallNoteSchema = Joi.object({
+  text: Joi.string().trim().min(1).max(2000).required(),
+});

@@ -7,6 +7,7 @@ import {
 } from '../../config/constants.js';
 
 const passengerSchema = Joi.object({
+  _id: Joi.string().hex().length(24).optional(),
   firstName: Joi.string().trim().required(),
   lastName: Joi.string().trim().required(),
   middleName: Joi.string().trim().allow('').default(''),
@@ -19,6 +20,20 @@ const passengerSchema = Joi.object({
     .valid(...PASSENGER_TYPES)
     .default('adult'),
 });
+
+const docRequestSlotSchema = Joi.object({
+  key: Joi.string().trim().allow('').optional(),
+  role: Joi.string().valid('cardholder', 'passenger', 'other').required(),
+  passengerId: Joi.string().hex().length(24).allow(null, '').optional(),
+  passengerIndex: Joi.number().integer().min(0).optional(),
+  label: Joi.string().trim().allow('').optional(),
+  docKind: Joi.string().trim().allow('').optional(),
+}).unknown(true);
+
+const docRequestSchema = Joi.object({
+  mode: Joi.string().valid('all_slots', 'agent_selected').default('all_slots'),
+  slots: Joi.array().items(docRequestSlotSchema).default([]),
+}).default({ mode: 'all_slots', slots: [] });
 
 export const sendInquirySchema = Joi.object({
   customer: Joi.object({
@@ -51,6 +66,7 @@ export const sendInquirySchema = Joi.object({
   billing: Joi.object({
     phone: Joi.string().trim().allow('').default(''),
     address: Joi.string().trim().allow('').default(''),
+    city: Joi.string().trim().allow('').default(''),
     state: Joi.string().trim().allow('').default(''),
     zip: Joi.string().trim().allow('').default(''),
     country: Joi.string().trim().allow('').default(''),
@@ -72,6 +88,7 @@ export const sendInquirySchema = Joi.object({
     currency: Joi.string().trim().allow('').default(''),
     amount: Joi.string().trim().allow('').default(''),
   }).optional(),
+  docRequest: docRequestSchema,
 });
 
 export const closeInquirySchema = Joi.object({
@@ -128,6 +145,7 @@ export const saveDraftSchema = Joi.object({
   billing: Joi.object({
     phone: Joi.string().trim().allow('').default(''),
     address: Joi.string().trim().allow('').default(''),
+    city: Joi.string().trim().allow('').default(''),
     state: Joi.string().trim().allow('').default(''),
     zip: Joi.string().trim().allow('').default(''),
     country: Joi.string().trim().allow('').default(''),

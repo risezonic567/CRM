@@ -64,6 +64,7 @@ export function listInquirySupportDocs(inquiry) {
               new Date(legacy.uploadedAt).getTime() + SUPPORT_DOC_TTL_MS
             ).toISOString()
           : null,
+        available: legacy.available,
       },
     ];
   }
