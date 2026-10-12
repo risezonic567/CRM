@@ -1,6 +1,7 @@
 # PNR → Authorize Flow (branch: `backup`)
 
-Source of truth for the Gotoflyer-style inquiry rebuild.
+> **Current product (`manual` branch):** see [`PROJECT_PRD.md`](./PROJECT_PRD.md) — PNR + Manual entry, US ZIP, receipts T&Cs, roles, calls, cleanup, etc.  
+> This file remains the historical source of truth for the **`backup`** (PNR-only) rebuild.
 
 Related: [pnrconverter.com](https://www.pnrconverter.com/) · [API intro](https://www.pnrconverter.com/api-introduction)
 
