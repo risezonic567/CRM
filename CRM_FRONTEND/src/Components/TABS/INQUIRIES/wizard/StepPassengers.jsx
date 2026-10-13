@@ -63,8 +63,8 @@ const StepPassengers = () => {
               Passenger details
             </h3>
             <p className="mt-0.5 text-sm text-slate-500">
-              Names should match travel documents. Phone is required for each
-              passenger.
+              Names should match travel documents. Date of birth and phone are
+              required for each passenger.
             </p>
           </div>
         </div>
@@ -127,12 +127,13 @@ const StepPassengers = () => {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Date of birth</label>
+                  <label className={labelClass}>Date of birth *</label>
                   <input
                     type="date"
                     className={fieldClass}
                     value={p.dob || ''}
                     onChange={(e) => setField(idx, 'dob', e.target.value)}
+                    required
                   />
                 </div>
                 <div>
@@ -232,6 +233,10 @@ const StepPassengers = () => {
               }
               if (!String(p.lastName || '').trim()) {
                 toast.error(`Passenger ${n}: enter last name`);
+                return;
+              }
+              if (!String(p.dob || '').trim()) {
+                toast.error(`Passenger ${n}: enter date of birth`);
                 return;
               }
               if (!String(p.phone || '').trim()) {
