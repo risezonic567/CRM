@@ -4,6 +4,7 @@ import {
   PASSENGER_TYPES,
   INQUIRY_STATUSES,
   CLOSE_SOURCES,
+  INQUIRY_CURRENCIES,
 } from '../../config/constants.js';
 
 const passengerSchema = Joi.object({
@@ -61,7 +62,11 @@ export const sendInquirySchema = Joi.object({
   selectedOffer: Joi.object().unknown(true).required(),
   markup: Joi.number().min(0).required(),
   costPrice: Joi.number().min(0).required(),
-  currency: Joi.string().trim().default('USD'),
+  currency: Joi.string()
+    .trim()
+    .uppercase()
+    .valid(...INQUIRY_CURRENCIES)
+    .default('USD'),
   passengers: Joi.array().items(passengerSchema).min(1).required(),
   billing: Joi.object({
     phone: Joi.string().trim().allow('').default(''),
@@ -126,7 +131,10 @@ export const saveDraftSchema = Joi.object({
   selectedOffer: Joi.object().unknown(true).allow(null),
   markup: Joi.number().min(0),
   costPrice: Joi.number().min(0),
-  currency: Joi.string().trim(),
+  currency: Joi.string()
+    .trim()
+    .uppercase()
+    .valid(...INQUIRY_CURRENCIES),
   passengers: Joi.array().items(
     Joi.object({
       firstName: Joi.string().trim().allow('').default(''),

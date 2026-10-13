@@ -9,6 +9,7 @@ import {
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
 import { useConvertPnrMutation } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
 import { getErrorMessage } from '../../../../utils/getErrorMessage';
+import { normalizeInquiryCurrency } from '../../../../constants/currencies';
 import {
   mapPnrToOffer,
   travelPatchFromPnr,
@@ -75,7 +76,7 @@ const StepPnrSearch = () => {
     const travelPatch = travelPatchFromPnr(itinerary, wizard.travel || {});
     const offer = mapPnrToOffer(itinerary, {
       costPrice: wizard.costPrice || 0,
-      currency: wizard.currency || 'USD',
+      currency: normalizeInquiryCurrency(wizard.currency),
     });
     dispatch(
       patchWizard({

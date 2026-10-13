@@ -13,6 +13,11 @@ import {
   lookupUsZip,
   normalizeUsZip,
 } from '../../../../utils/usZipLookup';
+import {
+  clampPhone10,
+  isValidPhone10,
+  PHONE_10_ERROR,
+} from '../../../../utils/phoneValidation';
 
 const fieldClass =
   'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
@@ -120,6 +125,34 @@ const StepBilling = () => {
     dispatch(patchWizard({ billing: { ...b, [field]: e.target.value } }));
 
   const handleNext = () => {
+    if (!String(b.phone || '').trim()) {
+      toast.error('Enter billing phone');
+      return;
+    }
+    if (!isValidPhone10(b.phone)) {
+      toast.error(PHONE_10_ERROR);
+      return;
+    }
+    if (!String(b.address || '').trim()) {
+      toast.error('Enter billing address');
+      return;
+    }
+    if (!String(b.zip || '').trim()) {
+      toast.error('Enter ZIP code');
+      return;
+    }
+    if (!String(b.city || '').trim()) {
+      toast.error('Enter city');
+      return;
+    }
+    if (!String(b.state || '').trim()) {
+      toast.error('Enter state');
+      return;
+    }
+    if (!String(b.country || '').trim()) {
+      toast.error('Enter country');
+      return;
+    }
     if (!b.cardType?.trim()) {
       toast.error(isOther ? 'Enter the card type' : 'Select a card type');
       return;
@@ -162,17 +195,26 @@ const StepBilling = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className={labelClass}>Billing phone</label>
+              <label className={labelClass}>Billing phone * (10 digits)</label>
               <input
                 className={fieldClass}
-                placeholder="Phone number"
+                placeholder="10-digit phone"
                 value={b.phone || ''}
-                onChange={set('phone')}
+                onChange={(e) =>
+                  dispatch(
+                    patchWizard({
+                      billing: { ...b, phone: clampPhone10(e.target.value) },
+                    })
+                  )
+                }
                 type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                autoComplete="tel"
               />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelClass}>Billing address</label>
+              <label className={labelClass}>Billing address *</label>
               <input
                 className={fieldClass}
                 placeholder="Street address"
@@ -183,7 +225,7 @@ const StepBilling = () => {
             </div>
             <div>
               <label className={labelClass}>
-                Zip{' '}
+                Zip *{' '}
                 <span className="font-normal text-slate-400">(US — autofills city / state)</span>
               </label>
               <div className="relative">
@@ -210,7 +252,7 @@ const StepBilling = () => {
               ) : null}
             </div>
             <div>
-              <label className={labelClass}>City</label>
+              <label className={labelClass}>City *</label>
               <input
                 className={fieldClass}
                 placeholder="Beverly Hills"
@@ -221,7 +263,7 @@ const StepBilling = () => {
               />
             </div>
             <div>
-              <label className={labelClass}>State</label>
+              <label className={labelClass}>State *</label>
               <input
                 className={fieldClass}
                 placeholder="CA"
@@ -232,7 +274,7 @@ const StepBilling = () => {
               />
             </div>
             <div>
-              <label className={labelClass}>Country</label>
+              <label className={labelClass}>Country *</label>
               <input
                 className={fieldClass}
                 placeholder="United States"

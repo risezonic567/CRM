@@ -6,10 +6,15 @@ import {
   selectWizard,
   setWizardStep,
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
+import {
+  INQUIRY_CURRENCIES,
+  normalizeInquiryCurrency,
+} from '../../../../constants/currencies';
 import PnrItineraryTable from './PnrItineraryTable';
 
 /**
  * Step 2 — review decoded itinerary + enter supplier price & agency markup.
+ * Agent-selected currency is source of truth for this inquiry (no FX conversion).
  * Pax will only see Total (supplier + markup). Merchant fee removed from this path.
  */
 const StepPnrQuote = () => {
@@ -20,13 +25,22 @@ const StepPnrQuote = () => {
 
   const [supplier, setSupplier] = useState(String(wizard.costPrice ?? ''));
   const [markup, setMarkup] = useState(String(wizard.markup ?? 0));
-  const currency = wizard.currency || 'USD';
+  const [currency, setCurrency] = useState(() =>
+    normalizeInquiryCurrency(wizard.currency)
+  );
 
   const total = useMemo(() => {
     const s = Number(supplier) || 0;
     const m = Number(markup) || 0;
     return Math.round((s + m) * 100) / 100;
   }, [supplier, markup]);
+
+  const applyCurrency = (nextRaw) => {
+    const next = normalizeInquiryCurrency(nextRaw);
+    setCurrency(next);
+    // Persist immediately so draft autosave + later steps (auth text) use agent choice
+    dispatch(patchWizard({ currency: next }));
+  };
 
   const handleContinue = () => {
     if (!segments.length) {
@@ -44,17 +58,18 @@ const StepPnrQuote = () => {
       return;
     }
 
+    const curr = normalizeInquiryCurrency(currency);
     const prevOffer = wizard.selectedOffer || {};
     dispatch(
       patchWizard({
         costPrice,
         markup: markupNum,
         merchantFeePercent: 0,
-        currency,
+        currency: curr,
         selectedOffer: {
           ...prevOffer,
           costPrice,
-          currency,
+          currency: curr,
         },
       })
     );
@@ -66,7 +81,8 @@ const StepPnrQuote = () => {
       <div>
         <h2 className="text-sm font-bold text-slate-900">Itinerary & pricing</h2>
         <p className="mt-0.5 text-xs text-slate-500">
-          Confirm segments, then set supplier price and agency fee. Customer sees{' '}
+          Confirm segments, choose currency, then set supplier price and agency fee.
+          Amounts are in the selected currency (no conversion). Customer sees{' '}
           <span className="font-semibold">total only</span>.
         </p>
       </div>
@@ -83,9 +99,26 @@ const StepPnrQuote = () => {
 
       <PnrItineraryTable segments={segments} />
 
+      <label className="flex max-w-xs flex-col gap-1 text-xs">
+        <span className="font-semibold text-slate-700">Currency *</span>
+        <select
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:border-sky-600 focus:outline-none"
+          value={currency}
+          onChange={(e) => applyCurrency(e.target.value)}
+        >
+          {INQUIRY_CURRENCIES.map((code) => (
+            <option key={code} value={code}>
+              {code}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-xs">
-          <span className="font-semibold text-slate-700">Supplier price ({currency})</span>
+          <span className="font-semibold text-slate-700">
+            Supplier price ({currency})
+          </span>
           <input
             type="number"
             min="0"
@@ -96,7 +129,9 @@ const StepPnrQuote = () => {
           />
         </label>
         <label className="flex flex-col gap-1 text-xs">
-          <span className="font-semibold text-slate-700">Agency fee / markup ({currency})</span>
+          <span className="font-semibold text-slate-700">
+            Agency fee / markup ({currency})
+          </span>
           <input
             type="number"
             min="0"

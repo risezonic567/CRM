@@ -1,6 +1,8 @@
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import ejs from 'ejs';
+import config from '../../config/index.js';
 import { sendMail } from '../../integrations/nodemailer/nodemailer.client.js';
 import { NotificationLog } from '../../models/index.js';
 import logger from '../../utils/logger.js';
@@ -8,6 +10,7 @@ import {
   fillsFromInquiry,
   renderAuthorizationHtml,
 } from '../../utils/buildAuthorizationText.js';
+import { resolveSupportDocumentAbsolutePath } from '../../middlewares/authorizeUpload.middleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,6 +67,110 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
       agencyId: inquiry.agencyId,
     });
     throw err;
+  }
+}
+
+/**
+ * Staff inbox: forward authorize support docs as attachments.
+ * No EJS — plain text/html body. Never throws to caller (authorize must not fail).
+ * Skips when SUPPORT_DOCS_NOTIFY_EMAIL is empty or no readable files.
+ */
+export async function queueSupportDocsNotifyEmail({ inquiry, docs }) {
+  const to = config.supportDocs.notifyEmail;
+  if (!to) return;
+
+  const list = Array.isArray(docs) ? docs.filter((d) => d?.relativePath) : [];
+  if (!list.length) return;
+
+  const ref = inquiry?.inquiryReference || String(inquiry?._id || '');
+  const subject = `Support docs — ${ref}`;
+  const customerName = [
+    inquiry?.customer?.firstName,
+    inquiry?.customer?.lastName,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  const attachments = [];
+  const usedNames = new Set();
+
+  for (const doc of list) {
+    let abs;
+    try {
+      abs = resolveSupportDocumentAbsolutePath(doc.relativePath);
+    } catch {
+      continue;
+    }
+    if (!abs || !fs.existsSync(abs)) continue;
+
+    let filename =
+      String(doc.originalName || doc.storedName || 'document').slice(0, 180) ||
+      'document';
+    if (usedNames.has(filename)) {
+      const base = path.parse(filename);
+      filename = `${base.name}-${attachments.length + 1}${base.ext || ''}`;
+    }
+    usedNames.add(filename);
+
+    attachments.push({
+      filename,
+      path: abs,
+      contentType: doc.mimeType || undefined,
+    });
+  }
+
+  if (!attachments.length) {
+    logger.warn('Support docs notify skipped — no files on disk', { ref, to });
+    return;
+  }
+
+  const lines = [
+    `Reference number: ${ref}`,
+    customerName ? `Customer: ${customerName}` : null,
+    inquiry?.customer?.email ? `Customer email: ${inquiry.customer.email}` : null,
+    `Files attached: ${attachments.length}`,
+    '',
+    'Files are also stored on the server (uploads/authorize).',
+  ].filter((l) => l !== null);
+
+  const text = lines.join('\n');
+  const html = `<pre style="font-family:system-ui,sans-serif;font-size:14px;line-height:1.5">${text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')}</pre>`;
+
+  try {
+    const info = await sendMail({ to, subject, text, html, attachments });
+    await NotificationLog.create({
+      type: 'email',
+      to,
+      subject,
+      status: 'sent',
+      relatedTo: { model: 'Inquiry', id: inquiry._id },
+      messageId: info.messageId || '',
+      agencyId: inquiry.agencyId,
+    });
+  } catch (err) {
+    logger.error('Failed to send support docs notify email', {
+      message: err.message,
+      to,
+      ref,
+    });
+    try {
+      await NotificationLog.create({
+        type: 'email',
+        to,
+        subject,
+        status: 'failed',
+        relatedTo: { model: 'Inquiry', id: inquiry._id },
+        error: err.message,
+        agencyId: inquiry.agencyId,
+      });
+    } catch {
+      // ignore log write failure
+    }
+    // do not rethrow — authorize path must stay unaffected
   }
 }
 

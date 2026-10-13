@@ -216,7 +216,7 @@
       <input type="hidden" name="token" value="<%= token %>" />
 
       <div class="upload-box">
-        <h3>Supporting documents (optional)</h3>
+        <h3>Supporting documents</h3>
         <p>
           Upload only what your agent asked for (usually passport). You can authorize without uploading.
           Accepted: PDF, JPG, PNG · max 5&nbsp;MB each. Photos are compressed before send.
@@ -227,7 +227,7 @@
             <p class="slot-label">
               <%= slot.role === 'cardholder' ? 'Cardholder' : 'Passenger' %> — <%= slot.label %>
             </p>
-            <p class="slot-meta">Passport (optional)</p>
+            <p class="slot-meta">Passport</p>
             <input
               type="file"
               name="<%= slot.key %>"

@@ -27,7 +27,7 @@ export function getMailTransporter() {
   return transporter;
 }
 
-export async function sendMail({ to, subject, html, text }) {
+export async function sendMail({ to, subject, html, text, attachments }) {
   try {
     const tx = getMailTransporter();
     const info = await tx.sendMail({
@@ -36,6 +36,9 @@ export async function sendMail({ to, subject, html, text }) {
       subject,
       html,
       ...(text ? { text } : {}),
+      ...(Array.isArray(attachments) && attachments.length
+        ? { attachments }
+        : {}),
     });
     logger.info('Email sent', { to, messageId: info.messageId });
     return info;

@@ -46,3 +46,6 @@ export const CLOSE_SOURCES = Object.freeze({
   WAITING_MODAL: 'waiting_modal',
   DETAIL_PAGE: 'detail_page',
 });
+
+/** Inquiry pricing currencies — agent selects; amounts entered in that currency (no FX). */
+export const INQUIRY_CURRENCIES = Object.freeze(['USD', 'EUR']);

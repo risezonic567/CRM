@@ -128,6 +128,8 @@ const config = {
       ttlMs: ttlDays * 24 * 60 * 60 * 1000,
       cleanupDryRun: process.env.SUPPORT_DOC_CLEANUP_DRY_RUN === 'true',
       cleanupIntervalMs: 60 * 60 * 1000,
+      /** Empty = skip staff notify email (authorize + disk save unchanged). */
+      notifyEmail: String(process.env.SUPPORT_DOCS_NOTIFY_EMAIL || '').trim(),
     };
   })(),
 };

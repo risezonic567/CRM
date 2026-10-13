@@ -161,3 +161,118 @@ Without key → local parser (working flow). With key → richer logos/duration 
 - [ ] Manual E2E: paste sample → authorize → download  
 - [x] Support doc disk cleanup job (mtime + env TTL; dry-run flag)  
 
+
+
+
+
+
+
+
+
+
+************************************************
+# Travel CRM — MongoDB Backup
+
+## Why
+MongoDB runs on one VPS. If the VPS dies, the DB dies with it.
+We keep a dump on the VPS (daily cron) and a copy on a Windows PC (weekly manual).
+
+## What we back up
+- Database only: `travelcrm` (users, inquiries, calls, agencies, notificationlogs)
+- NOT: `uploads/` (passport docs — short-lived by design)
+
+## What we did (one-time setup)
+
+### VPS
+1. Verified: `mongodump` installed, `mongod` active, `MONGO_URI=mongodb://127.0.0.1:27017/travelcrm`
+2. First dump:
+   ```bash
+   mkdir -p /root/backups
+   mongodump --uri="mongodb://127.0.0.1:27017/travelcrm" --gzip --archive=/root/backups/travelcrm-$(date +%F).gz
+
+   Ho gaya. Dump VPS pe + cron + file PC pe (C:\Users\User\travelcrm-backups\travelcrm-2026-10-13.gz). Ab koi aur setup step zaroori nahi.
+
+Ask mode me main repo me .md file create nahi kar sakta. Neeche poora guide hai — isko copy karke CRM_BACKEND/docs/mongodb-backup.md (ya Desktop) me save kar lo. Agent mode me bolo to main file bana dunga.
+
+Abhi kya karna hai
+Kuch nahi. Backup chal raha hai. Optional: baad me kabhi restore test (neeche). Aaj production pe mongorestore mat chalao.
+
+Future routine (yaad rakhne wali)
+Kab	Kya	Kahan
+Roz 3:00 (VPS time, usually UTC)
+Dump auto
+VPS /root/backups/ — haath mat lagana
+Hafte me 1 baar
+PC pe copy
+Windows PowerShell
+Har 2–3 mahine
+Restore test
+Sirf local/empty Mongo — prod VPS pe nahi
+Hafte wali copy (PowerShell, SSH band):
+
+cd $HOME\travelcrm-backups
+scp root@72.60.223.24:/root/backups/travelcrm-$(Get-Date -Format yyyy-MM-dd).gz .
+dir
+Agar aaj ki file nahi (cron UTC 3 pe chala, India me dopahar) to VPS pe ls /root/backups se exact naam leke scp karo.
+
+Copy-paste MD (docs ke liye)
+# Travel CRM — MongoDB Backup
+## Why
+MongoDB runs on one VPS. If the VPS dies, the DB dies with it.
+We keep a dump on the VPS (daily cron) and a copy on a Windows PC (weekly manual).
+## What we back up
+- Database only: `travelcrm` (users, inquiries, calls, agencies, notificationlogs)
+- NOT: `uploads/` (passport docs — short-lived by design)
+## What we did (one-time setup)
+### VPS
+1. Verified: `mongodump` installed, `mongod` active, `MONGO_URI=mongodb://127.0.0.1:27017/travelcrm`
+2. First dump:
+   ```bash
+   mkdir -p /root/backups
+   mongodump --uri="mongodb://127.0.0.1:27017/travelcrm" --gzip --archive=/root/backups/travelcrm-$(date +%F).gz
+Cron (crontab -e as root):
+0 3 * * * mkdir -p /root/backups && mongodump --uri="mongodb://127.0.0.1:27017/travelcrm" --gzip --archive=/root/backups/travelcrm-$(date +\%F).gz && find /root/backups -name 'travelcrm-*.gz' -mtime +7 -delete
+Runs daily at 03:00 VPS time (often UTC)
+Deletes local travelcrm-*.gz older than 7 days
+Only touches /root/backups/travelcrm-*.gz — other projects untouched
+Windows PC
+Folder: C:\Users\User\travelcrm-backups
+Copy with:
+cd $HOME\travelcrm-backups
+scp root@72.60.223.24:/root/backups/travelcrm-YYYY-MM-DD.gz .
+Weekly checklist
+Do NOT need to SSH for the dump (cron does it)
+On PC PowerShell:
+cd $HOME\travelcrm-backups
+scp root@72.60.223.24:/root/backups/travelcrm-YYYY-MM-DD.gz .
+dir
+Keep only recent copies on PC; delete old .gz files
+Do not send backup files on WhatsApp / public drives (customer PII)
+Restore test (optional, NOT on production)
+Only on a machine with MongoDB where mixing into prod is impossible (prefer empty DB / different host):
+
+mongorestore --gzip --archive=travelcrm-YYYY-MM-DD.gz --nsInclude="travelcrm.*"
+Then check counts, e.g. inquiries. If local already has travelcrm, restore can merge — use a throwaway Mongo or --drop only when you intend to replace that DB.
+
+Disaster recovery (VPS gone)
+New VPS + install MongoDB + app
+Copy .gz from PC to new server
+mongorestore --gzip --archive=...
+Restore app .env from password manager (not from backup bucket)
+Passport uploads will be missing — matches “410 Document removed” design
+Do NOT
+Run mongorestore on production unless recovering for real
+Back up uploads/authorize into this flow
+Bind MongoDB to 0.0.0.0 without auth
+Rely only on VPS-local backups (same machine = same risk)
+Status as of 2026-10-13
+First dump OK (~9KB): users 2, calls 10, inquiries 9, agencies 1, notificationlogs 9
+Cron installed for root
+First PC copy: C:\Users\User\travelcrm-backups\travelcrm-2026-10-13.gz
+---
+### Short “ab + future”
+- **Ab:** done. PC folder me file rakho.  
+- **Roz:** auto (cron).  
+- **Hafte:** `scp` PC pe.  
+- **Kabhi emergency:** PC ki `.gz` se restore.  
+

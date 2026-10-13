@@ -16,6 +16,7 @@ import {
   setWizardStep,
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
 import { CABIN_CLASSES } from '../../../../constants/dispositions';
+import { normalizeInquiryCurrency } from '../../../../constants/currencies';
 import {
   buildManualItineraryFromLegs,
   mapManualToOffer,
@@ -620,7 +621,7 @@ const StepManualFlight = () => {
     const travelPatch = travelPatchFromManualItinerary(built, t);
     const offer = mapManualToOffer(built, {
       costPrice: wizard.costPrice || 0,
-      currency: wizard.currency || 'USD',
+      currency: normalizeInquiryCurrency(wizard.currency),
     });
     dispatch(
       patchWizard({

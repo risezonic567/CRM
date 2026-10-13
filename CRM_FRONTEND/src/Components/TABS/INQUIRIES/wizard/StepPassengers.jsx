@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 import { Plus, User, Users, X } from 'lucide-react';
 import {
   patchWizard,
@@ -7,6 +8,11 @@ import {
   setWizardStep,
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
 import { PASSENGER_TYPES } from '../../../../constants/dispositions';
+import {
+  clampPhone10,
+  isValidPhone10,
+  PHONE_10_ERROR,
+} from '../../../../utils/phoneValidation';
 
 const blankPax = () => ({
   firstName: '',
@@ -140,13 +146,18 @@ const StepPassengers = () => {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Calling phone *</label>
+                  <label className={labelClass}>Calling phone * (10 digits)</label>
                   <input
                     className={fieldClass}
-                    placeholder="Phone number"
+                    placeholder="10-digit phone"
                     value={p.phone}
-                    onChange={(e) => setField(idx, 'phone', e.target.value)}
+                    onChange={(e) =>
+                      setField(idx, 'phone', clampPhone10(e.target.value))
+                    }
                     type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    autoComplete="tel"
                   />
                 </div>
                 <div>
@@ -212,10 +223,26 @@ const StepPassengers = () => {
           type="button"
           className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
           onClick={() => {
-            const ok = passengers.every(
-              (p) => p.firstName && p.lastName && p.phone
-            );
-            if (!ok) return;
+            for (let i = 0; i < passengers.length; i += 1) {
+              const p = passengers[i];
+              const n = i + 1;
+              if (!String(p.firstName || '').trim()) {
+                toast.error(`Passenger ${n}: enter first name`);
+                return;
+              }
+              if (!String(p.lastName || '').trim()) {
+                toast.error(`Passenger ${n}: enter last name`);
+                return;
+              }
+              if (!String(p.phone || '').trim()) {
+                toast.error(`Passenger ${n}: enter phone number`);
+                return;
+              }
+              if (!isValidPhone10(p.phone)) {
+                toast.error(`Passenger ${n}: ${PHONE_10_ERROR}`);
+                return;
+              }
+            }
             update(passengers);
             dispatch(setWizardStep(4));
           }}

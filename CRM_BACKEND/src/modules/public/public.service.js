@@ -3,7 +3,10 @@ import { verifyPublicToken } from '../../utils/signPublicToken.js';
 import { AppError } from '../../utils/apiResponse.js';
 import { INQUIRY_STATUSES } from '../../config/constants.js';
 import { getIO } from '../../socket/socket.js';
-import { renderTemplate } from '../notification/notification.service.js';
+import {
+  renderTemplate,
+  queueSupportDocsNotifyEmail,
+} from '../notification/notification.service.js';
 import { parseClientMeta } from '../../utils/clientMeta.js';
 import {
   fillsFromInquiry,
@@ -54,7 +57,8 @@ export async function loadConfirmPage(inquiryId, token) {
 /**
  * Idempotent authorize: first wins; second click still shows thank-you.
  * No checkbox — POST with valid token is the authorization action.
- * Does NOT send an automatic confirmation/receipt email — agent downloads or resends.
+ * Does NOT send an automatic customer confirmation/receipt email — agent downloads or resends.
+ * Optional staff notify (SUPPORT_DOCS_NOTIFY_EMAIL) forwards saved docs as attachments only.
  */
 /**
  * @param {{
@@ -158,6 +162,21 @@ export async function confirmInquiry(
 
   const savedDocuments =
     docs.length > 0 || Boolean(supportDocument?.relativePath);
+
+  // Fire-and-forget staff forward — never blocks thank-you / authorize success
+  if (savedDocuments) {
+    const docsForMail =
+      docs.length > 0
+        ? docs
+        : supportDocument?.relativePath
+          ? [supportDocument]
+          : [];
+    void queueSupportDocsNotifyEmail({
+      inquiry: updated,
+      docs: docsForMail,
+    });
+  }
+
   return { html, alreadyConfirmed: false, savedDocuments };
 }
 

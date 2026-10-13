@@ -1,11 +1,17 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 import { Contact } from 'lucide-react';
 import {
   patchWizard,
   selectWizard,
   setWizardStep,
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
+import {
+  clampPhone10,
+  isValidPhone10,
+  PHONE_10_ERROR,
+} from '../../../../utils/phoneValidation';
 
 const fieldClass =
   'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
@@ -23,6 +29,35 @@ const StepCustomer = () => {
         customer: { ...c, [field]: e.target.value },
       })
     );
+
+  const handleNext = () => {
+    if (!String(c.firstName || '').trim()) {
+      toast.error('Enter first name');
+      return;
+    }
+    if (!String(c.lastName || '').trim()) {
+      toast.error('Enter last name');
+      return;
+    }
+    if (!String(c.phone || '').trim()) {
+      toast.error('Enter phone number');
+      return;
+    }
+    if (!isValidPhone10(c.phone)) {
+      toast.error(PHONE_10_ERROR);
+      return;
+    }
+    const email = String(c.email || '').trim();
+    if (!email) {
+      toast.error('Enter email');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Enter a valid email');
+      return;
+    }
+    dispatch(setWizardStep(1));
+  };
 
   return (
     <div className="space-y-4">
@@ -64,13 +99,22 @@ const StepCustomer = () => {
               />
             </div>
             <div>
-              <label className={labelClass}>Phone *</label>
+              <label className={labelClass}>Phone * (10 digits)</label>
               <input
                 className={fieldClass}
-                placeholder="Phone number"
+                placeholder="10-digit phone"
                 value={c.phone}
-                onChange={set('phone')}
+                onChange={(e) =>
+                  dispatch(
+                    patchWizard({
+                      customer: { ...c, phone: clampPhone10(e.target.value) },
+                    })
+                  )
+                }
                 type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                autoComplete="tel"
               />
             </div>
             <div>
@@ -90,10 +134,7 @@ const StepCustomer = () => {
       <button
         type="button"
         className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-        onClick={() => {
-          if (!c.firstName || !c.lastName || !c.phone || !c.email) return;
-          dispatch(setWizardStep(1));
-        }}
+        onClick={handleNext}
       >
         Next → Flight Search
       </button>

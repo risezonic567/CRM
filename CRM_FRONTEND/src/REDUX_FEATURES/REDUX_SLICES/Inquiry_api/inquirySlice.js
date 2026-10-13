@@ -1,4 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit';
+import {
+  DEFAULT_INQUIRY_CURRENCY,
+  normalizeInquiryCurrency,
+} from '../../../constants/currencies';
 
 const emptyCustomer = { firstName: '', lastName: '', phone: '', email: '' };
 const emptyTravel = {
@@ -43,7 +47,7 @@ const initialState = {
     selectedOffer: null,
     markup: 50,
     costPrice: 0,
-    currency: 'USD',
+    currency: DEFAULT_INQUIRY_CURRENCY,
     merchantFeePercent: 0,
     passengers: [],
     billing: { ...emptyBilling },
@@ -106,7 +110,7 @@ export function mapInquiryToWizard(inquiry) {
     selectedOffer: offer,
     markup: pricing.markup ?? 50,
     costPrice: pricing.costPrice ?? 0,
-    currency: pricing.currency || 'USD',
+    currency: normalizeInquiryCurrency(pricing.currency),
     merchantFeePercent: pricing.merchantFeePercent ?? 0,
     passengers: inquiry.passengers || [],
     billing: {
@@ -159,7 +163,7 @@ export function buildDraftPayload(wizard) {
     selectedOffer: wizard.selectedOffer || null,
     markup: Number(wizard.markup) || 0,
     costPrice: Number(wizard.costPrice) || 0,
-    currency: wizard.currency || 'USD',
+    currency: normalizeInquiryCurrency(wizard.currency),
     passengers: wizard.passengers || [],
     billing: wizard.billing || {},
     notes: wizard.notes || '',

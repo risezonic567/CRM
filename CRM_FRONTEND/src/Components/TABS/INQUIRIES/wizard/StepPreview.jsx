@@ -17,6 +17,7 @@ import {
   resetWizard,
   patchWizard,
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
+import { normalizeInquiryCurrency } from '../../../../constants/currencies';
 import {
   inquiryApi,
   useSendInquiryMutation,
@@ -59,7 +60,7 @@ const StepPreview = ({ onDone }) => {
   const cost = Number(wizard.costPrice || 0);
   const markup = Number(wizard.markup || 0);
   const grandTotal = Math.round((cost + markup) * 100) / 100;
-  const currency = wizard.currency || 'USD';
+  const currency = normalizeInquiryCurrency(wizard.currency);
 
   const segments =
     wizard.pnrSegments || wizard.selectedOffer?.raw?.segments || [];
@@ -320,7 +321,7 @@ const StepPreview = ({ onDone }) => {
         selectedOffer: wizard.selectedOffer,
         markup,
         costPrice: cost,
-        currency: wizard.currency || 'USD',
+        currency: normalizeInquiryCurrency(wizard.currency),
         passengers: wizard.passengers,
         billing: {
           phone: billing.phone || '',
