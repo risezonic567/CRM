@@ -173,6 +173,7 @@ export async function confirmInquiry(
           : [];
     void queueSupportDocsNotifyEmail({
       inquiry: updated,
+      agency,
       docs: docsForMail,
     });
   }

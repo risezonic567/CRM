@@ -1,0 +1,246 @@
+<%- include('partials/header', { title: 'Authorization packet', agency }) %>
+
+      <%
+        function fmtWhen(at, fallbackDate) {
+          if (at) {
+            var s = String(at);
+            var m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+            if (m) {
+              var d = new Date(m[1] + 'T' + m[2] + ':00');
+              if (!isNaN(d.getTime())) {
+                return d.toLocaleString('en-US', {
+                  weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+                  hour: '2-digit', minute: '2-digit', hour12: false
+                });
+              }
+              return m[1] + ' · ' + m[2];
+            }
+          }
+          if (fallbackDate) {
+            var fd = new Date(fallbackDate);
+            if (!isNaN(fd.getTime())) {
+              return fd.toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+              });
+            }
+          }
+          return '—';
+        }
+        function fmtDate(iso) {
+          if (!iso) return '—';
+          var d = new Date(String(iso).length === 10 ? iso + 'T00:00:00Z' : iso);
+          if (isNaN(d.getTime())) return String(iso);
+          return d.toLocaleDateString('en-US', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            timeZone: 'UTC'
+          });
+        }
+        function fmtAuthorizedAt(value) {
+          if (!value) return '—';
+          var d = new Date(value);
+          if (isNaN(d.getTime())) return '—';
+          return d.toLocaleString('en-US', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: false
+          });
+        }
+        function fmtDob(iso) {
+          if (!iso) return '';
+          var d = new Date(String(iso).length === 10 ? iso + 'T00:00:00Z' : iso);
+          if (isNaN(d.getTime())) return String(iso);
+          return d.toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            timeZone: 'UTC'
+          });
+        }
+        var offer = inquiry.selectedOffer || {};
+        var pnrSegments = (offer.raw && Array.isArray(offer.raw.segments) && offer.raw.segments.length)
+          ? offer.raw.segments
+          : [];
+        var outbound = offer.outbound || offer;
+        var inbound = offer.inbound || null;
+        var billing = inquiry.billing || {};
+        var customer = inquiry.customer || {};
+        var customerName = [customer.firstName, customer.lastName].filter(Boolean).join(' ') || '—';
+        var signature = billing.cardholderName || customerName || '—';
+        var docList = Array.isArray(attachedDocs) ? attachedDocs : [];
+        var labelStyle = 'width:140px;color:#64748b;vertical-align:top;padding:6px 0;';
+        var valueStyle = 'padding:6px 0;color:#0f172a;';
+      %>
+
+      <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#64748b;">
+        Internal authorization packet
+      </p>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#334155;">
+        Customer authorization completed. Supporting documents are attached.
+        Full booking and cardholder details are below.
+      </p>
+
+      <p style="margin:0 0 20px;padding:14px 16px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;color:#065f46;font-size:14px;line-height:1.6;">
+        <strong>Status:</strong> Authorized<br />
+        <strong>Authorized at:</strong> <%= fmtAuthorizedAt(inquiry.confirmedAt || inquiry.agreement?.agreedAt) %><br />
+        <strong>Reference:</strong> <%= inquiry.inquiryReference %><br />
+        <strong>Documents attached:</strong> <%= docList.length || attachmentCount || 0 %>
+      </p>
+
+      <h3 style="margin:0 0 10px;font-size:15px;color:#0f172a;">Customer</h3>
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-bottom:20px;">
+        <tr>
+          <td style="<%= labelStyle %>">Name</td>
+          <td style="<%= valueStyle %>"><%= customerName %></td>
+        </tr>
+        <tr>
+          <td style="<%= labelStyle %>">Email</td>
+          <td style="<%= valueStyle %>"><%= customer.email || '—' %></td>
+        </tr>
+        <tr>
+          <td style="<%= labelStyle %>">Phone</td>
+          <td style="<%= valueStyle %>"><%= customer.phone || '—' %></td>
+        </tr>
+      </table>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 20px;" />
+
+      <h3 style="margin:0 0 12px;font-size:15px;color:#0f172a;">Flight details</h3>
+      <% if (pnrSegments.length) { %>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;border-collapse:collapse;margin-bottom:20px;">
+        <tr style="background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;">
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">#</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Airline</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Flight</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Date</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Route</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Dep</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Arr</td>
+        </tr>
+        <% pnrSegments.forEach(function(seg) { %>
+        <tr>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.lineNumber || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.airlineName || seg.airlineCode || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= [seg.airlineCode, seg.flightNumber].filter(Boolean).join(' ') %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= fmtDate(seg.departureDate) %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.from %> → <%= seg.to %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.departureTime || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= seg.arrivalTime || '—' %></td>
+        </tr>
+        <% }) %>
+      </table>
+      <% } else { %>
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-bottom:20px;">
+        <tr>
+          <td style="<%= labelStyle %>">Airline</td>
+          <td style="<%= valueStyle %>"><%= outbound.airline?.name || offer.airline?.name || '—' %> <%= (outbound.flightNumber || offer.flightNumber) ? '(' + (outbound.flightNumber || offer.flightNumber) + ')' : '' %></td>
+        </tr>
+        <tr>
+          <td style="<%= labelStyle %>">From</td>
+          <td style="<%= valueStyle %>"><%= inquiry.travel?.from || '—' %> — <%= fmtWhen(outbound.departure?.at || offer.departure?.at, inquiry.travel?.departureDate) %></td>
+        </tr>
+        <tr>
+          <td style="<%= labelStyle %>">To</td>
+          <td style="<%= valueStyle %>"><%= inquiry.travel?.to || '—' %> — <%= fmtWhen(outbound.arrival?.at || offer.arrival?.at, null) %></td>
+        </tr>
+        <% if (inbound) { %>
+        <tr>
+          <td style="<%= labelStyle %>">Return</td>
+          <td style="<%= valueStyle %>"><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber || '' %></td>
+        </tr>
+        <% } %>
+      </table>
+      <% } %>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 20px;" />
+
+      <h3 style="margin:0 0 12px;font-size:15px;color:#0f172a;">Passengers</h3>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;border-collapse:collapse;margin-bottom:20px;">
+        <tr style="background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;">
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Name</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Type</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">DOB</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Phone</td>
+        </tr>
+        <% (inquiry.passengers || []).forEach(function(p) { %>
+        <tr>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;text-transform:capitalize;"><%= p.type || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= fmtDob(p.dob) || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= p.phone || '—' %></td>
+        </tr>
+        <% }) %>
+      </table>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 20px;" />
+
+      <h3 style="margin:0 0 12px;font-size:15px;color:#0f172a;">Cardholder &amp; billing</h3>
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-bottom:8px;">
+        <tr>
+          <td style="<%= labelStyle %>">Cardholder</td>
+          <td style="<%= valueStyle %>;font-weight:600;"><%= billing.cardholderName || '—' %></td>
+        </tr>
+        <tr>
+          <td style="<%= labelStyle %>">Card</td>
+          <td style="<%= valueStyle %>">
+            <%= billing.cardType || 'Card' %>
+            <% if (billing.last4) { %> · •••• <%= billing.last4 %><% } %>
+            <% if (billing.expiryMonth && billing.expiryYear) { %>
+              · exp <%= billing.expiryMonth %>/<%= billing.expiryYear %>
+            <% } %>
+          </td>
+        </tr>
+        <tr>
+          <td style="<%= labelStyle %>">Billing phone</td>
+          <td style="<%= valueStyle %>"><%= billing.phone || '—' %></td>
+        </tr>
+        <tr>
+          <td style="<%= labelStyle %>">Address</td>
+          <td style="<%= valueStyle %>"><%= billing.address || '—' %></td>
+        </tr>
+        <tr>
+          <td style="<%= labelStyle %>">City / State / Zip</td>
+          <td style="<%= valueStyle %>"><%= [billing.city, billing.state, billing.zip].filter(Boolean).join(', ') || '—' %></td>
+        </tr>
+        <tr>
+          <td style="<%= labelStyle %>">Country</td>
+          <td style="<%= valueStyle %>"><%= billing.country || '—' %></td>
+        </tr>
+      </table>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
+      <p style="font-size:18px;margin:0 0 20px;color:#0f172a;">
+        <strong>Total authorized:</strong>
+        <%= currency %> <%= Number(grandTotal).toFixed(2) %>
+      </p>
+
+      <% if (inquiry.authorizationText || authorizationHtml) { %>
+      <h3 style="margin:0 0 12px;font-size:15px;color:#0f172a;">Authorization text</h3>
+      <div style="font-size:13px;line-height:1.65;color:#334155;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:20px;">
+        <%- authorizationHtml || inquiry.authorizationText %>
+      </div>
+      <% } %>
+
+      <div style="margin:8px 0 20px;padding-top:16px;border-top:1px solid #e2e8f0;">
+        <p style="margin:0 0 4px;font-size:12px;color:#64748b;">Authorized signature (cardholder)</p>
+        <p style="margin:0;font-size:18px;font-weight:600;color:#0f172a;">
+          <%= signature %>
+        </p>
+      </div>
+
+      <% if (docList.length) { %>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 16px;" />
+      <h3 style="margin:0 0 10px;font-size:15px;color:#0f172a;">Attached documents</h3>
+      <ul style="margin:0;padding-left:18px;font-size:13px;color:#334155;line-height:1.7;">
+        <% docList.forEach(function(d) { %>
+          <li>
+            <%= d.label || d.originalName || d.filename || 'Document' %>
+            <% if (d.originalName && d.label && d.label !== d.originalName) { %>
+              <span style="color:#64748b;">(<%= d.originalName %>)</span>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+      <p style="margin:12px 0 0;font-size:12px;color:#64748b;">
+        Files are also stored on the server under uploads/authorize.
+      </p>
+      <% } %>
+
+<%- include('partials/footer') %>

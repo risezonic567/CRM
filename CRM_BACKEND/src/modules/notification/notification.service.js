@@ -71,11 +71,12 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
 }
 
 /**
- * Staff inbox: forward authorize support docs as attachments.
- * No EJS — plain text/html body. Never throws to caller (authorize must not fail).
+ * Staff inbox: authorization packet (receipt-style) + support docs as attachments.
+ * Uses supportDocsNotify.ejs — does not alter customer confirmationEmail.
+ * Never throws to caller (authorize must not fail).
  * Skips when SUPPORT_DOCS_NOTIFY_EMAIL is empty or no readable files.
  */
-export async function queueSupportDocsNotifyEmail({ inquiry, docs }) {
+export async function queueSupportDocsNotifyEmail({ inquiry, agency, docs }) {
   const to = config.supportDocs.notifyEmail;
   if (!to) return;
 
@@ -83,16 +84,16 @@ export async function queueSupportDocsNotifyEmail({ inquiry, docs }) {
   if (!list.length) return;
 
   const ref = inquiry?.inquiryReference || String(inquiry?._id || '');
-  const subject = `Support docs — ${ref}`;
-  const customerName = [
-    inquiry?.customer?.firstName,
-    inquiry?.customer?.lastName,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .trim();
+  const route =
+    inquiry?.travel?.from && inquiry?.travel?.to
+      ? `${inquiry.travel.from} to ${inquiry.travel.to}`
+      : '';
+  const subject = route
+    ? `Authorized packet — ${ref} · ${route}`
+    : `Authorized packet — ${ref}`;
 
   const attachments = [];
+  const attachedDocs = [];
   const usedNames = new Set();
 
   for (const doc of list) {
@@ -118,6 +119,12 @@ export async function queueSupportDocsNotifyEmail({ inquiry, docs }) {
       path: abs,
       contentType: doc.mimeType || undefined,
     });
+    attachedDocs.push({
+      label: doc.label || '',
+      originalName: doc.originalName || filename,
+      filename,
+      role: doc.role || '',
+    });
   }
 
   if (!attachments.length) {
@@ -125,23 +132,23 @@ export async function queueSupportDocsNotifyEmail({ inquiry, docs }) {
     return;
   }
 
-  const lines = [
-    `Reference number: ${ref}`,
-    customerName ? `Customer: ${customerName}` : null,
-    inquiry?.customer?.email ? `Customer email: ${inquiry.customer.email}` : null,
-    `Files attached: ${attachments.length}`,
-    '',
-    'Files are also stored on the server (uploads/authorize).',
-  ].filter((l) => l !== null);
-
-  const text = lines.join('\n');
-  const html = `<pre style="font-family:system-ui,sans-serif;font-size:14px;line-height:1.5">${text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')}</pre>`;
-
   try {
-    const info = await sendMail({ to, subject, text, html, attachments });
+    const fills = fillsFromInquiry(inquiry, agency);
+    const authorizationHtml = renderAuthorizationHtml(
+      inquiry.authorizationText || '',
+      fills
+    );
+    const html = await renderTemplate('supportDocsNotify.ejs', {
+      agency,
+      inquiry,
+      grandTotal: inquiry.pricing?.sellingPrice,
+      currency: inquiry.pricing?.currency || 'USD',
+      authorizationHtml,
+      attachedDocs,
+      attachmentCount: attachments.length,
+    });
+
+    const info = await sendMail({ to, subject, html, attachments });
     await NotificationLog.create({
       type: 'email',
       to,
