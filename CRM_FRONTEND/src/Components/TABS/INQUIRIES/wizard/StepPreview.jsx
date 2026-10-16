@@ -458,8 +458,9 @@ const StepPreview = ({ onDone }) => {
               </div>
             </div>
             <p className="mb-3 text-xs text-slate-500">
-              Customer confirm page shows only checked slots (optional upload).
-              Default is all — same as before.
+              Checked slots appear on the customer page and uploads are
+              required. Unchecked = not requested. None = authorize without
+              documents. Applied when you click Send authorization.
             </p>
             <ul className="space-y-2">
               {docSlotCandidates.map((slot) => {
@@ -568,7 +569,8 @@ const StepPreview = ({ onDone }) => {
             </div>
             <p className="mb-2 text-xs text-slate-500">
               Filled values are underlined (name, agency, total, route). After
-              editing plain text, click Apply changes so underlines update.
+              editing plain text, click Apply underline changes (authorization
+              text only — not document checkboxes).
             </p>
             <div
               className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-relaxed text-slate-800 [&_.auth-fill]:border-b [&_.auth-fill]:border-slate-900 [&_.auth-fill]:font-semibold [&_.auth-fill]:px-0.5"
@@ -592,7 +594,7 @@ const StepPreview = ({ onDone }) => {
                 className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                 onClick={handleApplyAuthChanges}
               >
-                Apply changes
+                Apply underline changes
               </button>
             </div>
             <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-center">

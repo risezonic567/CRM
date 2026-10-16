@@ -161,7 +161,7 @@ const InquiriesDashboard = () => {
                 <input
                   type="text"
                   className="w-full pl-9 pr-8 py-1.5 text-xs bg-white border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-600 transition-colors"
-                  placeholder="Lookup Reference ID, customer email, or phone…"
+                  placeholder="Search Reference, Invoice No., email, or phone…"
                   value={q}
                   onChange={handleQueryChange}
                 />
@@ -299,7 +299,7 @@ const InquiriesDashboard = () => {
                           <td className="py-3 px-4">
                             <div className="font-bold text-xs text-emerald-700">
                               <span className="text-[11px] font-semibold text-slate-500 mr-1">
-                                {inq.pricing?.currency || 'USD'}
+                                {inq.pricing?.currency}
                               </span>
                               {Number(inq.pricing?.markup || 0).toFixed(2)}
                             </div>
@@ -308,13 +308,13 @@ const InquiriesDashboard = () => {
                           <td className="py-3 px-4">
                             <div className="font-bold text-xs text-slate-900">
                               <span className="text-[11px] font-semibold text-slate-500 mr-1">
-                                {inq.pricing?.currency || 'USD'}
+                                {inq.pricing?.currency}
                               </span>
                               {Number(inq.pricing?.sellingPrice || 0).toFixed(2)}
                             </div>
                           </td>
 
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4">  
                             <div
                               className="flex items-center justify-end gap-1.5"
                               onClick={(e) => e.stopPropagation()}

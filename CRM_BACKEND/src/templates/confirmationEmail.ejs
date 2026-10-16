@@ -56,12 +56,12 @@
 
       <p>Hello <%= inquiry.customer.firstName %>,</p>
       <p>
-        This is your <strong>authorization receipt</strong> for the itinerary below.
+        This is your <strong>Customer Ticket &amp; Service Invoice</strong> for the itinerary below.
       </p>
 
       <p style="margin:16px 0;padding:12px 14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:6px;color:#065f46;font-size:14px;">
         Authorized at: <strong><%= fmtAuthorizedAt(inquiry.confirmedAt || inquiry.agreement?.agreedAt) %></strong><br />
-        Reference: <strong><%= inquiry.inquiryReference %></strong>
+        Invoice Number: <strong><%= inquiry.invoiceNumber || inquiry.inquiryReference %></strong>
       </p>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />

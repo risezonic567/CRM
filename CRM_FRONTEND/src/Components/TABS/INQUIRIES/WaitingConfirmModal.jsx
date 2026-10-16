@@ -59,7 +59,19 @@ const WaitingConfirmModal = ({ open, inquiry, email, onClosed }) => {
             </div>
 
             <p className="text-[11px] text-slate-400 mb-5">
-              Reference: <span className="font-mono text-sky-600 font-semibold">{inquiry?.inquiryReference || '—'}</span>
+              Reference:{' '}
+              <span className="font-mono text-sky-600 font-semibold">
+                {inquiry?.inquiryReference || '—'}
+              </span>
+              {inquiry?.invoiceNumber ? (
+                <>
+                  {' '}
+                  · Invoice:{' '}
+                  <span className="font-mono text-emerald-700 font-semibold">
+                    {inquiry.invoiceNumber}
+                  </span>
+                </>
+              ) : null}
             </p>
 
             <button

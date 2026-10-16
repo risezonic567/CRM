@@ -94,7 +94,8 @@
   %>
   <div class="card">
     <h1>Authorize your itinerary</h1>
-    <p class="muted"><%= agency?.name || 'Travel CRM' %> · Ref <%= inquiry.inquiryReference %></p>
+    <p class="muted"><%= agency?.name || 'Travel CRM' %> · Customer Ticket &amp; Service Invoice</p>
+    <p class="muted">Invoice Number: <strong><%= inquiry.invoiceNumber || inquiry.inquiryReference %></strong></p>
 
     <% if (typeof error === 'string' && error) { %>
       <p class="error"><%= error %></p>
@@ -215,31 +216,32 @@
     <form id="authorizeForm" method="POST" action="/public/confirm/<%= inquiry._id %>" enctype="multipart/form-data">
       <input type="hidden" name="token" value="<%= token %>" />
 
+      <% if (slots.length) { %>
       <div class="upload-box">
         <h3>Supporting documents</h3>
         <p>
-          Upload only what your agent asked for (usually passport). You can authorize without uploading.
+          Upload the document(s) your agent requested (usually passport).
+          <strong>Required to authorize.</strong>
           Accepted: PDF, JPG, PNG · max 5&nbsp;MB each. Photos are compressed before send.
         </p>
-        <% if (slots.length) { %>
-          <% slots.forEach(function(slot) { %>
+        <% slots.forEach(function(slot) { %>
           <div class="slot">
             <p class="slot-label">
               <%= slot.role === 'cardholder' ? 'Cardholder' : 'Passenger' %> — <%= slot.label %>
             </p>
-            <p class="slot-meta">Passport</p>
+            <p class="slot-meta">Passport (required)</p>
             <input
               type="file"
               name="<%= slot.key %>"
               accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
               data-slot-key="<%= slot.key %>"
+              data-required="1"
+              required
             />
           </div>
-          <% }) %>
-        <% } else { %>
-          <input type="file" name="supportDocument" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" />
-        <% } %>
+        <% }) %>
       </div>
+      <% } %>
 
       <button type="submit" id="authorizeBtn">I Authorize</button>
       <p id="uploadStatus">Preparing documents…</p>
@@ -293,7 +295,18 @@
 
         var inputs = form.querySelectorAll('input[type=file]');
         for (var i = 0; i < inputs.length; i++) {
-          var f = inputs[i].files && inputs[i].files[0];
+          var inputCheck = inputs[i];
+          var f = inputCheck.files && inputCheck.files[0];
+          if (inputCheck.getAttribute('data-required') === '1' && !f) {
+            var labelEl = inputCheck.closest('.slot');
+            var labelText =
+              (labelEl &&
+                labelEl.querySelector('.slot-label') &&
+                labelEl.querySelector('.slot-label').textContent) ||
+              'required document';
+            alert('Please upload: ' + String(labelText).trim());
+            return;
+          }
           if (f && f.size > MAX_BYTES) {
             alert('Each file must be 5 MB or smaller: ' + (f.name || 'file'));
             return;

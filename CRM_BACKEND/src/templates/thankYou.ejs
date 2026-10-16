@@ -19,7 +19,8 @@
     <h1>Thank You!</h1>
     <p>Your authorization has been received. Our team will follow up shortly.</p>
     <p>No further action is required from you on this page.</p>
-    <div class="ref">Reference: <%= inquiry.inquiryReference %></div>
+    <div class="ref">Customer Ticket &amp; Service Invoice</div>
+    <div class="ref" style="margin-top:8px;font-size:14px;">Invoice Number: <%= inquiry.invoiceNumber || inquiry.inquiryReference %></div>
   </div>
 </body>
 </html>

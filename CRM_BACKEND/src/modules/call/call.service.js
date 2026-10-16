@@ -1,6 +1,7 @@
 import { Call, Inquiry } from '../../models/index.js';
 import { AppError } from '../../utils/apiResponse.js';
 import { generateInquiryRef } from '../../utils/generateInquiryRef.js';
+import { generateInvoiceNumber } from '../../utils/generateInvoiceNumber.js';
 import { INQUIRY_STATUSES, ROLES } from '../../config/constants.js';
 
 export async function createCall(user, payload) {
@@ -18,8 +19,10 @@ export async function createCall(user, payload) {
   if (payload.disposition === 'new_booking') {
     try {
       const inquiryReference = await generateInquiryRef();
+      const invoiceNumber = await generateInvoiceNumber();
       inquiry = await Inquiry.create({
         inquiryReference,
+        invoiceNumber,
         callId: call._id,
         agencyId: user.agencyId,
         assignedTo: user._id,

@@ -27,7 +27,9 @@ export async function renderTemplate(name, data) {
  */
 export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
   const to = inquiry.customer.email;
-  const subject = `Authorize your itinerary — ${inquiry.inquiryReference} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
+  const invoiceNo =
+    inquiry.invoiceNumber || inquiry.inquiryReference || '';
+  const subject = `Authorize your itinerary — Invoice No. ${invoiceNo} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
 
   try {
     const fills = fillsFromInquiry(inquiry, agency);
@@ -83,14 +85,17 @@ export async function queueSupportDocsNotifyEmail({ inquiry, agency, docs }) {
   const list = Array.isArray(docs) ? docs.filter((d) => d?.relativePath) : [];
   if (!list.length) return;
 
-  const ref = inquiry?.inquiryReference || String(inquiry?._id || '');
+  const invoiceNo =
+    inquiry?.invoiceNumber ||
+    inquiry?.inquiryReference ||
+    String(inquiry?._id || '');
   const route =
     inquiry?.travel?.from && inquiry?.travel?.to
       ? `${inquiry.travel.from} to ${inquiry.travel.to}`
       : '';
   const subject = route
-    ? `Authorized packet — ${ref} · ${route}`
-    : `Authorized packet — ${ref}`;
+    ? `Authorized packet — Invoice No. ${invoiceNo} · ${route}`
+    : `Authorized packet — Invoice No. ${invoiceNo}`;
 
   const attachments = [];
   const attachedDocs = [];
@@ -186,7 +191,9 @@ export async function queueSupportDocsNotifyEmail({ inquiry, agency, docs }) {
  */
 export async function queueConfirmationEmail({ inquiry, agency }) {
   const to = inquiry.customer.email;
-  const subject = `Authorized — ${inquiry.inquiryReference} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
+  const invoiceNo =
+    inquiry.invoiceNumber || inquiry.inquiryReference || '';
+  const subject = `Authorized — Invoice No. ${invoiceNo} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
 
   try {
     const fills = fillsFromInquiry(inquiry, agency);

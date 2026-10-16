@@ -224,8 +224,19 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
               Inquiry details
             </h1>
             {inq?.inquiryReference && (
-              <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 font-mono text-xs font-bold text-sky-700">
-                {inq.inquiryReference}
+              <span
+                className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 font-mono text-xs font-bold text-sky-700"
+                title="Internal reference"
+              >
+                Ref {inq.inquiryReference}
+              </span>
+            )}
+            {inq?.invoiceNumber && (
+              <span
+                className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 font-mono text-xs font-bold text-emerald-800"
+                title="Customer invoice number"
+              >
+                Invoice {inq.invoiceNumber}
               </span>
             )}
             {inq?.status && <StatusBadge status={inq.status} />}

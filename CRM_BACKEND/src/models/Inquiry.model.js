@@ -33,6 +33,14 @@ const inquirySchema = new mongoose.Schema(
       unique: true,
       index: true,
     },
+    /** Customer-facing invoice no. (INV-YYYY-####). Internal CRM still uses inquiryReference. */
+    invoiceNumber: {
+      type: String,
+      default: null,
+      sparse: true,
+      unique: true,
+      index: true,
+    },
     callId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Call',

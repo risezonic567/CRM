@@ -32,11 +32,34 @@ export async function submitConfirm(req, res, next) {
 
     // Load inquiry once for slot mapping (token verified again inside service)
     const inquiry = await Inquiry.findById(req.params.inquiryId);
+    if (!inquiry) {
+      throw new AppError('Inquiry not found', 404);
+    }
+
+    // Agent-requested slots must each have a file (None / empty slots = no docs required)
+    const requiredSlots = buildDocSlots(inquiry);
+    if (requiredSlots.length > 0) {
+      const byField = new Map(
+        (uploaded || []).map((f) => [f.fieldname, f])
+      );
+      const missing = requiredSlots.filter((s) => !byField.has(s.key));
+      if (missing.length) {
+        throw new AppError(
+          'Please upload all required supporting documents before authorizing',
+          400
+        );
+      }
+    }
+
     let supportDocuments = supportDocumentsFromUpload(uploaded, inquiry);
 
-    // Legacy single field fallback
+    // Legacy single field fallback (only when no Plan A/B slots were requested)
     let supportDocument = null;
-    if (!supportDocuments.length && uploaded.length === 1) {
+    if (
+      !requiredSlots.length &&
+      !supportDocuments.length &&
+      uploaded.length === 1
+    ) {
       const only = uploaded[0];
       if (only.fieldname === 'supportDocument') {
         supportDocument = legacyMetaFromFile(only);

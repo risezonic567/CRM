@@ -91,6 +91,7 @@ export async function listInquiries(user, query) {
     const rx = new RegExp(search, 'i');
     filter.$or = [
       { inquiryReference: rx },
+      { invoiceNumber: rx },
       { 'customer.email': rx },
       { 'customer.phone': rx },
       { 'customer.firstName': rx },
@@ -185,6 +186,7 @@ export async function lookupInquiries(user, q) {
     agencyId: user.agencyId,
     $or: [
       { inquiryReference: rx },
+      { invoiceNumber: rx },
       { 'customer.email': rx },
       { 'customer.phone': rx },
     ],
@@ -197,7 +199,7 @@ export async function lookupInquiries(user, q) {
     .sort({ createdAt: -1 })
     .limit(25)
     .select(
-      'inquiryReference status customer pricing travel createdAt confirmedAt emailSentAt assignedTo'
+      'inquiryReference invoiceNumber status customer pricing travel createdAt confirmedAt emailSentAt assignedTo'
     );
 
   return items;

@@ -79,6 +79,7 @@
       <p style="margin:0 0 20px;padding:14px 16px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;color:#065f46;font-size:14px;line-height:1.6;">
         <strong>Status:</strong> Authorized<br />
         <strong>Authorized at:</strong> <%= fmtAuthorizedAt(inquiry.confirmedAt || inquiry.agreement?.agreedAt) %><br />
+        <strong>Invoice Number:</strong> <%= inquiry.invoiceNumber || inquiry.inquiryReference %><br />
         <strong>Reference:</strong> <%= inquiry.inquiryReference %><br />
         <strong>Documents attached:</strong> <%= docList.length || attachmentCount || 0 %>
       </p>
