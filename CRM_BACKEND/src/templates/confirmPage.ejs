@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Authorize Itinerary — <%= agency?.name || 'Travel CRM' %></title>
+  <title>Authorize Itinerary — <%= agency?.name || 'Airline Ticket Booking' %></title>
   <style>
     body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#0f172a; }
     .card { max-width:720px; margin:40px auto; background:#fff; border-radius:10px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
@@ -94,7 +94,7 @@
   %>
   <div class="card">
     <h1>Authorize your itinerary</h1>
-    <p class="muted"><%= agency?.name || 'Travel CRM' %> · Customer Ticket &amp; Service Invoice</p>
+    <p class="muted">Airline Ticket Booking · Customer Ticket &amp; Service Invoice</p>
     <p class="muted">Invoice Number: <strong><%= inquiry.invoiceNumber || inquiry.inquiryReference %></strong></p>
 
     <% if (typeof error === 'string' && error) { %>

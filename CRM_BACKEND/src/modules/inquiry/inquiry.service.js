@@ -272,7 +272,7 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
   const fromAgent = String(payload.authorizationText || '').trim();
   const fallbackAuth = buildAuthorizationText({
     authorizerName,
-    agencyName: agency.name || 'DEMO Travel Agency',
+    agencyName: agency.name || 'Airline Ticket Booking',
     currency: pricing.currency,
     total: pricing.sellingPrice,
     purpose,
@@ -298,7 +298,7 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
       inquiry.authorizationText,
       {
         authorizerName,
-        agencyName: agency.name || 'DEMO Travel Agency',
+        agencyName: agency.name || 'Airline Ticket Booking',
         currency: pricing.currency,
         total: pricing.sellingPrice,
         purpose,

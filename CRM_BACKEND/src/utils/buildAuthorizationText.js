@@ -20,13 +20,13 @@ export function escapeHtml(value) {
 /** Normalize the dynamic slots used in the authorization sentence. */
 export function resolveAuthFills({
   authorizerName = '',
-  agencyName = 'DEMO Travel Agency',
+  agencyName = 'Airline Ticket Booking',
   currency = 'USD',
   total = 0,
   purpose = '',
 } = {}) {
   const name = String(authorizerName || '').trim() || '____________________';
-  const agency = String(agencyName || '').trim() || 'DEMO Travel Agency';
+  const agency = String(agencyName || '').trim() || 'Airline Ticket Booking';
   const curr = String(currency || 'USD').trim() || 'USD';
   const amount = Number.isFinite(Number(total))
     ? Number(total).toFixed(2)
@@ -168,7 +168,7 @@ export function fillsFromInquiry(inquiry, agency) {
 
   const fromDefaults = resolveAuthFills({
     authorizerName,
-    agencyName: agency?.name || 'DEMO Travel Agency',
+    agencyName: agency?.name || 'Airline Ticket Booking',
     currency: inquiry?.pricing?.currency || 'USD',
     total: inquiry?.pricing?.sellingPrice ?? 0,
     purpose,

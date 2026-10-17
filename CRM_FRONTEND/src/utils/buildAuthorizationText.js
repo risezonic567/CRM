@@ -17,13 +17,13 @@ export function escapeHtml(value) {
 
 export function resolveAuthFills({
   authorizerName = '',
-  agencyName = 'DEMO Travel Agency',
+  agencyName = 'Airline Ticket Booking',
   currency = 'USD',
   total = 0,
   purpose = '',
 } = {}) {
   const name = String(authorizerName || '').trim() || '____________________';
-  const agency = String(agencyName || '').trim() || 'DEMO Travel Agency';
+  const agency = String(agencyName || '').trim() || 'Airline Ticket Booking';
   const curr = String(currency || 'USD').trim() || 'USD';
   const amount = Number.isFinite(Number(total))
     ? Number(total).toFixed(2)

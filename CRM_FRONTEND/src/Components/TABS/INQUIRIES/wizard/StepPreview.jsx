@@ -148,7 +148,6 @@ const StepPreview = ({ onDone }) => {
     () =>
       resolveAuthFills({
         authorizerName,
-        agencyName: 'DEMO Travel Agency',
         currency,
         total: grandTotal,
         purpose,
@@ -160,7 +159,6 @@ const StepPreview = ({ onDone }) => {
     () =>
       buildAuthorizationText({
         authorizerName,
-        agencyName: 'DEMO Travel Agency',
         currency,
         total: grandTotal,
         purpose,
