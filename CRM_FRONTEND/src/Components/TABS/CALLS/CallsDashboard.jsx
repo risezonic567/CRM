@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, X, RefreshCw } from 'lucide-react';
@@ -13,12 +13,14 @@ import {
   setCallFilters,
   resetCallFilters,
 } from '../../../REDUX_FEATURES/REDUX_SLICES/Call_api/callSlice';
+import { selectCurrentUser } from '../../../REDUX_FEATURES/REDUX_SLICES/Auth_api/authSlice';
 import { useListUsersQuery } from '../../../REDUX_FEATURES/REDUX_SLICES/User_api/userApi';
 import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
 import Can from '../../shared/Can';
 import { isAdmin } from '../../roles';
 
 const PAGE_SIZE = 10;
+const MONGO_ID_RE = /^[a-f\d]{24}$/i;
 
 const CallsDashboard = () => {
   const dispatch = useDispatch();
@@ -28,6 +30,7 @@ const CallsDashboard = () => {
   const [markupCallId, setMarkupCallId] = useState(null);
   const [page, setPage] = useState(1);
   const filters = useSelector(selectCallFilters);
+  const currentUser = useSelector(selectCurrentUser);
   const adminView = isAdmin();
 
   /** Deep-link into Inquiries detail (same URL contract as InquiriesDashboard). */
@@ -36,6 +39,13 @@ const CallsDashboard = () => {
     setSearchParams({ tab: 'inquiries', inquiryId: String(inquiryId) });
   };
 
+  // Clear stale filter if a display name was ever saved (legacy bug)
+  useEffect(() => {
+    if (filters.loggedBy && !MONGO_ID_RE.test(filters.loggedBy)) {
+      dispatch(setCallFilters({ loggedBy: '' }));
+    }
+  }, [filters.loggedBy, dispatch]);
+
   const { data: usersRes } = useListUsersQuery(
     { page: 1, limit: 100 },
     { skip: !adminView }
@@ -43,24 +53,50 @@ const CallsDashboard = () => {
 
   const agentOptions = useMemo(() => {
     const items = Array.isArray(usersRes?.data) ? usersRes.data : [];
-    return items
+    const fromApi = items
       .filter((u) => u?.isActive !== false && u?.role !== 'viewer')
-      .map((u) => ({
-        id: u._id,
-        label:
-          `${u.firstName || ''} ${u.lastName || ''}`.trim() ||
-          u.email ||
-          'User',
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [usersRes]);
+      .map((u) => {
+        // toSafeJSON returns `id` (not `_id`) — must send Mongo ObjectId to BE
+        const id = String(u.id || u._id || '');
+        return {
+          id,
+          label:
+            `${u.firstName || ''} ${u.lastName || ''}`.trim() ||
+            u.email ||
+            'User',
+        };
+      })
+      .filter((a) => MONGO_ID_RE.test(a.id));
+
+    // listUsers excludes admins — still allow filtering by current admin's calls
+    const adminId = String(currentUser?.id || currentUser?._id || '');
+    if (adminView && MONGO_ID_RE.test(adminId)) {
+      const already = fromApi.some((a) => a.id === adminId);
+      if (!already) {
+        fromApi.push({
+          id: adminId,
+          label:
+            `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() ||
+            currentUser?.email ||
+            'Admin (me)',
+        });
+      }
+    }
+
+    return fromApi.sort((a, b) => a.label.localeCompare(b.label));
+  }, [usersRes, currentUser, adminView]);
+
+  const safeLoggedBy =
+    adminView && MONGO_ID_RE.test(filters.loggedBy || '')
+      ? filters.loggedBy
+      : undefined;
 
   const { data, isFetching, refetch } = useListCallsQuery({
     page,
     limit: PAGE_SIZE,
     disposition: filters.disposition || undefined,
     search: filters.search || undefined,
-    loggedBy: adminView && filters.loggedBy ? filters.loggedBy : undefined,
+    loggedBy: safeLoggedBy,
   });
 
   const items = data?.data || [];
@@ -91,8 +127,11 @@ const CallsDashboard = () => {
   };
 
   const handleAgentChange = (e) => {
+    const next = e.target.value;
+    // Only accept empty (All) or a valid Mongo ObjectId — never a display name
+    if (next && !MONGO_ID_RE.test(next)) return;
     setPage(1);
-    dispatch(setCallFilters({ loggedBy: e.target.value }));
+    dispatch(setCallFilters({ loggedBy: next }));
   };
 
   const handleReset = () => {
@@ -177,7 +216,7 @@ const CallsDashboard = () => {
           {adminView ? (
             <select
               className="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md text-slate-700 focus:outline-none focus:border-sky-600 cursor-pointer max-w-[180px]"
-              value={filters.loggedBy || ''}
+              value={safeLoggedBy || ''}
               onChange={handleAgentChange}
               aria-label="Filter by agent"
             >

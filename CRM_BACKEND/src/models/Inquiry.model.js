@@ -4,6 +4,7 @@ import {
   PASSENGER_TYPES,
   CABIN_CLASSES,
   CLOSE_SOURCES,
+  CALL_DISPOSITIONS,
 } from '../config/constants.js';
 
 const passengerSchema = new mongoose.Schema(
@@ -137,6 +138,21 @@ const inquirySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    /**
+     * booking = flight authorize wizard; service = disposition fee / markup path.
+     * Older rows without this field behave as booking.
+     */
+    kind: {
+      type: String,
+      enum: ['booking', 'service'],
+      default: 'booking',
+      index: true,
+    },
+    /** Call disposition that spawned a service inquiry (omit for classic booking). */
+    sourceDisposition: {
+      type: String,
+      enum: CALL_DISPOSITIONS,
     },
     notes: { type: String, default: '' },
     /** Agent-edited authorization paragraph sent to customer (one total amount). */

@@ -24,6 +24,7 @@ import StatusBadge from '../../shared/StatusBadge';
 import PaginationBar from '../../shared/PaginationBar';
 import InquiryWizard from './InquiryWizard';
 import InquiryDetailPage from './InquiryDetailPage';
+import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
 
 const PAGE_SIZE = 10;
 
@@ -31,6 +32,24 @@ const getCustomerInitials = (firstName, lastName) => {
   const f = firstName?.[0] || '';
   const l = lastName?.[0] || '';
   return (f + l).toUpperCase() || '?';
+};
+
+const dispositionLabel = (value) =>
+  CALL_DISPOSITIONS.find((d) => d.value === value)?.label || value || '';
+
+/** Booking → route; service / markup backfill → reason (disposition). */
+const routeOrReason = (inq) => {
+  const from = String(inq.travel?.from || '').trim();
+  const to = String(inq.travel?.to || '').trim();
+  if (from && to) {
+    return { type: 'route', from, to };
+  }
+  const reason =
+    dispositionLabel(inq.sourceDisposition) ||
+    dispositionLabel(inq.callId?.disposition) ||
+    String(inq.notes || inq.callId?.remarks || '').trim() ||
+    '';
+  return { type: 'reason', reason: reason || '—' };
 };
 
 const InquiriesDashboard = () => {
@@ -230,7 +249,7 @@ const InquiriesDashboard = () => {
                         Customer
                       </th>
                       <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        Route
+                        Route / Reason
                       </th>
                       <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                         Status
@@ -255,6 +274,7 @@ const InquiriesDashboard = () => {
                         inq.customer?.firstName,
                         inq.customer?.lastName
                       );
+                      const detail = routeOrReason(inq);
 
                       return (
                         <tr
@@ -285,11 +305,21 @@ const InquiriesDashboard = () => {
                           </td>
 
                           <td className="py-3 px-4">
-                            <div className="inline-flex items-center gap-1.5 font-semibold text-xs text-slate-800 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-                              <span>{inq.travel?.from || '—'}</span>
-                              <Plane className="w-3 h-3 text-slate-400 rotate-90" />
-                              <span>{inq.travel?.to || '—'}</span>
-                            </div>
+                            {detail.type === 'route' ? (
+                              <div className="inline-flex items-center gap-1.5 font-semibold text-xs text-slate-800 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                                <span>{detail.from}</span>
+                                <Plane className="w-3 h-3 text-slate-400 rotate-90" />
+                                <span>{detail.to}</span>
+                              </div>
+                            ) : (
+                              <div
+                                className="inline-flex max-w-[220px] items-center gap-1.5 font-semibold text-xs text-slate-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded"
+                                title={detail.reason}
+                              >
+                                <FileText className="w-3 h-3 text-amber-600 shrink-0" />
+                                <span className="truncate">{detail.reason}</span>
+                              </div>
+                            )}
                           </td>
 
                           <td className="py-3 px-4">

@@ -20,7 +20,16 @@ export const listCallsQuerySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(20),
   disposition: Joi.string().valid(...CALL_DISPOSITIONS),
   search: Joi.string().trim().allow(''),
-  loggedBy: Joi.string().hex().length(24),
+  // Accept only Mongo ObjectId; strip names / junk so old FE never 400s the list
+  loggedBy: Joi.string()
+    .trim()
+    .allow('')
+    .optional()
+    .custom((value, helpers) => {
+      if (!value) return undefined;
+      if (!/^[a-f\d]{24}$/i.test(value)) return undefined;
+      return value;
+    }),
 });
 
 export const addCallNoteSchema = Joi.object({

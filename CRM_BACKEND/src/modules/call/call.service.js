@@ -76,7 +76,10 @@ export async function listCalls(user, query) {
   const filter = { agencyId: user.agencyId };
 
   if (user.role === ROLES.ADMIN) {
-    if (loggedBy) filter.loggedBy = loggedBy;
+    // Ignore non-ObjectId values (e.g. accidental display name from FE)
+    if (loggedBy && /^[a-f\d]{24}$/i.test(String(loggedBy))) {
+      filter.loggedBy = loggedBy;
+    }
   } else {
     filter.loggedBy = user._id;
   }
@@ -163,11 +166,26 @@ export async function recordCallPricing(user, callId, payload) {
       if (!inquiry.confirmedAt) inquiry.confirmedAt = new Date();
     }
 
+    // Backfill reason fields when recording markup on a non-booking call
+    if (call.disposition && call.disposition !== 'new_booking') {
+      if (!inquiry.kind || inquiry.kind === 'booking') {
+        const hasRoute =
+          Boolean(inquiry.travel?.from?.trim?.()) &&
+          Boolean(inquiry.travel?.to?.trim?.());
+        if (!hasRoute) inquiry.kind = 'service';
+      }
+      if (!inquiry.sourceDisposition) {
+        inquiry.sourceDisposition = call.disposition;
+      }
+    }
+
     await inquiry.save();
   } else {
     const { firstName, lastName } = splitCallerName(call.callerName);
     const inquiryReference = await generateInquiryRef();
     const invoiceNumber = await generateInvoiceNumber();
+    const isService =
+      Boolean(call.disposition) && call.disposition !== 'new_booking';
 
     inquiry = await Inquiry.create({
       inquiryReference,
@@ -175,6 +193,8 @@ export async function recordCallPricing(user, callId, payload) {
       callId: call._id,
       agencyId: user.agencyId,
       assignedTo: user._id,
+      kind: isService ? 'service' : 'booking',
+      ...(isService ? { sourceDisposition: call.disposition } : {}),
       status: paymentReceived
         ? INQUIRY_STATUSES.AUTHORIZED
         : INQUIRY_STATUSES.DRAFT,
