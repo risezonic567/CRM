@@ -1,7 +1,9 @@
 import React from 'react';
-import { Phone, PhoneOff, Plus, Loader2, Eye, StickyNote } from 'lucide-react';
+import { Phone, PhoneOff, Plus, Loader2, Eye, StickyNote, Wallet } from 'lucide-react';
 import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
 import Can from '../../shared/Can';
+import { formatDateTimeIST } from '../../../utils/formatDateTimeIST';
+import { can } from '../../roles';
 
 const labelFor = (value) =>
   CALL_DISPOSITIONS.find((d) => d.value === value)?.label || value;
@@ -65,6 +67,7 @@ const CallsTable = ({
   onOpenCreate,
   onOpenInquiry,
   onOpenNotes,
+  onOpenMarkup,
   footer = null,
 }) => {
   if (isLoading) {
@@ -119,6 +122,7 @@ const CallsTable = ({
               <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Remarks</th>
               <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Notes</th>
               <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Reference</th>
+              <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Markup</th>
               <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Logged By</th>
             </tr>
           </thead>
@@ -131,6 +135,11 @@ const CallsTable = ({
               const dispConfig = getDispositionConfig(call.disposition);
               const inquiryId = linkedInquiryId(call);
               const inquiryRef = call.inquiryId?.inquiryReference;
+              const markupVal = call.inquiryId?.pricing?.markup;
+              const markupCurrency = call.inquiryId?.pricing?.currency || 'USD';
+              const hasMarkup =
+                markupVal != null && Number.isFinite(Number(markupVal));
+              const canRecordMarkup = Boolean(onOpenMarkup && can('call.create'));
               const canOpen = Boolean(inquiryId && onOpenInquiry);
 
               const openInquiry = () => {
@@ -170,14 +179,7 @@ const CallsTable = ({
                   }
                 >
                   <td className="py-3 px-4 text-slate-500 whitespace-nowrap font-mono text-[11px]">
-                    {call.createdAt
-                      ? new Date(call.createdAt).toLocaleString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : '—'}
+                    {formatDateTimeIST(call.createdAt)}
                   </td>
 
                   <td className="py-3 px-4">
@@ -249,6 +251,44 @@ const CallsTable = ({
                       >
                         <Eye className="w-3 h-3 shrink-0 opacity-70" strokeWidth={2} />
                         {inquiryRef}
+                      </button>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+
+                  <td className="py-3 px-4">
+                    {hasMarkup ? (
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="font-mono text-[11px] font-semibold text-emerald-700 tabular-nums">
+                          {markupCurrency} {Number(markupVal).toFixed(2)}
+                        </span>
+                        {canRecordMarkup ? (
+                          <button
+                            type="button"
+                            className="text-[10px] font-semibold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenMarkup(call);
+                            }}
+                          >
+                            Edit
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : canRecordMarkup ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded hover:bg-slate-100 hover:border-slate-300 transition-colors cursor-pointer"
+                        title="Record markup"
+                        aria-label="Record markup"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenMarkup(call);
+                        }}
+                      >
+                        <Wallet className="w-3 h-3 shrink-0 opacity-70" strokeWidth={2} />
+                        Record
                       </button>
                     ) : (
                       <span className="text-slate-400">—</span>

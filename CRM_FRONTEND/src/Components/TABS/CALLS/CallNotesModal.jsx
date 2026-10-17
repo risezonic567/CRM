@@ -6,6 +6,7 @@ import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
 import Can from '../../shared/Can';
 import { can } from '../../roles';
 import { getErrorMessage } from '../../../utils/getErrorMessage';
+import { formatDateTimeIST } from '../../../utils/formatDateTimeIST';
 
 const labelFor = (value) =>
   CALL_DISPOSITIONS.find((d) => d.value === value)?.label || value;
@@ -124,12 +125,7 @@ const CallNotesModal = ({ open, call, onClose }) => {
                     <p className="text-[10px] text-slate-400 mt-1.5">
                       {noteAuthor(note)}
                       {note.createdAt
-                        ? ` · ${new Date(note.createdAt).toLocaleString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}`
+                        ? ` · ${formatDateTimeIST(note.createdAt)}`
                         : ''}
                     </p>
                   </li>

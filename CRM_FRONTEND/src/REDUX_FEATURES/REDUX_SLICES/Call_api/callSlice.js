@@ -4,6 +4,7 @@ const initialState = {
   filters: {
     disposition: '',
     search: '',
+    loggedBy: '',
   },
 };
 

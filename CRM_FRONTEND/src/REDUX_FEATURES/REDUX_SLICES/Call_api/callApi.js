@@ -36,6 +36,14 @@ export const callApi = createApi({
       }),
       invalidatesTags: ['Calls'],
     }),
+    recordCallPricing: builder.mutation({
+      query: ({ id, body }) => ({
+        url: `/calls/${id}/pricing`,
+        method: 'POST',
+        data: body,
+      }),
+      invalidatesTags: ['Calls'],
+    }),
   }),
 });
 
@@ -44,4 +52,5 @@ export const {
   useGetCallQuery,
   useCreateCallMutation,
   useAddCallNoteMutation,
+  useRecordCallPricingMutation,
 } = callApi;

@@ -151,57 +151,71 @@
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 20px;" />
 
-      <h3 style="margin:0 0 12px;font-size:15px;color:#0f172a;">Passengers</h3>
+      <%
+        var paxList = inquiry.passengers || [];
+        var paxHeading = paxList.length === 1 ? 'Passenger' : 'Passengers';
+      %>
+      <h3 style="margin:0 0 12px;font-size:15px;color:#0f172a;"><%= paxHeading %></h3>
       <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;border-collapse:collapse;margin-bottom:20px;">
         <tr style="background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;">
-          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Name</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Pax</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">First Name</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Middle Name</td>
+          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Last Name</td>
           <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Type</td>
-          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">DOB</td>
-          <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">Phone</td>
         </tr>
-        <% (inquiry.passengers || []).forEach(function(p) { %>
+        <% paxList.forEach(function(p, idx) { %>
         <tr>
-          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= idx + 1 %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= p.firstName || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= p.middleName || '—' %></td>
+          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= p.lastName || '—' %></td>
           <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;text-transform:capitalize;"><%= p.type || '—' %></td>
-          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= fmtDob(p.dob) || '—' %></td>
-          <td style="border-bottom:1px solid #f1f5f9;padding:8px 6px;"><%= p.phone || '—' %></td>
         </tr>
         <% }) %>
       </table>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 20px;" />
 
-      <h3 style="margin:0 0 12px;font-size:15px;color:#0f172a;">Cardholder &amp; billing</h3>
-      <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-bottom:8px;">
+      <h3 style="margin:0 0 12px;font-size:15px;color:#0f172a;">Billing Details</h3>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;margin-bottom:8px;">
         <tr>
-          <td style="<%= labelStyle %>">Cardholder</td>
-          <td style="<%= valueStyle %>;font-weight:600;"><%= billing.cardholderName || '—' %></td>
+          <td style="width:160px;color:#64748b;">Cardholder Name</td>
+          <td><%= billing.cardholderName || '—' %></td>
         </tr>
         <tr>
-          <td style="<%= labelStyle %>">Card</td>
-          <td style="<%= valueStyle %>">
+          <td style="color:#64748b;">Billing Phone Number</td>
+          <td><%= billing.phone || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Billing Address</td>
+          <td><%= billing.address || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">City</td>
+          <td><%= billing.city || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">State</td>
+          <td><%= billing.state || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Zip Code</td>
+          <td><%= billing.zip || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Country</td>
+          <td><%= billing.country || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Card Details</td>
+          <td>
             <%= billing.cardType || 'Card' %>
-            <% if (billing.last4) { %> · •••• <%= billing.last4 %><% } %>
+            <% if (billing.last4) { %> •••• <%= billing.last4 %><% } %>
             <% if (billing.expiryMonth && billing.expiryYear) { %>
               · exp <%= billing.expiryMonth %>/<%= billing.expiryYear %>
             <% } %>
           </td>
-        </tr>
-        <tr>
-          <td style="<%= labelStyle %>">Billing phone</td>
-          <td style="<%= valueStyle %>"><%= billing.phone || '—' %></td>
-        </tr>
-        <tr>
-          <td style="<%= labelStyle %>">Address</td>
-          <td style="<%= valueStyle %>"><%= billing.address || '—' %></td>
-        </tr>
-        <tr>
-          <td style="<%= labelStyle %>">City / State / Zip</td>
-          <td style="<%= valueStyle %>"><%= [billing.city, billing.state, billing.zip].filter(Boolean).join(', ') || '—' %></td>
-        </tr>
-        <tr>
-          <td style="<%= labelStyle %>">Country</td>
-          <td style="<%= valueStyle %>"><%= billing.country || '—' %></td>
         </tr>
       </table>
 

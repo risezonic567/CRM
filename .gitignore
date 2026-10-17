@@ -6,8 +6,8 @@ skills-lock.json
 .freebuff/
 **/.freebuff/
 
-# Archify diagrams / generated HTML under docs
-docs/archify/
+# Local docs folder (all plans / PRDs / archify) — keep off remote
+docs/
 
-# Markdown docs / READMEs — local only
+# Markdown anywhere (READMEs, notes) — local only
 *.md

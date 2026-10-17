@@ -54,3 +54,24 @@ export async function addNote(req, res, next) {
     return next(err);
   }
 }
+
+export async function recordPricing(req, res, next) {
+  try {
+    const result = await callService.recordCallPricing(
+      req.user,
+      req.params.id,
+      req.body
+    );
+    return success(res, {
+      message: req.body.paymentReceived
+        ? 'Markup saved — counted in Margin Collected'
+        : 'Markup saved on call',
+      data: {
+        call: result.call,
+        inquiry: result.inquiry,
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}

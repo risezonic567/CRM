@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import { CALL_DISPOSITIONS } from '../../config/constants.js';
+import { CALL_DISPOSITIONS, INQUIRY_CURRENCIES } from '../../config/constants.js';
 
 export const createCallSchema = Joi.object({
   callerName: Joi.string().trim().allow('').default(''),
@@ -25,4 +25,15 @@ export const listCallsQuerySchema = Joi.object({
 
 export const addCallNoteSchema = Joi.object({
   text: Joi.string().trim().min(1).max(2000).required(),
+});
+
+export const recordCallPricingSchema = Joi.object({
+  costPrice: Joi.number().min(0).required(),
+  markup: Joi.number().min(0).required(),
+  currency: Joi.string()
+    .trim()
+    .uppercase()
+    .valid(...INQUIRY_CURRENCIES)
+    .default('USD'),
+  paymentReceived: Joi.boolean().default(false),
 });

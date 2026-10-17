@@ -4,6 +4,7 @@ import {
   createCallSchema,
   listCallsQuerySchema,
   addCallNoteSchema,
+  recordCallPricingSchema,
 } from './call.validation.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { authenticate } from '../../middlewares/auth.middleware.js';
@@ -22,6 +23,11 @@ router.post(
   '/:id/notes',
   validate(addCallNoteSchema),
   callController.addNote
+);
+router.post(
+  '/:id/pricing',
+  validate(recordCallPricingSchema),
+  callController.recordPricing
 );
 router.get('/:id', callController.getById);
 

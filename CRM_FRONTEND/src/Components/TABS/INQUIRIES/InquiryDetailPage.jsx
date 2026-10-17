@@ -32,6 +32,7 @@ import {
   listInquirySupportDocs,
   resolveDocExpiresAt,
 } from '../../../utils/docExpiryCountdown';
+import { formatDateTimeISTWithYear } from '../../../utils/formatDateTimeIST';
 
 const CLOSE_SOURCE_LABELS = {
   [CLOSE_SOURCES.WAITING_MODAL]: 'Waiting modal',
@@ -325,7 +326,7 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
               <div>
                 <p className="text-[11px] font-medium text-slate-500">Created</p>
                 <p className="text-sm font-semibold text-slate-900">
-                  {formatDate(inq.createdAt)}
+                  {formatDateTimeISTWithYear(inq.createdAt)}
                 </p>
               </div>
             </div>
@@ -625,7 +626,7 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                       Quotation sent
                     </p>
                     <p className="text-sm font-semibold text-slate-900">
-                      {formatDate(inq.emailSentAt)}
+                      {formatDateTimeISTWithYear(inq.emailSentAt)}
                     </p>
                   </div>
                 )}
@@ -635,7 +636,7 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                       Customer authorized
                     </p>
                     <p className="text-sm font-semibold text-emerald-600">
-                      {formatDate(inq.confirmedAt)}
+                      {formatDateTimeISTWithYear(inq.confirmedAt)}
                     </p>
                   </div>
                 )}
@@ -661,7 +662,7 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                             Agreed at
                           </p>
                           <p className="text-sm font-semibold text-slate-900">
-                            {formatDate(inq.agreement.agreedAt)}
+                            {formatDateTimeISTWithYear(inq.agreement.agreedAt)}
                           </p>
                         </div>
                       )}
@@ -760,7 +761,9 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                     {CLOSE_SOURCE_LABELS[inq.closeSource] || inq.closeSource}
                   </span>
                 )}
-                {inq.closedAt && <span>Closed: {formatDate(inq.closedAt)}</span>}
+                {inq.closedAt && (
+                  <span>Closed: {formatDateTimeISTWithYear(inq.closedAt)}</span>
+                )}
               </div>
             </div>
           )}
