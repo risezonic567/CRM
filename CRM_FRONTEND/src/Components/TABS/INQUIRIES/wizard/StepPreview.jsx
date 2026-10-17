@@ -31,6 +31,7 @@ import {
 } from '../../../../SERVICES/socket';
 import { getErrorMessage } from '../../../../utils/getErrorMessage';
 import {
+  buildAuthPurpose,
   buildAuthorizationText,
   extractAuthFillsFromText,
   missingAuthFillLabels,
@@ -137,10 +138,10 @@ const StepPreview = ({ onDone }) => {
   };
 
   const purpose = useMemo(() => {
-    if (wizard.travel?.from && wizard.travel?.to) {
-      return `${wizard.travel.from} to ${wizard.travel.to}`;
-    }
-    return 'the itinerary detailed above';
+    return (
+      buildAuthPurpose(wizard.travel?.from, wizard.travel?.to) ||
+      'the itinerary detailed above'
+    );
   }, [wizard.travel?.from, wizard.travel?.to]);
 
   const defaultFills = useMemo(
@@ -264,7 +265,7 @@ const StepPreview = ({ onDone }) => {
     const missing = missingAuthFillLabels(plain, fills);
     if (missing.length) {
       toast.error(
-        `Applied, but could not underline: ${missing.join(', ')}. Keep the sentence shape (I, NAME, authorize AGENCY…).`
+        `Applied, but could not underline: ${missing.join(', ')}. Keep the sentence shape (I, NAME, hereby authorize AGENCY…).`
       );
       return;
     }

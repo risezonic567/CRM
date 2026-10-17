@@ -42,14 +42,26 @@ export function resolveAuthFills({
   };
 }
 
+/** Route purpose for auth text, e.g. "AKL–WLG flight booking". */
+export function buildAuthPurpose(from, to) {
+  const a = String(from || '').trim();
+  const b = String(to || '').trim();
+  if (a && b) return `${a}–${b} flight booking`;
+  return '';
+}
+
 export function buildAuthorizationText(options = {}) {
   const f = resolveAuthFills(options);
   return (
-    `As per our telephonic conversation and as agreed I, ${f.authorizerName}, authorize ${f.agencyName} ` +
-    `to charge my above card for ${f.amountLabel} as per given details for ${f.purpose}. ` +
-    `I understand that this charge is non-refundable. (You may see above charges in split, ` +
-    `however total remains same) Bookings purchased are non-transferable. Name changes are ` +
-    `not permitted. Date/Route/Time change may incur penalty plus difference in fare.`
+    `I, ${f.authorizerName}, hereby authorize ${f.agencyName} to charge my card ` +
+    `for the amount of ${f.amountLabel} in connection with the purchase of travel services, ` +
+    `specifically the ${f.purpose}. I acknowledge and agree that this charge is non-refundable, ` +
+    `that bookings purchased are non-transferable, and that name changes are not permitted. ` +
+    `I further understand that any request to change the date, route, or time of travel may ` +
+    `result in additional penalties and fare differences. By signing below, I confirm that I am ` +
+    `willingly paying ${f.agencyName} for the travel services offered, which may include flights, ` +
+    `hotels, and car bookings in both the U.S. and European markets, and I authorize ${f.agencyName} ` +
+    `to process the stated amount using the card details I have provided.`
   );
 }
 
@@ -83,19 +95,26 @@ export function renderAuthorizationHtml(plainText, fills = {}) {
 /**
  * After agent edits plain text, re-detect fill slots from the sentence so
  * underlines still work on email / confirm (exact phrases in the text).
+ * Supports current wording + legacy telephonic template.
  */
 export function extractAuthFillsFromText(plainText, fallback = {}) {
   const text = String(plainText || '');
   const fb = resolveAuthFills(fallback);
 
-  const nameMatch = text.match(/I,\s*(.+?),\s*authorize/i);
+  const nameMatch =
+    text.match(/I,\s*(.+?),\s*hereby authorize/i) ||
+    text.match(/I,\s*(.+?),\s*authorize/i);
   const agencyMatch = text.match(/authorize\s+(.+?)\s+to charge/i);
-  const amountMatch = text.match(
-    /to charge my above card for\s+([A-Z]{3}\s+\d+(?:\.\d{1,2})?)\s+as per/i
-  );
-  const purposeMatch = text.match(
-    /as per given details for\s+(.+?)\.\s*I understand/i
-  );
+  const amountMatch =
+    text.match(
+      /for the amount of\s+([A-Z]{3}\s+\d+(?:\.\d{1,2})?)\s+in connection/i
+    ) ||
+    text.match(
+      /to charge my above card for\s+([A-Z]{3}\s+\d+(?:\.\d{1,2})?)\s+as per/i
+    );
+  const purposeMatch =
+    text.match(/specifically the\s+(.+?)\.\s*I acknowledge/i) ||
+    text.match(/as per given details for\s+(.+?)\.\s*I understand/i);
 
   const authorizerName = nameMatch?.[1]?.trim() || fb.authorizerName;
   const agencyName = agencyMatch?.[1]?.trim() || fb.agencyName;

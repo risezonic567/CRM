@@ -6,6 +6,7 @@ import { AppError } from '../../utils/apiResponse.js';
 import { calculatePricing } from '../../utils/calculatePricing.js';
 import { sanitizeBilling } from '../../utils/sanitizeBilling.js';
 import {
+  buildAuthPurpose,
   buildAuthorizationText,
   extractAuthFillsFromText,
   fillsFromInquiry,
@@ -265,14 +266,9 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
       .filter(Boolean)
       .join(' ')
       .trim();
-  const purpose = [
-    payload.travel?.from && payload.travel?.to
-      ? `${payload.travel.from} to ${payload.travel.to}`
-      : '',
-    inquiry.inquiryReference,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const purpose =
+    buildAuthPurpose(payload.travel?.from, payload.travel?.to) ||
+    'the itinerary detailed above';
   const fromAgent = String(payload.authorizationText || '').trim();
   const fallbackAuth = buildAuthorizationText({
     authorizerName,

@@ -8,6 +8,10 @@ import { useCreateCallMutation } from '../../../REDUX_FEATURES/REDUX_SLICES/Call
 import { startWizard } from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
 import { can } from '../../roles';
 import { getErrorMessage } from '../../../utils/getErrorMessage';
+import {
+  isValidPhone10,
+  PHONE_10_ERROR,
+} from '../../../utils/phoneValidation';
 
 const empty = {
   callerName: '',
@@ -29,6 +33,10 @@ const CallDispositionModal = ({ open, onClose }) => {
 
   const validate = () => {
     if (!values.disposition) return 'Please select a call disposition';
+    // Optional phone — but if entered, must be exactly 10 digits
+    if (values.phoneNumber?.trim() && !isValidPhone10(values.phoneNumber)) {
+      return PHONE_10_ERROR;
+    }
     // Remarks required for every disposition except new booking
     if (
       values.disposition &&

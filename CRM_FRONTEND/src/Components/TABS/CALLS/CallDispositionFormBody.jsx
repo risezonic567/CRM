@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
+import { clampPhone10 } from '../../../utils/phoneValidation';
 
 /**
  * Shared fields for call disposition — used by Add modal only in Phase 1.
@@ -31,14 +32,19 @@ const CallDispositionFormBody = ({ values, onChange }) => {
         <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
             <span>Phone Number</span>
-            <span className="text-[11px] font-normal text-slate-400">(optional)</span>
+            <span className="text-[11px] font-normal text-slate-400">(optional · 10 digits)</span>
           </label>
           <input
-            className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-600 transition-colors"
+            className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-600 transition-colors font-mono"
             value={values.phoneNumber}
-            onChange={set('phoneNumber')}
-            placeholder="+1 555-0199"
+            onChange={(e) =>
+              onChange({ ...values, phoneNumber: clampPhone10(e.target.value) })
+            }
+            placeholder="5550199123"
             type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            autoComplete="tel-national"
           />
         </div>
       </div>

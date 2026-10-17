@@ -170,21 +170,41 @@
     </table>
     <% } %>
 
-    <h3>Passengers</h3>
-    <ul style="margin:0;padding-left:18px;font-size:14px;">
-      <% (inquiry.passengers || []).forEach(function(p) { %>
-        <li><%= p.firstName %> <%= p.lastName %> (<%= p.type %>)</li>
+    <%
+      var paxList = inquiry.passengers || [];
+      var paxHeading = paxList.length === 1 ? 'Passenger' : 'Passengers';
+    %>
+    <h3><%= paxHeading %></h3>
+    <table class="segs">
+      <tr>
+        <th>Pax</th>
+        <th>First Name</th>
+        <th>Middle Name</th>
+        <th>Last Name</th>
+        <th>Type</th>
+      </tr>
+      <% paxList.forEach(function(p, idx) { %>
+      <tr>
+        <td><%= idx + 1 %></td>
+        <td><%= p.firstName || '—' %></td>
+        <td><%= p.middleName || '—' %></td>
+        <td><%= p.lastName || '—' %></td>
+        <td style="text-transform:capitalize;"><%= p.type || '—' %></td>
+      </tr>
       <% }) %>
-    </ul>
+    </table>
 
-    <h3>Billing</h3>
+    <h3>Billing Details</h3>
     <table class="info">
-      <tr><td class="k">Phone</td><td><%= billing.phone || '—' %></td></tr>
-      <tr><td class="k">Address</td><td><%= billing.address || '—' %></td></tr>
-      <tr><td class="k">City / State / Zip</td><td><%= [billing.city, billing.state, billing.zip].filter(Boolean).join(', ') || '—' %></td></tr>
+      <tr><td class="k">Cardholder Name</td><td><%= billing.cardholderName || '—' %></td></tr>
+      <tr><td class="k">Billing Phone Number</td><td><%= billing.phone || '—' %></td></tr>
+      <tr><td class="k">Billing Address</td><td><%= billing.address || '—' %></td></tr>
+      <tr><td class="k">City</td><td><%= billing.city || '—' %></td></tr>
+      <tr><td class="k">State</td><td><%= billing.state || '—' %></td></tr>
+      <tr><td class="k">Zip Code</td><td><%= billing.zip || '—' %></td></tr>
       <tr><td class="k">Country</td><td><%= billing.country || '—' %></td></tr>
       <tr>
-        <td class="k">Card</td>
+        <td class="k">Card Details</td>
         <td>
           <%= billing.cardType || 'Card' %>
           <% if (billing.last4) { %> •••• <%= billing.last4 %><% } %>
@@ -193,7 +213,6 @@
           <% } %>
         </td>
       </tr>
-      <tr><td class="k">Cardholder</td><td><%= billing.cardholderName || '—' %></td></tr>
     </table>
 
     <div class="total">

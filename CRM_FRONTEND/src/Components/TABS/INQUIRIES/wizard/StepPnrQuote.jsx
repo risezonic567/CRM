@@ -7,7 +7,9 @@ import {
   setWizardStep,
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
 import {
-  INQUIRY_CURRENCIES,
+  POPULAR_INQUIRY_CURRENCIES,
+  currencyOptionLabel,
+  filterInquiryCurrencies,
   normalizeInquiryCurrency,
 } from '../../../../constants/currencies';
 import PnrItineraryTable from './PnrItineraryTable';
@@ -28,12 +30,27 @@ const StepPnrQuote = () => {
   const [currency, setCurrency] = useState(() =>
     normalizeInquiryCurrency(wizard.currency)
   );
+  const [currencyQuery, setCurrencyQuery] = useState('');
 
   const total = useMemo(() => {
     const s = Number(supplier) || 0;
     const m = Number(markup) || 0;
     return Math.round((s + m) * 100) / 100;
   }, [supplier, markup]);
+
+  const currencyOptions = useMemo(() => {
+    let filtered = filterInquiryCurrencies(currencyQuery);
+    // Keep current selection visible even if it falls outside the search filter
+    if (currency && !filtered.includes(currency)) {
+      filtered = [currency, ...filtered];
+    }
+    const popularSet = new Set(POPULAR_INQUIRY_CURRENCIES);
+    const popular = POPULAR_INQUIRY_CURRENCIES.filter((c) =>
+      filtered.includes(c)
+    );
+    const rest = filtered.filter((c) => !popularSet.has(c));
+    return { popular, rest, filtered };
+  }, [currencyQuery, currency]);
 
   const applyCurrency = (nextRaw) => {
     const next = normalizeInquiryCurrency(nextRaw);
@@ -99,20 +116,44 @@ const StepPnrQuote = () => {
 
       <PnrItineraryTable segments={segments} />
 
-      <label className="flex max-w-xs flex-col gap-1 text-xs">
+      <div className="flex max-w-sm flex-col gap-1.5 text-xs">
         <span className="font-semibold text-slate-700">Currency *</span>
+        <input
+          type="search"
+          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-600 focus:outline-none"
+          placeholder="Search currency (e.g. GBP, India)"
+          value={currencyQuery}
+          onChange={(e) => setCurrencyQuery(e.target.value)}
+          aria-label="Search currencies"
+        />
         <select
           className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:border-sky-600 focus:outline-none"
           value={currency}
           onChange={(e) => applyCurrency(e.target.value)}
         >
-          {INQUIRY_CURRENCIES.map((code) => (
-            <option key={code} value={code}>
-              {code}
-            </option>
-          ))}
+          {currencyOptions.popular.length > 0 && (
+            <optgroup label="Popular">
+              {currencyOptions.popular.map((code) => (
+                <option key={code} value={code}>
+                  {currencyOptionLabel(code)}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {currencyOptions.rest.length > 0 && (
+            <optgroup label="All currencies">
+              {currencyOptions.rest.map((code) => (
+                <option key={code} value={code}>
+                  {currencyOptionLabel(code)}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
-      </label>
+        {!currencyOptions.filtered.length ? (
+          <p className="text-[11px] text-rose-600">No currency matches that search.</p>
+        ) : null}
+      </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-xs">
