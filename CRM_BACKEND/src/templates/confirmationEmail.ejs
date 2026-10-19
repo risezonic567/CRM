@@ -54,9 +54,13 @@
         var signature = billing.cardholderName || [inquiry.customer.firstName, inquiry.customer.lastName].filter(Boolean).join(' ') || '—';
       %>
 
+      <% var isService = inquiry.kind === 'service'; %>
       <p>Hello <%= inquiry.customer.firstName %>,</p>
       <p>
-        This is your <strong>Customer Ticket &amp; Service Invoice</strong> for the itinerary below.
+        This is your <strong>Customer Ticket &amp; Service Invoice</strong>
+        <% if (isService) { %> for the service fee below.
+        <% } else { %> for the itinerary below.
+        <% } %>
       </p>
 
       <p style="margin:16px 0;padding:12px 14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:6px;color:#065f46;font-size:14px;">
@@ -66,6 +70,33 @@
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 
+      <% if (isService) { %>
+      <h3 style="margin:0 0 12px;">Service</h3>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
+        <tr>
+          <td style="width:160px;color:#64748b;">Service</td>
+          <td><%= (inquiry.authorizationFills && inquiry.authorizationFills.purpose) || inquiry.sourceDisposition || 'Travel service' %></td>
+        </tr>
+      </table>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
+      <h3 style="margin:0 0 12px;">Pax details</h3>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
+        <tr>
+          <td style="width:160px;color:#64748b;">Name</td>
+          <td><%= [inquiry.customer.firstName, inquiry.customer.middleName, inquiry.customer.lastName].filter(Boolean).join(' ') || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Email</td>
+          <td><%= inquiry.customer.email || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Phone</td>
+          <td><%= inquiry.customer.phone || '—' %></td>
+        </tr>
+      </table>
+      <% } else { %>
       <h3 style="margin:0 0 12px;">Flight details</h3>
       <% if (pnrSegments.length) { %>
       <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;border-collapse:collapse;">
@@ -138,6 +169,7 @@
         </tr>
         <% }) %>
       </table>
+      <% } %>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 
@@ -194,7 +226,7 @@
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
       <h3 style="margin:0 0 12px;">Authorization</h3>
       <div style="font-size:13px;line-height:1.65;color:#334155;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
-        <%- authorizationHtml || inquiry.authorizationText %>
+        <% if (authorizationHtml) { %><%- authorizationHtml %><% } else { %><%= inquiry.authorizationText %><% } %>
       </div>
       <% } %>
 

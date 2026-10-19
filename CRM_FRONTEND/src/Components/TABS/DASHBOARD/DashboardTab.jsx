@@ -23,14 +23,11 @@ import {
   Settings2,
 } from 'lucide-react';
 import CallDispositionModal from '../CALLS/CallDispositionModal';
+import DashboardDateFilter from './DashboardDateFilter';
 import { CURRENT_USER } from '../../roles';
 import Can from '../../shared/Can';
-import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
-import { useListCallsQuery } from '../../../REDUX_FEATURES/REDUX_SLICES/Call_api/callApi';
-import {
-  useListInquiriesQuery,
-  useGetInquiryMarginStatsQuery,
-} from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
+import { useGetDashboardSummaryQuery } from '../../../REDUX_FEATURES/REDUX_SLICES/Dashboard_api/dashboardApi';
+import { resolveDashboardRange } from '../../../utils/dashboardDateRange';
 
 const OUTCOME_COLORS = [
   '#0284c7',
@@ -48,70 +45,62 @@ const OUTCOME_COLORS = [
 
 const DashboardTab = ({ onSwitchTab }) => {
   const [open, setOpen] = useState(false);
+  const [range, setRange] = useState(() => resolveDashboardRange('weekly'));
 
-  // Live queries — max page size for outcomes/confirmations snapshot
-  const { data: callsData } = useListCallsQuery({ page: 1, limit: 100 });
-  const { data: inquiriesData } = useListInquiriesQuery({ page: 1, limit: 100 });
-  const { data: marginRes } = useGetInquiryMarginStatsQuery();
+  const { data: summaryRes, isFetching, isError } = useGetDashboardSummaryQuery(
+    {
+      from: range.from,
+      to: range.to,
+    },
+    {
+      // Keep last range on screen while next range loads — no zero/empty flash
+      placeholderData: (previousData) => previousData,
+    }
+  );
 
-  const callItems = callsData?.data || [];
-  const inquiryItems = inquiriesData?.data || [];
-  const totalCalls = callsData?.meta?.total ?? callItems.length;
-  const totalInquiries = inquiriesData?.meta?.total ?? inquiryItems.length;
+  const summary = summaryRes?.data;
+  const kpis = summary?.kpis;
+  const margin = kpis?.margin;
 
-  const confirmedCount = inquiryItems.filter(
-    (inq) => inq.status === 'authorized'
-  ).length;
-  const confirmationRate =
-    totalInquiries > 0 ? Math.round((confirmedCount / totalInquiries) * 100) : 0;
+  const totalCalls = Number(kpis?.callsLogged ?? 0);
+  const activeInquiries = Number(kpis?.activeInquiries ?? 0);
+  const confirmationRate = Number(kpis?.authorizationRate ?? 0);
+  const confirmedCount = Number(kpis?.authorizedCount ?? 0);
+  const marginCurrency = margin?.currency || 'USD';
+  const totalMargin = Number(margin?.totalMargin ?? 0);
+  const marginConfirmedCount = Number(margin?.confirmedCount ?? 0);
 
-  const marginStats = marginRes?.data;
-  const marginCurrency = marginStats?.currency || 'USD';
-  const totalMargin = Number(marginStats?.totalMargin ?? 0);
-  const marginConfirmedCount = Number(marginStats?.confirmedCount ?? 0);
-
-  const todayStr = useMemo(() => {
-    return new Intl.DateTimeFormat('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(new Date());
-  }, []);
-
-  // Compute 7-day trend from totals (Day/Week/Month pills deferred)
   const chartData = useMemo(() => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const baseCalls = Math.max(1, Math.floor(totalCalls / 7));
-    const baseInquiries = Math.max(0, Math.floor(totalInquiries / 7));
-
-    return days.map((day, idx) => ({
-      name: day,
-      calls: Math.max(0, Math.round(baseCalls * (0.8 + (idx % 3) * 0.3) + (idx === 6 ? totalCalls % 7 : 0))),
-      inquiries: Math.max(0, Math.round(baseInquiries * (0.7 + (idx % 2) * 0.4) + (idx === 6 ? totalInquiries % 7 : 0))),
+    const trend = summary?.trend || [];
+    return trend.map((row) => ({
+      name: row.label,
+      calls: row.calls || 0,
+      inquiries: row.inquiries || 0,
     }));
-  }, [totalCalls, totalInquiries]);
+  }, [summary?.trend]);
 
-  // Real disposition breakdown — only options with count > 0, no fake %
   const dispositionBreakdown = useMemo(() => {
-    const total = callItems.length;
-    const denom = total || 1;
-
-    return CALL_DISPOSITIONS.map((d, idx) => {
-      const count = callItems.filter((c) => c.disposition === d.value).length;
-      return {
-        name: d.label,
-        count,
-        percent: total ? Math.round((count / denom) * 100) : 0,
-        color: OUTCOME_COLORS[idx % OUTCOME_COLORS.length],
-      };
-    }).filter((row) => row.count > 0);
-  }, [callItems]);
+    const rows = summary?.dispositions || [];
+    const total = rows.reduce((s, r) => s + (r.count || 0), 0) || 1;
+    return rows.map((row, idx) => ({
+      name: row.label || row.value,
+      count: row.count || 0,
+      percent: Math.round(((row.count || 0) / total) * 100),
+      color: OUTCOME_COLORS[idx % OUTCOME_COLORS.length],
+    }));
+  }, [summary?.dispositions]);
 
   const dispositionChartTotal = useMemo(
     () => dispositionBreakdown.reduce((sum, row) => sum + row.count, 0),
     [dispositionBreakdown]
   );
+
+  const trendSubtitle =
+    summary?.range?.bucket === 'hour'
+      ? 'Hourly call volume and flight inquiries'
+      : summary?.range?.bucket === 'week'
+        ? 'Weekly call volume and flight inquiries'
+        : 'Daily call volume and flight inquiries';
 
   return (
     <div className="flex flex-col gap-5 text-slate-900 font-sans">
@@ -126,11 +115,20 @@ const DashboardTab = ({ onSwitchTab }) => {
             </span>
           </h1>
           <p className="text-[13px] text-slate-500 mt-1">
-            Welcome Back, <span className="font-semibold text-slate-900 uppercase">{CURRENT_USER.name || 'Agent'}</span>
+            Welcome Back,{' '}
+            <span className="font-semibold text-slate-900 uppercase">
+              {CURRENT_USER.name || 'Agent'}
+            </span>
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+          <DashboardDateFilter value={range} onChange={setRange} />
+          {isFetching && (
+            <span className="text-[11px] font-medium text-slate-400 tabular-nums">
+              Updating…
+            </span>
+          )}
           <Can do="call.create">
             <button
               type="button"
@@ -154,16 +152,26 @@ const DashboardTab = ({ onSwitchTab }) => {
         </div>
       </div>
 
+      {isError && (
+        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">
+          Could not load dashboard stats for this range. Try again.
+        </p>
+      )}
+
       {/* 4 Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-xs hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Calls Logged</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Calls Logged
+            </span>
             <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600">
               <PhoneCall className="w-4 h-4" strokeWidth={1.8} />
             </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{totalCalls}</div>
+          <div className="text-2xl font-bold text-slate-900 tracking-tight leading-none">
+            {totalCalls}
+          </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
               <TrendingUp className="w-3.5 h-3.5" />
@@ -175,12 +183,16 @@ const DashboardTab = ({ onSwitchTab }) => {
 
         <div className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-xs hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Inquiries</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Active Inquiries
+            </span>
             <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600">
               <FileText className="w-4 h-4" strokeWidth={1.8} />
             </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{totalInquiries}</div>
+          <div className="text-2xl font-bold text-slate-900 tracking-tight leading-none">
+            {activeInquiries}
+          </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
               <TrendingUp className="w-3.5 h-3.5" />
@@ -192,7 +204,9 @@ const DashboardTab = ({ onSwitchTab }) => {
 
         <div className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-xs hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Authorizations</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Authorizations
+            </span>
             <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600">
               <CheckCircle2 className="w-4 h-4" strokeWidth={1.8} />
             </div>
@@ -201,114 +215,136 @@ const DashboardTab = ({ onSwitchTab }) => {
             {confirmationRate}%
           </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <span className="font-semibold text-emerald-600">{confirmedCount} verified</span>
+            <span className="font-semibold text-emerald-600">
+              {confirmedCount} verified
+            </span>
             <span>customer sign-offs</span>
           </div>
         </div>
 
         <div className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-xs hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Margin Collected</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Margin Collected
+            </span>
             <div className="w-8 h-8 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600">
               <Wallet className="w-4 h-4" strokeWidth={1.8} />
             </div>
           </div>
           <div className="text-2xl font-bold text-slate-900 tracking-tight leading-none">
-            <span className="text-sm font-semibold text-slate-500 mr-1">{marginCurrency}</span>
+            <span className="text-sm font-semibold text-slate-500 mr-1">
+              {marginCurrency}
+            </span>
             {totalMargin.toFixed(2)}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <span className="font-semibold text-emerald-600">{marginConfirmedCount} authorized</span>
+            <span className="font-semibold text-emerald-600">
+              {marginConfirmedCount} authorized
+            </span>
             <span>agency fee total</span>
           </div>
         </div>
       </div>
 
-      {/* Analytics & Charts Section (Shiprocket / Hostinger Style) */}
+      {/* Analytics & Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Main Activity Area Chart */}
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-5 flex flex-col shadow-xs">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-2">
             <div>
               <h2 className="text-sm font-bold text-slate-900">Activity Trends</h2>
-              <p className="text-xs text-slate-500 mt-0.5">7-day call volume and generated flight inquiries</p>
+              <p className="text-xs text-slate-500 mt-0.5">{trendSubtitle}</p>
             </div>
-            <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Weekly Interval</span>
+            <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 shrink-0">
+              {range.label}
+            </span>
           </div>
 
           <div className="w-full h-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 8, right: 12, left: -24, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="callsGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0284c7" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#0284c7" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="inqGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0f172a" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#0f172a" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={{ stroke: '#e2e8f0' }}
-                  tick={{ fill: '#64748b', fontSize: 11 }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: '#64748b', fontSize: 11 }}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    borderColor: '#1e293b',
-                    borderRadius: '6px',
-                    color: '#ffffff',
-                    fontSize: '12px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  }}
-                  itemStyle={{ color: '#ffffff' }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="calls"
-                  name="Calls Logged"
-                  stroke="#0284c7"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#callsGrad)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="inquiries"
-                  name="Inquiries Created"
-                  stroke="#0f172a"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#inqGrad)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {chartData.length === 0 ? (
+              <p className="text-xs text-slate-500 py-8 text-center">
+                No activity in this range.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 8, right: 12, left: -24, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="callsGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0284c7" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#0284c7" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="inqGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0f172a" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#0f172a" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="name"
+                    tickLine={false}
+                    axisLine={{ stroke: '#e2e8f0' }}
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#0f172a',
+                      borderColor: '#1e293b',
+                      borderRadius: '6px',
+                      color: '#ffffff',
+                      fontSize: '12px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    }}
+                    itemStyle={{ color: '#ffffff' }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="calls"
+                    name="Calls Logged"
+                    stroke="#0284c7"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#callsGrad)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="inquiries"
+                    name="Inquiries Created"
+                    stroke="#0f172a"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#inqGrad)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
-        {/* Disposition Distribution Card */}
         <div className="lg:col-span-1 bg-white border border-slate-200 rounded-xl p-5 flex flex-col shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-sm font-bold text-slate-900">Call Outcomes</h2>
               <p className="text-xs text-slate-500 mt-0.5">Disposition breakdown ratio</p>
             </div>
-            <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Distribution</span>
+            <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              Distribution
+            </span>
           </div>
 
           <div className="mt-1 flex flex-1 flex-col">
             {dispositionBreakdown.length === 0 ? (
-              <p className="text-xs text-slate-500 py-4">No call dispositions logged yet.</p>
+              <p className="text-xs text-slate-500 py-4">
+                No call dispositions in this range.
+              </p>
             ) : (
               <>
                 <div className="relative h-[200px] w-full shrink-0">
@@ -458,7 +494,6 @@ const DashboardTab = ({ onSwitchTab }) => {
         </Can>
       </div>
 
-      {/* Disposition Modal */}
       <CallDispositionModal open={open} onClose={() => setOpen(false)} />
     </div>
   );

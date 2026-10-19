@@ -1,7 +1,6 @@
 import * as publicService from './public.service.js';
 import { AppError } from '../../utils/apiResponse.js';
 import { renderTemplate } from '../notification/notification.service.js';
-import { Inquiry, Agency } from '../../models/index.js';
 import { resolveClientIp } from '../../utils/clientMeta.js';
 import {
   fillsFromInquiry,
@@ -12,14 +11,68 @@ import {
   supportDocumentsFromUpload,
   unlinkUploadedFiles,
 } from '../../utils/supportDocuments.js';
-import { supportDocumentMetaFromFile as legacyMetaFromFile } from '../../middlewares/authorizeUpload.middleware.js';
+import {
+  supportDocumentMetaFromFile as legacyMetaFromFile,
+  assertUploadedFileMagic,
+} from '../../middlewares/authorizeUpload.middleware.js';
+import config from '../../config/index.js';
+
+function setPublicSecurityHeaders(res) {
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+}
+
+function resolvePublicToken(req) {
+  const inquiryId = req.params.inquiryId;
+  const cookieName = publicService.publicConfirmCookieName(inquiryId);
+  return (
+    req.query.token ||
+    req.body?.token ||
+    req.cookies?.[cookieName] ||
+    ''
+  );
+}
 
 export async function showConfirm(req, res, next) {
   try {
-    const token = req.query.token;
-    const result = await publicService.loadConfirmPage(req.params.inquiryId, token);
+    setPublicSecurityHeaders(res);
+    const inquiryId = req.params.inquiryId;
+
+    // Email links use ?token= once → httpOnly cookie → redirect strips token from URL/logs/history
+    if (req.query.token) {
+      await publicService.verifyAndLoad(inquiryId, req.query.token);
+      res.cookie(publicService.publicConfirmCookieName(inquiryId), req.query.token, {
+        httpOnly: true,
+        secure: config.cookie.secure,
+        sameSite: 'lax',
+        path: `/public/confirm/${inquiryId}`,
+        maxAge: 2 * 60 * 60 * 1000,
+      });
+      return res.redirect(302, `/public/confirm/${inquiryId}`);
+    }
+
+    const token = resolvePublicToken(req);
+    const result = await publicService.loadConfirmPage(inquiryId, token);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(result.html);
+  } catch (err) {
+    return renderError(res, err, next);
+  }
+}
+
+/**
+ * Runs before multer — token from query or confirm cookie only (multipart body not parsed yet).
+ */
+export async function requireConfirmToken(req, res, next) {
+  try {
+    setPublicSecurityHeaders(res);
+    const token =
+      req.query.token ||
+      req.cookies?.[publicService.publicConfirmCookieName(req.params.inquiryId)] ||
+      '';
+    await publicService.verifyAndLoad(req.params.inquiryId, token);
+    req.publicConfirmToken = token;
+    return next();
   } catch (err) {
     return renderError(res, err, next);
   }
@@ -28,15 +81,22 @@ export async function showConfirm(req, res, next) {
 export async function submitConfirm(req, res, next) {
   const uploaded = Array.isArray(req.files) ? req.files : [];
   try {
-    const token = req.body.token || req.query.token;
+    setPublicSecurityHeaders(res);
+    const token = resolvePublicToken(req) || req.publicConfirmToken;
+    const { inquiry } = await publicService.verifyAndLoad(
+      req.params.inquiryId,
+      token
+    );
 
-    // Load inquiry once for slot mapping (token verified again inside service)
-    const inquiry = await Inquiry.findById(req.params.inquiryId);
-    if (!inquiry) {
-      throw new AppError('Inquiry not found', 404);
+    for (const file of uploaded) {
+      try {
+        assertUploadedFileMagic(file);
+      } catch (magicErr) {
+        unlinkUploadedFiles(uploaded);
+        throw magicErr;
+      }
     }
 
-    // Agent-requested slots must each have a file (None / empty slots = no docs required)
     const requiredSlots = buildDocSlots(inquiry);
     if (requiredSlots.length > 0) {
       const byField = new Map(
@@ -53,7 +113,6 @@ export async function submitConfirm(req, res, next) {
 
     let supportDocuments = supportDocumentsFromUpload(uploaded, inquiry);
 
-    // Legacy single field fallback (only when no Plan A/B slots were requested)
     let supportDocument = null;
     if (
       !requiredSlots.length &&
@@ -75,7 +134,6 @@ export async function submitConfirm(req, res, next) {
       }
     );
 
-    // Already authorized / race — do not keep this request's uploads
     if (!result.savedDocuments && uploaded.length) {
       unlinkUploadedFiles(uploaded);
     }
@@ -91,23 +149,27 @@ export async function submitConfirm(req, res, next) {
   }
 }
 
-/** Re-show confirm page with error (upload / validation). */
+/** Re-show confirm page with error — only after token verified (no anonymous PII). */
 export async function renderConfirmError(req, res, next, err) {
   try {
-    const token = req.body?.token || req.query?.token;
-    const inquiry = await Inquiry.findById(req.params.inquiryId);
-    const agency = inquiry ? await Agency.findById(inquiry.agencyId) : null;
-    const fills = inquiry ? fillsFromInquiry(inquiry, agency) : {};
-    const authorizationHtml = inquiry
-      ? renderAuthorizationHtml(inquiry.authorizationText || '', fills)
-      : '';
+    setPublicSecurityHeaders(res);
+    const token = resolvePublicToken(req) || req.publicConfirmToken;
+    const { inquiry, agency } = await publicService.verifyAndLoad(
+      req.params.inquiryId,
+      token
+    );
+    const fills = fillsFromInquiry(inquiry, agency);
+    const authorizationHtml = renderAuthorizationHtml(
+      inquiry.authorizationText || '',
+      fills
+    );
     const html = await renderTemplate('confirmPage.ejs', {
       inquiry,
       agency,
       token,
       error: err.message || 'Unable to authorize',
       authorizationHtml,
-      docSlots: inquiry ? buildDocSlots(inquiry) : [],
+      docSlots: buildDocSlots(inquiry),
     });
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(err.statusCode || 400).send(html);
@@ -117,6 +179,7 @@ export async function renderConfirmError(req, res, next, err) {
 }
 
 function renderError(res, err, next) {
+  setPublicSecurityHeaders(res);
   if (err instanceof AppError) {
     const safe = String(err.message).replace(/[<>&]/g, '');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');

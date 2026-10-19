@@ -36,7 +36,8 @@ function isPresetCardType(cardType) {
   return t === 'Amex' || PRESET_CARD_TYPES.includes(t);
 }
 
-const StepBilling = () => {
+/** Optional next/back steps so service wizard can reuse this screen (defaults = booking). */
+const StepBilling = ({ nextStep = 5, backStep = 3 } = {}) => {
   const dispatch = useDispatch();
   const wizard = useSelector(selectWizard);
   const b = wizard.billing || {};
@@ -171,7 +172,7 @@ const StepBilling = () => {
     }
     // cvv intentionally discarded — not stored
     setCvv('');
-    dispatch(setWizardStep(5));
+    dispatch(setWizardStep(nextStep));
   };
 
   return (
@@ -436,7 +437,7 @@ const StepBilling = () => {
         <button
           type="button"
           className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-          onClick={() => dispatch(setWizardStep(3))}
+          onClick={() => dispatch(setWizardStep(backStep))}
         >
           Back
         </button>

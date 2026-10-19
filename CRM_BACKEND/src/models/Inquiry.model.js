@@ -54,6 +54,7 @@ const inquirySchema = new mongoose.Schema(
     },
     customer: {
       firstName: { type: String, trim: true, default: '' },
+      middleName: { type: String, trim: true, default: '' },
       lastName: { type: String, trim: true, default: '' },
       phone: { type: String, trim: true, default: '' },
       email: { type: String, trim: true, lowercase: true, default: '' },
@@ -211,13 +212,15 @@ const inquirySchema = new mongoose.Schema(
       default: [],
     },
     /**
-     * Plan A: agent-selected slots for confirm page (set on send).
-     * mode 'all_slots' = Plan B (show cardholder + all passengers).
+     * Confirm-page upload slots (set on send).
+     * - all_slots: cardholder + all passengers (booking default)
+     * - agent_selected: only listed slots (custom labels allowed)
+     * - none: no supporting docs required
      */
     docRequest: {
       mode: {
         type: String,
-        enum: ['all_slots', 'agent_selected'],
+        enum: ['all_slots', 'agent_selected', 'none'],
         default: 'all_slots',
       },
       slots: { type: [Object], default: [] },

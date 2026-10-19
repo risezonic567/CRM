@@ -32,11 +32,25 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+function safeInquiryUploadDir(inquiryId) {
+  const id = String(inquiryId || '');
+  if (!/^[a-f\d]{24}$/i.test(id)) {
+    throw new AppError('Invalid inquiry', 400);
+  }
+  const dir = path.resolve(AUTHORIZE_UPLOAD_ROOT, id);
+  if (
+    dir !== AUTHORIZE_UPLOAD_ROOT &&
+    !dir.startsWith(AUTHORIZE_UPLOAD_ROOT + path.sep)
+  ) {
+    throw new AppError('Invalid document path', 400);
+  }
+  return dir;
+}
+
 const storage = multer.diskStorage({
   destination(req, _file, cb) {
     try {
-      const inquiryId = String(req.params.inquiryId || 'unknown');
-      const dir = path.join(AUTHORIZE_UPLOAD_ROOT, inquiryId);
+      const dir = safeInquiryUploadDir(req.params.inquiryId);
       ensureDir(dir);
       cb(null, dir);
     } catch (err) {
@@ -44,10 +58,10 @@ const storage = multer.diskStorage({
     }
   },
   filename(_req, file, cb) {
-    const ext =
-      EXT_BY_MIME[file.mimetype] ||
-      path.extname(file.originalname || '').toLowerCase() ||
-      '.bin';
+    const ext = EXT_BY_MIME[file.mimetype];
+    if (!ext) {
+      return cb(new AppError('Only PDF, JPG, or PNG files are allowed (max 5 MB)', 400));
+    }
     const id = crypto.randomUUID();
     cb(null, `${id}${ext}`);
   },
@@ -108,10 +122,52 @@ export function supportDocumentMetaFromFile(file) {
 export function resolveSupportDocumentAbsolutePath(relativePath) {
   if (!relativePath) return null;
   const abs = path.resolve(AUTHORIZE_UPLOAD_ROOT, relativePath);
-  if (!abs.startsWith(AUTHORIZE_UPLOAD_ROOT)) {
+  if (
+    abs !== AUTHORIZE_UPLOAD_ROOT &&
+    !abs.startsWith(AUTHORIZE_UPLOAD_ROOT + path.sep)
+  ) {
     throw new AppError('Invalid document path', 400);
   }
   return abs;
+}
+
+/**
+ * Reject client MIME spoofing — check magic bytes after multer write.
+ * @param {Express.Multer.File} file
+ */
+export function assertUploadedFileMagic(file) {
+  if (!file?.path) {
+    throw new AppError('Upload failed', 400);
+  }
+  const fd = fs.openSync(file.path, 'r');
+  try {
+    const buf = Buffer.alloc(8);
+    const n = fs.readSync(fd, buf, 0, 8, 0);
+    const head = buf.subarray(0, n);
+    const mime = file.mimetype;
+    let ok = false;
+    if (mime === 'application/pdf') {
+      ok = head.length >= 4 && head.subarray(0, 4).toString('ascii') === '%PDF';
+    } else if (mime === 'image/jpeg') {
+      ok = head.length >= 3 && head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
+    } else if (mime === 'image/png') {
+      ok =
+        head.length >= 8 &&
+        head[0] === 0x89 &&
+        head[1] === 0x50 &&
+        head[2] === 0x4e &&
+        head[3] === 0x47 &&
+        head[4] === 0x0d &&
+        head[5] === 0x0a &&
+        head[6] === 0x1a &&
+        head[7] === 0x0a;
+    }
+    if (!ok) {
+      throw new AppError('File content does not match an allowed PDF/JPG/PNG type', 400);
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 export default optionalSupportDocumentUpload;

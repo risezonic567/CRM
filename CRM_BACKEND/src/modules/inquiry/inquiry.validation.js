@@ -32,25 +32,29 @@ const docRequestSlotSchema = Joi.object({
 }).unknown(true);
 
 const docRequestSchema = Joi.object({
-  mode: Joi.string().valid('all_slots', 'agent_selected').default('all_slots'),
+  mode: Joi.string()
+    .valid('all_slots', 'agent_selected', 'none')
+    .default('all_slots'),
   slots: Joi.array().items(docRequestSlotSchema).default([]),
 }).default({ mode: 'all_slots', slots: [] });
 
 export const sendInquirySchema = Joi.object({
   customer: Joi.object({
     firstName: Joi.string().trim().required(),
+    middleName: Joi.string().trim().allow('').default(''),
     lastName: Joi.string().trim().required(),
     phone: Joi.string().trim().required(),
     email: Joi.string().email().required(),
   }).required(),
+  // Booking requires full travel/offer/pax — enforced in sendInquiryToCustomer when kind≠service
   travel: Joi.object({
-    from: Joi.string().trim().required(),
+    from: Joi.string().trim().allow('').default(''),
     fromLabel: Joi.string().trim().allow('').default(''),
-    to: Joi.string().trim().required(),
+    to: Joi.string().trim().allow('').default(''),
     toLabel: Joi.string().trim().allow('').default(''),
-    departureDate: Joi.date().iso().required(),
+    departureDate: Joi.date().iso().allow(null),
     returnDate: Joi.date().iso().allow(null),
-    passengers: Joi.number().integer().min(1).max(9).required(),
+    passengers: Joi.number().integer().min(1).max(9).default(1),
     adults: Joi.number().integer().min(0).max(9),
     children: Joi.number().integer().min(0).max(8),
     infantsInSeat: Joi.number().integer().min(0).max(8),
@@ -58,8 +62,8 @@ export const sendInquirySchema = Joi.object({
     cabinClass: Joi.string()
       .valid(...CABIN_CLASSES)
       .default('economy'),
-  }).required(),
-  selectedOffer: Joi.object().unknown(true).required(),
+  }).default({}),
+  selectedOffer: Joi.object().unknown(true).allow(null).optional(),
   markup: Joi.number().min(0).required(),
   costPrice: Joi.number().min(0).required(),
   currency: Joi.string()
@@ -67,7 +71,7 @@ export const sendInquirySchema = Joi.object({
     .uppercase()
     .valid(...INQUIRY_CURRENCIES)
     .default('USD'),
-  passengers: Joi.array().items(passengerSchema).min(1).required(),
+  passengers: Joi.array().items(passengerSchema).default([]),
   billing: Joi.object({
     phone: Joi.string().trim().allow('').default(''),
     address: Joi.string().trim().allow('').default(''),
@@ -108,6 +112,7 @@ export const saveDraftSchema = Joi.object({
   wizardStep: Joi.number().integer().min(0).max(5),
   customer: Joi.object({
     firstName: Joi.string().trim().allow('').default(''),
+    middleName: Joi.string().trim().allow('').default(''),
     lastName: Joi.string().trim().allow('').default(''),
     phone: Joi.string().trim().allow('').default(''),
     email: Joi.string().trim().allow('').default(''),

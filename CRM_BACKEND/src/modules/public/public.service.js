@@ -181,7 +181,11 @@ export async function confirmInquiry(
   return { html, alreadyConfirmed: false, savedDocuments };
 }
 
-async function verifyAndLoad(inquiryId, token) {
+/** Public confirm auth — export so controller/routes can verify before any PII or uploads. */
+export async function verifyAndLoad(inquiryId, token) {
+  if (!/^[a-f\d]{24}$/i.test(String(inquiryId || ''))) {
+    throw new AppError('Invalid inquiry', 400);
+  }
   if (!token) throw new AppError('Token required', 401);
 
   let decoded;
@@ -191,7 +195,7 @@ async function verifyAndLoad(inquiryId, token) {
     throw new AppError('Invalid or expired authorization link', 401);
   }
 
-  if (decoded.inquiryId !== inquiryId) {
+  if (String(decoded.inquiryId) !== String(inquiryId)) {
     throw new AppError('Token does not match inquiry', 401);
   }
 
@@ -204,4 +208,8 @@ async function verifyAndLoad(inquiryId, token) {
 
   const agency = await Agency.findById(inquiry.agencyId);
   return { inquiry, agency, decoded };
+}
+
+export function publicConfirmCookieName(inquiryId) {
+  return `pub_confirm_${inquiryId}`;
 }

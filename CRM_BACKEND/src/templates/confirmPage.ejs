@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
   <title>Authorize Itinerary — <%= agency?.name || 'Airline Ticket Booking' %></title>
   <style>
     body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#0f172a; }
@@ -88,12 +89,13 @@
     var authText = inquiry.authorizationText || '';
     var authHtml = typeof authorizationHtml === 'string' ? authorizationHtml : '';
     var signature = billing.cardholderName
-      || [inquiry.customer?.firstName, inquiry.customer?.lastName].filter(Boolean).join(' ')
+      || [inquiry.customer?.firstName, inquiry.customer?.middleName, inquiry.customer?.lastName].filter(Boolean).join(' ')
       || '—';
     var slots = Array.isArray(docSlots) ? docSlots : [];
+    var isService = inquiry.kind === 'service';
   %>
   <div class="card">
-    <h1>Authorize your itinerary</h1>
+    <h1><%= isService ? 'Authorize your service fee' : 'Authorize your itinerary' %></h1>
     <p class="muted">Airline Ticket Booking · Customer Ticket &amp; Service Invoice</p>
     <p class="muted">Invoice Number: <strong><%= inquiry.invoiceNumber || inquiry.inquiryReference %></strong></p>
 
@@ -101,6 +103,25 @@
       <p class="error"><%= error %></p>
     <% } %>
 
+    <% if (isService) { %>
+    <h3>Service</h3>
+    <table class="info">
+      <tr>
+        <td class="k">Service</td>
+        <td><%= (inquiry.authorizationFills && inquiry.authorizationFills.purpose) || inquiry.sourceDisposition || 'Travel service' %></td>
+      </tr>
+    </table>
+
+    <h3>Pax details</h3>
+    <table class="info">
+      <tr>
+        <td class="k">Name</td>
+        <td><%= [inquiry.customer?.firstName, inquiry.customer?.middleName, inquiry.customer?.lastName].filter(Boolean).join(' ') || '—' %></td>
+      </tr>
+      <tr><td class="k">Email</td><td><%= inquiry.customer?.email || '—' %></td></tr>
+      <tr><td class="k">Phone</td><td><%= inquiry.customer?.phone || '—' %></td></tr>
+    </table>
+    <% } else { %>
     <div class="row"><strong>Route:</strong> <%= inquiry.travel.from %> → <%= inquiry.travel.to %><%= inquiry.travel.returnDate ? ' (round trip)' : '' %></div>
     <div class="row"><strong>Departure date:</strong> <%= fmtDateOnly(inquiry.travel.departureDate) %></div>
     <% if (inquiry.travel.returnDate) { %>
@@ -193,6 +214,7 @@
       </tr>
       <% }) %>
     </table>
+    <% } %>
 
     <h3>Billing Details</h3>
     <table class="info">
@@ -239,16 +261,25 @@
       <div class="upload-box">
         <h3>Supporting documents</h3>
         <p>
-          Upload the document(s) your agent requested (usually passport).
+          Upload the document(s) your agent requested.
           <strong>Required to authorize.</strong>
           Accepted: PDF, JPG, PNG · max 5&nbsp;MB each. Photos are compressed before send.
         </p>
         <% slots.forEach(function(slot) { %>
           <div class="slot">
             <p class="slot-label">
-              <%= slot.role === 'cardholder' ? 'Cardholder' : 'Passenger' %> — <%= slot.label %>
+              <% if (slot.docKind && slot.docKind !== 'passport') { %>
+                <%= slot.label || 'Document' %>
+              <% } else { %>
+                <%= slot.role === 'cardholder' ? 'Cardholder' : 'Passenger' %> — <%= slot.label %>
+              <% } %>
             </p>
-            <p class="slot-meta">Passport (required)</p>
+            <p class="slot-meta">
+              <%= (slot.docKind && slot.docKind !== 'document')
+                    ? slot.docKind
+                    : (slot.docKind === 'document' ? 'Document' : 'Passport') %>
+              (required)
+            </p>
             <input
               type="file"
               name="<%= slot.key %>"
@@ -266,7 +297,7 @@
       <p id="uploadStatus">Preparing documents…</p>
     </form>
     <p class="muted" style="margin-top:12px;text-align:center;font-size:12px;">
-      Clicking I Authorize records your authorization for this itinerary and card on file.
+      Clicking I Authorize records your authorization for this <%= isService ? 'service fee' : 'itinerary' %> and card on file.
     </p>
 
     <%- include('partials/gotoflyerTerms') %>

@@ -19,6 +19,10 @@ export function errorHandler(err, req, res, _next) {
     return fail(res, { status: 422, message: err.message });
   }
 
+  if (err.name === 'CastError') {
+    return fail(res, { status: 400, message: 'Invalid id' });
+  }
+
   if (err.code === 11000) {
     return fail(res, { status: 409, message: 'Duplicate key error' });
   }

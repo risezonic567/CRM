@@ -23,6 +23,7 @@ import {
   useResendConfirmationMutation,
 } from '../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
 import { CLOSE_SOURCES } from '../../../constants/dispositions';
+import { dispositionLabel } from '../../../constants/serviceDispositions';
 import StatusBadge from '../../shared/StatusBadge';
 import { getErrorMessage } from '../../../utils/getErrorMessage';
 import PnrItineraryTable from './wizard/PnrItineraryTable';
@@ -118,6 +119,7 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
   const [showRawUserAgent, setShowRawUserAgent] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const inq = data?.data?.inquiry;
+  const isService = inq?.kind === 'service';
   const offer = inq?.selectedOffer || {};
   const outbound = offer.outbound || offer;
   const inbound = offer.inbound || null;
@@ -129,6 +131,10 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
   const currency = inq?.pricing?.currency || 'USD';
   const isConfirmed = inq?.status === 'authorized';
   const supportDocs = useMemo(() => listInquirySupportDocs(inq), [inq]);
+  const serviceReason =
+    dispositionLabel(inq?.sourceDisposition) ||
+    inq?.authorizationFills?.purpose ||
+    'Service fee';
 
   useEffect(() => {
     setRemovedDocIds(new Set());
@@ -308,7 +314,13 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
               <div>
                 <p className="text-[11px] font-medium text-slate-500">Name</p>
                 <p className="text-sm font-semibold text-slate-900">
-                  {inq.customer?.firstName} {inq.customer?.lastName}
+                  {[
+                    inq.customer?.firstName,
+                    inq.customer?.middleName,
+                    inq.customer?.lastName,
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 </p>
               </div>
               <div>
@@ -332,121 +344,153 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
             </div>
           </Section>
 
-          <Section icon={MapPin} title="Travel">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <p className="text-[11px] font-medium text-slate-500">Route</p>
-                <p className="text-sm font-semibold text-slate-900">
-                  {inq.travel?.from || '—'} → {inq.travel?.to || '—'}
-                  {inq.travel?.returnDate ? ' · Round trip' : ' · One way'}
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-slate-500">
-                  Departure
-                </p>
-                <p className="text-sm font-semibold text-slate-900">
-                  {inq.travel?.departureDate
-                    ? formatDate(inq.travel.departureDate)
-                    : '—'}
-                </p>
-              </div>
-              {inq.travel?.returnDate && (
+          {isService ? (
+            <Section icon={FileText} title="Service">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <p className="text-[11px] font-medium text-slate-500">
-                    Return
+                    Reason
                   </p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {formatDate(inq.travel.returnDate)}
+                    {serviceReason}
                   </p>
                 </div>
-              )}
-              <div>
-                <p className="text-[11px] font-medium text-slate-500">Cabin</p>
-                <p className="text-sm font-semibold capitalize text-slate-900">
-                  {inq.travel?.cabinClass || '—'}
-                </p>
+                <div>
+                  <p className="text-[11px] font-medium text-slate-500">Kind</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    Service authorize
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[11px] font-medium text-slate-500">
-                  Passengers (search)
-                </p>
-                <p className="text-sm font-semibold text-slate-900">
-                  {inq.travel?.passengers ?? '—'}
-                </p>
-              </div>
-            </div>
-          </Section>
+            </Section>
+          ) : (
+            <>
+              <Section icon={MapPin} title="Travel">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[11px] font-medium text-slate-500">
+                      Route
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {inq.travel?.from || '—'} → {inq.travel?.to || '—'}
+                      {inq.travel?.returnDate
+                        ? ' · Round trip'
+                        : ' · One way'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium text-slate-500">
+                      Departure
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {inq.travel?.departureDate
+                        ? formatDate(inq.travel.departureDate)
+                        : '—'}
+                    </p>
+                  </div>
+                  {inq.travel?.returnDate && (
+                    <div>
+                      <p className="text-[11px] font-medium text-slate-500">
+                        Return
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {formatDate(inq.travel.returnDate)}
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-[11px] font-medium text-slate-500">
+                      Cabin
+                    </p>
+                    <p className="text-sm font-semibold capitalize text-slate-900">
+                      {inq.travel?.cabinClass || '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium text-slate-500">
+                      Passengers (search)
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {inq.travel?.passengers ?? '—'}
+                    </p>
+                  </div>
+                </div>
+              </Section>
 
-          <div className="space-y-3 lg:col-span-2">
-            <div className="mb-1 flex items-center gap-2 px-1">
-              <Plane className="h-4 w-4 text-blue-600" />
-              <h3 className="text-sm font-semibold text-slate-900">
-                {pnrSegments.length ? 'Itinerary' : 'Selected flight'}
-              </h3>
-            </div>
-            {pnrSegments.length ? (
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <PnrItineraryTable segments={pnrSegments} />
-              </div>
-            ) : outbound?.flightNumber || outbound?.airline ? (
-              <div className="grid gap-3 md:grid-cols-2">
-                <FlightLeg
-                  title={inbound ? 'Departing' : 'Flight'}
-                  offer={outbound}
-                  from={inq.travel?.from}
-                  to={inq.travel?.to}
-                />
-                {inbound && (
-                  <FlightLeg
-                    title="Returning"
-                    offer={inbound}
-                    from={inq.travel?.to}
-                    to={inq.travel?.from}
-                  />
+              <div className="space-y-3 lg:col-span-2">
+                <div className="mb-1 flex items-center gap-2 px-1">
+                  <Plane className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    {pnrSegments.length ? 'Itinerary' : 'Selected flight'}
+                  </h3>
+                </div>
+                {pnrSegments.length ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <PnrItineraryTable segments={pnrSegments} />
+                  </div>
+                ) : outbound?.flightNumber || outbound?.airline ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <FlightLeg
+                      title={inbound ? 'Departing' : 'Flight'}
+                      offer={outbound}
+                      from={inq.travel?.from}
+                      to={inq.travel?.to}
+                    />
+                    {inbound && (
+                      <FlightLeg
+                        title="Returning"
+                        offer={inbound}
+                        from={inq.travel?.to}
+                        to={inq.travel?.from}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
+                    No itinerary recorded yet
+                  </p>
                 )}
               </div>
-            ) : (
-              <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
-                No itinerary recorded yet
-              </p>
-            )}
-          </div>
 
-          <Section icon={Users} title="Passengers">
-            {(inq.passengers || []).length ? (
-              <ul className="space-y-2">
-                {inq.passengers.map((p, i) => (
-                  <li
-                    key={i}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
-                  >
-                    <span className="font-semibold text-slate-900">
-                      {p.firstName} {p.middleName ? `${p.middleName} ` : ''}
-                      {p.lastName}
-                    </span>
-                    {p.type && (
-                      <span className="ml-1.5 text-xs capitalize text-slate-400">
-                        ({p.type})
-                      </span>
-                    )}
-                    <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-slate-500">
-                      {p.phone && <span>{p.phone}</span>}
-                      {p.email && <span>{p.email}</span>}
-                      {p.dob && <span>DOB {p.dob}</span>}
-                      {p.documentNumber && (
-                        <span>
-                          {p.documentType || 'Doc'} {p.documentNumber}
+              <Section icon={Users} title="Passengers">
+                {(inq.passengers || []).length ? (
+                  <ul className="space-y-2">
+                    {inq.passengers.map((p, i) => (
+                      <li
+                        key={i}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                      >
+                        <span className="font-semibold text-slate-900">
+                          {p.firstName}{' '}
+                          {p.middleName ? `${p.middleName} ` : ''}
+                          {p.lastName}
                         </span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">No passengers recorded</p>
-            )}
-          </Section>
+                        {p.type && (
+                          <span className="ml-1.5 text-xs capitalize text-slate-400">
+                            ({p.type})
+                          </span>
+                        )}
+                        <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-slate-500">
+                          {p.phone && <span>{p.phone}</span>}
+                          {p.email && <span>{p.email}</span>}
+                          {p.dob && <span>DOB {p.dob}</span>}
+                          {p.documentNumber && (
+                            <span>
+                              {p.documentType || 'Doc'} {p.documentNumber}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    No passengers recorded
+                  </p>
+                )}
+              </Section>
+            </>
+          )}
 
           {supportDocs.length > 0 && (
             <Section icon={FileText} title="Supporting documents">

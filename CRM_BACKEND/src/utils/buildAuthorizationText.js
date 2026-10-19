@@ -53,6 +53,9 @@ export function buildAuthPurpose(from, to) {
   return '';
 }
 
+/** Re-export service purpose helper for callers that already import this module. */
+export { servicePurposeLabel as buildAuthPurposeFromDisposition } from './serviceDispositions.js';
+
 export function buildAuthorizationText(options = {}) {
   const f = resolveAuthFills(options);
   return (

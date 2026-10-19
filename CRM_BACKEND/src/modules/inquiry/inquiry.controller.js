@@ -45,9 +45,12 @@ export async function send(req, res, next) {
       req.body
     );
     return success(res, {
-      message: 'Inquiry sent to customer',
+      message: result.emailSent
+        ? 'Inquiry sent to customer'
+        : 'Inquiry saved but email failed to send — resend or share the link',
       data: {
         inquiry: result.inquiry,
+        emailSent: Boolean(result.emailSent),
         ...(process.env.NODE_ENV !== 'production'
           ? { confirmUrl: result.confirmUrl }
           : {}),

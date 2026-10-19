@@ -1,6 +1,25 @@
 # Local agent skills (e.g. archify) — keep off remote
 .agents/
 skills-lock.json
+.claude/
+.codex/
+.opencode/
+.cursor/skills/
+.cursor/skills-lock.json
+
+# Cloudflare / local security-audit skill outputs — never push
+security-audit*/
+**/security-audit*/
+security-audit-skill/
+**/findings.json
+**/coverage-ledger.json
+**/FINDINGS-DETAIL.md
+**/NEEDS-VALIDATION.md
+**/architecture.md
+
+# /brag launch video output — local only, never commit
+brag-output/
+**/brag-output/
 
 # Freebuff local project markers
 .freebuff/

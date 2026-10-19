@@ -7,12 +7,8 @@ export const createCallSchema = Joi.object({
   disposition: Joi.string()
     .valid(...CALL_DISPOSITIONS)
     .required(),
-  // New booking: remarks optional; all other dispositions: required
-  remarks: Joi.when('disposition', {
-    is: 'new_booking',
-    then: Joi.string().trim().allow('').default(''),
-    otherwise: Joi.string().trim().min(1).required(),
-  }),
+  // Remarks optional for all dispositions (wizard / follow-up notes cover detail)
+  remarks: Joi.string().trim().allow('').default(''),
 });
 
 export const listCallsQuerySchema = Joi.object({

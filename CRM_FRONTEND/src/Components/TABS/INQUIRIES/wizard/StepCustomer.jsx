@@ -71,13 +71,14 @@ const StepCustomer = () => {
               Customer details
             </h3>
             <p className="mt-0.5 text-sm text-slate-500">
-              Primary contact for this inquiry. All fields are required.
+              Primary contact for this inquiry. First, last, phone, and email are
+              required; middle name is optional.
             </p>
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label className={labelClass}>First name *</label>
               <input
@@ -85,6 +86,16 @@ const StepCustomer = () => {
                 placeholder="First name"
                 value={c.firstName}
                 onChange={set('firstName')}
+                type="text"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Middle name</label>
+              <input
+                className={fieldClass}
+                placeholder="Middle name"
+                value={c.middleName || ''}
+                onChange={set('middleName')}
                 type="text"
               />
             </div>
@@ -98,6 +109,8 @@ const StepCustomer = () => {
                 type="text"
               />
             </div>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Phone * (10 digits)</label>
               <input

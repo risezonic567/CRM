@@ -81,11 +81,9 @@ const CallDispositionFormBody = ({ values, onChange }) => {
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
           <span>Remarks / Conversation Notes</span>
-          {values.disposition !== 'new_booking' ? (
-            <span className="text-rose-500">*</span>
-          ) : (
-            <span className="text-[11px] font-normal text-slate-400">(optional for new bookings)</span>
-          )}
+          <span className="text-[11px] font-normal text-slate-400">
+            (optional)
+          </span>
         </label>
         <textarea
           rows={3}

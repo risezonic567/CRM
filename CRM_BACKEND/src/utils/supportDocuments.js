@@ -54,12 +54,16 @@ export function buildAllDocSlots(inquiry) {
 }
 
 /**
- * Confirm-page slots. Plan A: filter by inquiry.docRequest when mode is
- * agent_selected. Missing/all_slots → full list (Plan B, backward compatible).
+ * Confirm-page slots.
+ * - none → no uploads
+ * - agent_selected → filter (+ optional custom label/docKind from agent)
+ * - missing / all_slots → full list (booking default, backward compatible)
  */
 export function buildDocSlots(inquiry) {
-  const all = buildAllDocSlots(inquiry);
   const mode = inquiry?.docRequest?.mode;
+  if (mode === 'none') return [];
+
+  const all = buildAllDocSlots(inquiry);
   if (mode !== 'agent_selected') return all;
 
   const wanted = Array.isArray(inquiry.docRequest?.slots)
@@ -77,26 +81,46 @@ export function buildDocSlots(inquiry) {
     (s) => s?.role === 'cardholder' || s?.key === DOC_FIELD_CARDHOLDER
   );
 
-  return all.filter((s) => {
-    if (keys.has(s.key)) return true;
-    if (s.role === 'cardholder' && wantCard) return true;
-    if (
-      s.role === 'passenger' &&
-      s.passengerId &&
-      paxIds.has(String(s.passengerId))
-    ) {
-      return true;
-    }
-    return false;
-  });
+  const byKey = new Map(
+    wanted.filter((s) => s?.key).map((s) => [s.key, s])
+  );
+
+  return all
+    .filter((s) => {
+      if (keys.has(s.key)) return true;
+      if (s.role === 'cardholder' && wantCard) return true;
+      if (
+        s.role === 'passenger' &&
+        s.passengerId &&
+        paxIds.has(String(s.passengerId))
+      ) {
+        return true;
+      }
+      return false;
+    })
+    .map((s) => {
+      const override = byKey.get(s.key);
+      if (!override) return s;
+      const label = String(override.label || '').trim();
+      const docKind = String(override.docKind || '').trim();
+      return {
+        ...s,
+        ...(label ? { label } : {}),
+        ...(docKind ? { docKind } : {}),
+      };
+    });
 }
 
 /**
  * Resolve agent payload → persisted docRequest after passengers have _ids.
  * Uses passengerId and/or passengerIndex (order in passengers array).
+ * Preserves agent-provided label / docKind on matched slots.
  */
 export function resolveDocRequest(raw, inquiry) {
-  if (!raw || raw.mode !== 'agent_selected') {
+  if (!raw || raw.mode === 'none') {
+    return { mode: 'none', slots: [] };
+  }
+  if (raw.mode !== 'agent_selected') {
     return { mode: 'all_slots', slots: [] };
   }
 
@@ -107,9 +131,18 @@ export function resolveDocRequest(raw, inquiry) {
   for (const r of raw.slots || []) {
     if (!r || typeof r !== 'object') continue;
 
+    const agentLabel = String(r.label || '').trim();
+    const agentKind = String(r.docKind || '').trim();
+
     if (r.role === 'cardholder' || r.key === DOC_FIELD_CARDHOLDER) {
       const s = all.find((x) => x.role === 'cardholder');
-      if (s) out.push({ ...s });
+      if (s) {
+        out.push({
+          ...s,
+          ...(agentLabel ? { label: agentLabel } : {}),
+          ...(agentKind ? { docKind: agentKind } : {}),
+        });
+      }
       continue;
     }
 
@@ -126,7 +159,13 @@ export function resolveDocRequest(raw, inquiry) {
       ) {
         s = paxSlots[r.passengerIndex];
       }
-      if (s) out.push({ ...s });
+      if (s) {
+        out.push({
+          ...s,
+          ...(agentLabel ? { label: agentLabel } : {}),
+          ...(agentKind ? { docKind: agentKind } : {}),
+        });
+      }
     }
   }
 

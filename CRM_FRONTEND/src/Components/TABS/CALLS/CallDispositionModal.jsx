@@ -37,14 +37,7 @@ const CallDispositionModal = ({ open, onClose }) => {
     if (values.phoneNumber?.trim() && !isValidPhone10(values.phoneNumber)) {
       return PHONE_10_ERROR;
     }
-    // Remarks required for every disposition except new booking
-    if (
-      values.disposition &&
-      values.disposition !== 'new_booking' &&
-      !values.remarks.trim()
-    ) {
-      return 'Remarks are required for this disposition';
-    }
+    // Remarks always optional — wizard / call notes cover follow-up
     return null;
   };
 
@@ -64,17 +57,31 @@ const CallDispositionModal = ({ open, onClose }) => {
       const data = res.data;
       toast.success(res.message || 'Call recorded successfully');
 
-      if (data?.openWizard && data?.inquiry?._id) {
+      const openWizard = data?.openWizard;
+      const inquiryId = data?.inquiry?._id;
+      if (inquiryId && (openWizard === 'booking' || openWizard === true)) {
         dispatch(
           startWizard({
-            inquiryId: data.inquiry._id,
+            inquiryId,
             phone: values.phoneNumber || '',
           })
         );
         setSearchParams({
           tab: 'inquiries',
           wizard: '1',
-          inquiryId: data.inquiry._id,
+          inquiryId,
+        });
+      } else if (inquiryId && openWizard === 'service') {
+        dispatch(
+          startWizard({
+            inquiryId,
+            phone: values.phoneNumber || '',
+          })
+        );
+        setSearchParams({
+          tab: 'inquiries',
+          wizard: 'service',
+          inquiryId,
         });
       } else {
         setSearchParams({ tab: 'calls' });

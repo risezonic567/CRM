@@ -54,9 +54,14 @@
           || '—';
       %>
 
+      <% var isService = inquiry.kind === 'service'; %>
       <p>Hello <%= inquiry.customer.firstName %>,</p>
       <p>
+        <% if (isService) { %>
+        Please review your service fee and billing details below.
+        <% } else { %>
         Please review your itinerary and billing details below.
+        <% } %>
         Then open the authorization page and click <strong>I Authorize</strong>.
       </p>
 
@@ -70,6 +75,33 @@
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 
+      <% if (isService) { %>
+      <h3 style="margin:0 0 12px;">Service</h3>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
+        <tr>
+          <td style="width:160px;color:#64748b;">Service</td>
+          <td><%= (inquiry.authorizationFills && inquiry.authorizationFills.purpose) || inquiry.sourceDisposition || 'Travel service' %></td>
+        </tr>
+      </table>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+
+      <h3 style="margin:0 0 12px;">Pax details</h3>
+      <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
+        <tr>
+          <td style="width:160px;color:#64748b;">Name</td>
+          <td><%= [inquiry.customer.firstName, inquiry.customer.middleName, inquiry.customer.lastName].filter(Boolean).join(' ') || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Email</td>
+          <td><%= inquiry.customer.email || '—' %></td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;">Phone</td>
+          <td><%= inquiry.customer.phone || '—' %></td>
+        </tr>
+      </table>
+      <% } else { %>
       <h3 style="margin:0 0 12px;">Flight details</h3>
 
       <% if (pnrSegments.length) { %>
@@ -150,6 +182,7 @@
         </tr>
         <% }) %>
       </table>
+      <% } %>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
 

@@ -1,6 +1,8 @@
 import { Server } from 'socket.io';
 import config from '../config/index.js';
 import { verifyAccessToken } from '../utils/signPublicToken.js';
+import { User, Inquiry } from '../models/index.js';
+import { ROLES } from '../config/constants.js';
 import logger from '../utils/logger.js';
 
 let io = null;
@@ -13,7 +15,7 @@ export function initSocket(httpServer) {
     },
   });
 
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     try {
       const token =
         socket.handshake.auth?.token ||
@@ -24,10 +26,17 @@ export function initSocket(httpServer) {
       }
 
       const decoded = verifyAccessToken(token);
+      const user = await User.findById(decoded.sub).select(
+        '_id role agencyId isActive'
+      );
+      if (!user || !user.isActive) {
+        return next(new Error('User not found or inactive'));
+      }
+
       socket.user = {
-        id: decoded.sub,
-        role: decoded.role,
-        agencyId: decoded.agencyId,
+        id: user._id.toString(),
+        role: user.role,
+        agencyId: user.agencyId?.toString(),
       };
       return next();
     } catch {
@@ -38,11 +47,29 @@ export function initSocket(httpServer) {
   io.on('connection', (socket) => {
     logger.info('Socket connected', { userId: socket.user?.id });
 
-    socket.on('inquiry:subscribe', (inquiryId) => {
-      if (!inquiryId) return;
-      const room = `inquiry_${inquiryId}`;
-      socket.join(room);
-      logger.debug('Joined room', { room, userId: socket.user?.id });
+    socket.on('inquiry:subscribe', async (inquiryId) => {
+      if (!inquiryId || !/^[a-f\d]{24}$/i.test(String(inquiryId))) return;
+      try {
+        const inquiry = await Inquiry.findById(inquiryId)
+          .select('agencyId assignedTo')
+          .lean();
+        if (!inquiry) return;
+        if (String(inquiry.agencyId) !== String(socket.user.agencyId)) return;
+        if (
+          socket.user.role !== ROLES.ADMIN &&
+          String(inquiry.assignedTo) !== String(socket.user.id)
+        ) {
+          return;
+        }
+        const room = `inquiry_${inquiryId}`;
+        socket.join(room);
+        logger.debug('Joined room', { room, userId: socket.user?.id });
+      } catch (err) {
+        logger.debug('inquiry:subscribe denied', {
+          inquiryId,
+          message: err.message,
+        });
+      }
     });
 
     socket.on('inquiry:unsubscribe', (inquiryId) => {

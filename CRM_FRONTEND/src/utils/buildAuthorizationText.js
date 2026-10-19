@@ -50,6 +50,8 @@ export function buildAuthPurpose(from, to) {
   return '';
 }
 
+export { servicePurposeLabel as buildAuthPurposeFromDisposition } from '../constants/serviceDispositions';
+
 export function buildAuthorizationText(options = {}) {
   const f = resolveAuthFills(options);
   return (

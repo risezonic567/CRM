@@ -22,6 +22,16 @@ export async function renderTemplate(name, data) {
   return ejs.renderFile(file, data);
 }
 
+function authorizeEmailSubject(inquiry, invoiceNo) {
+  if (inquiry.kind === 'service') {
+    return `Authorize service fee — Invoice No. ${invoiceNo}`;
+  }
+  const from = inquiry.travel?.from || '';
+  const toRoute = inquiry.travel?.to || '';
+  const route = from && toRoute ? ` · ${from} to ${toRoute}` : '';
+  return `Authorize your itinerary — Invoice No. ${invoiceNo}${route}`;
+}
+
 /**
  * Fire-and-forget friendly — caller should not await for API latency.
  */
@@ -29,7 +39,7 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
   const to = inquiry.customer.email;
   const invoiceNo =
     inquiry.invoiceNumber || inquiry.inquiryReference || '';
-  const subject = `Authorize your itinerary — Invoice No. ${invoiceNo} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
+  const subject = authorizeEmailSubject(inquiry, invoiceNo);
 
   try {
     const fills = fillsFromInquiry(inquiry, agency);
@@ -133,7 +143,10 @@ export async function queueSupportDocsNotifyEmail({ inquiry, agency, docs }) {
   }
 
   if (!attachments.length) {
-    logger.warn('Support docs notify skipped — no files on disk', { ref, to });
+    logger.warn('Support docs notify skipped — no files on disk', {
+      invoiceNo,
+      to,
+    });
     return;
   }
 
@@ -167,7 +180,7 @@ export async function queueSupportDocsNotifyEmail({ inquiry, agency, docs }) {
     logger.error('Failed to send support docs notify email', {
       message: err.message,
       to,
-      ref,
+      invoiceNo,
     });
     try {
       await NotificationLog.create({
@@ -193,7 +206,10 @@ export async function queueConfirmationEmail({ inquiry, agency }) {
   const to = inquiry.customer.email;
   const invoiceNo =
     inquiry.invoiceNumber || inquiry.inquiryReference || '';
-  const subject = `Authorized — Invoice No. ${invoiceNo} · ${inquiry.travel.from} to ${inquiry.travel.to}`;
+  const subject =
+    inquiry.kind === 'service'
+      ? `Authorized — Invoice No. ${invoiceNo} · service fee`
+      : `Authorized — Invoice No. ${invoiceNo} · ${inquiry.travel?.from || ''} to ${inquiry.travel?.to || ''}`;
 
   try {
     const fills = fillsFromInquiry(inquiry, agency);

@@ -4,7 +4,13 @@ import {
   normalizeInquiryCurrency,
 } from '../../../constants/currencies';
 
-const emptyCustomer = { firstName: '', lastName: '', phone: '', email: '' };
+const emptyCustomer = {
+  firstName: '',
+  middleName: '',
+  lastName: '',
+  phone: '',
+  email: '',
+};
 const emptyTravel = {
   from: '',
   fromLabel: '',
@@ -89,6 +95,7 @@ export function mapInquiryToWizard(inquiry) {
     step: typeof inquiry.wizardStep === 'number' ? inquiry.wizardStep : 0,
     customer: {
       firstName: inquiry.customer?.firstName || '',
+      middleName: inquiry.customer?.middleName || '',
       lastName: inquiry.customer?.lastName || '',
       phone: inquiry.customer?.phone || '',
       email: inquiry.customer?.email || '',

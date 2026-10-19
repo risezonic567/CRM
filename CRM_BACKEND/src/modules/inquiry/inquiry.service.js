@@ -11,7 +11,9 @@ import {
   extractAuthFillsFromText,
   fillsFromInquiry,
   renderAuthorizationHtml,
+  resolveAuthFills,
 } from '../../utils/buildAuthorizationText.js';
+import { servicePurposeLabel } from '../../utils/serviceDispositions.js';
 import { resolveSupportDocumentAbsolutePath } from '../../middlewares/authorizeUpload.middleware.js';
 import {
   findSupportDocument,
@@ -32,6 +34,7 @@ import {
 } from '../notification/notification.service.js';
 import { enrichAgreement } from '../../utils/enrichAgreement.js';
 import { getIO } from '../../socket/socket.js';
+import logger from '../../utils/logger.js';
 
 /** New authorize flow: customer total = cost + markup only (no merchant fee). */
 const AUTHORIZE_MERCHANT_FEE_PERCENT = 0;
@@ -226,6 +229,24 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
   const agency = await Agency.findById(user.agencyId);
   if (!agency) throw new AppError('Agency not found', 404);
 
+  const isService = inquiry.kind === 'service';
+
+  // Booking path still requires itinerary + offer + passengers
+  if (!isService) {
+    if (!payload.selectedOffer) {
+      throw new AppError('selectedOffer is required for booking inquiries', 400);
+    }
+    if (!payload.travel?.from || !payload.travel?.to) {
+      throw new AppError('Travel route is required for booking inquiries', 400);
+    }
+    if (!payload.travel?.departureDate) {
+      throw new AppError('Departure date is required for booking inquiries', 400);
+    }
+    if (!Array.isArray(payload.passengers) || payload.passengers.length < 1) {
+      throw new AppError('At least one passenger is required for booking inquiries', 400);
+    }
+  }
+
   // Never trust frontend sellingPrice — recompute (merchant fee stripped for authorize flow)
   const pricing = calculatePricing({
     costPrice: payload.costPrice,
@@ -242,73 +263,92 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
   });
 
   inquiry.customer = payload.customer;
-  inquiry.travel = {
-    type: 'flight',
-    ...payload.travel,
-  };
-  inquiry.selectedOffer = payload.selectedOffer;
+  if (!isService) {
+    inquiry.travel = {
+      type: 'flight',
+      ...payload.travel,
+    };
+    inquiry.selectedOffer = payload.selectedOffer;
+    // Ensure passenger subdocs have _ids so docRequest slots resolve stably
+    inquiry.passengers = (payload.passengers || []).map((p) => {
+      const row = { ...(p && typeof p === 'object' ? p : {}) };
+      if (!row._id) {
+        row._id = new mongoose.Types.ObjectId();
+      }
+      return row;
+    });
+  } else {
+    inquiry.selectedOffer = payload.selectedOffer || null;
+    inquiry.passengers = [];
+  }
   inquiry.pricing = pricing;
-  // Ensure passenger subdocs have _ids so docRequest slots resolve stably
-  inquiry.passengers = (payload.passengers || []).map((p) => {
-    const row = { ...(p && typeof p === 'object' ? p : {}) };
-    if (!row._id) {
-      row._id = new mongoose.Types.ObjectId();
-    }
-    return row;
-  });
   inquiry.billing = sanitizeBilling(payload.billing || {});
-  inquiry.notes = payload.notes || '';
+  inquiry.notes = payload.notes || inquiry.notes || '';
   inquiry.docRequest = resolveDocRequest(payload.docRequest, inquiry);
 
   const authorizerName =
     payload.billing?.cardholderName ||
-    [payload.customer?.firstName, payload.customer?.lastName]
+    [
+      payload.customer?.firstName,
+      payload.customer?.middleName,
+      payload.customer?.lastName,
+    ]
       .filter(Boolean)
       .join(' ')
       .trim();
-  const purpose =
-    buildAuthPurpose(payload.travel?.from, payload.travel?.to) ||
-    'the itinerary detailed above';
-  const fromAgent = String(payload.authorizationText || '').trim();
-  const fallbackAuth = buildAuthorizationText({
+  const purpose = isService
+    ? servicePurposeLabel(inquiry.sourceDisposition) ||
+      String(payload.authorizationFills?.purpose || '').trim() ||
+      'travel service fee'
+    : buildAuthPurpose(payload.travel?.from, payload.travel?.to) ||
+      'the itinerary detailed above';
+
+  // Server-owned amount — never trust client amountLabel / mismatched auth text
+  const serverFills = resolveAuthFills({
     authorizerName,
     agencyName: agency.name || 'Airline Ticket Booking',
     currency: pricing.currency,
     total: pricing.sellingPrice,
     purpose,
   });
-  inquiry.authorizationText = fromAgent || fallbackAuth;
+  const fromAgent = String(payload.authorizationText || '').trim();
+  const fallbackAuth = buildAuthorizationText({
+    authorizerName: serverFills.authorizerName,
+    agencyName: serverFills.agencyName,
+    currency: serverFills.currency,
+    total: pricing.sellingPrice,
+    purpose: serverFills.purpose,
+  });
 
-  const payloadFills = payload.authorizationFills;
-  if (
-    payloadFills &&
-    typeof payloadFills === 'object' &&
-    (payloadFills.authorizerName || payloadFills.amountLabel)
-  ) {
-    inquiry.authorizationFills = {
-      authorizerName: String(payloadFills.authorizerName || '').trim(),
-      agencyName: String(payloadFills.agencyName || '').trim(),
-      amountLabel: String(payloadFills.amountLabel || '').trim(),
-      purpose: String(payloadFills.purpose || '').trim(),
-      currency: String(payloadFills.currency || '').trim(),
-      amount: String(payloadFills.amount || '').trim(),
-    };
-  } else {
-    inquiry.authorizationFills = extractAuthFillsFromText(
-      inquiry.authorizationText,
-      {
-        authorizerName,
-        agencyName: agency.name || 'Airline Ticket Booking',
-        currency: pricing.currency,
-        total: pricing.sellingPrice,
-        purpose,
-      }
+  let authText = fromAgent || fallbackAuth;
+  if (!authText.includes(serverFills.amountLabel)) {
+    const replaced = authText.replace(
+      /for the amount of\s+[A-Z]{3}\s+\d+(?:\.\d{1,2})?/i,
+      `for the amount of ${serverFills.amountLabel}`
     );
+    authText =
+      replaced !== authText && replaced.includes(serverFills.amountLabel)
+        ? replaced
+        : fallbackAuth;
   }
+  inquiry.authorizationText = authText;
 
-  inquiry.wizardStep = 5;
+  const extracted = extractAuthFillsFromText(inquiry.authorizationText, {
+    authorizerName: serverFills.authorizerName,
+    agencyName: serverFills.agencyName,
+    currency: serverFills.currency,
+    total: pricing.sellingPrice,
+    purpose: serverFills.purpose,
+  });
+  inquiry.authorizationFills = {
+    ...extracted,
+    amountLabel: serverFills.amountLabel,
+    currency: serverFills.currency,
+    amount: serverFills.amount,
+  };
+
+  inquiry.wizardStep = isService ? 3 : 5;
   inquiry.status = INQUIRY_STATUSES.PREVIEW_SENT;
-  inquiry.emailSentAt = new Date();
   inquiry.publicTokenJti = jti;
   inquiry.closeReason = '';
   inquiry.closeSource = null;
@@ -321,14 +361,24 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
 
   const confirmUrl = `${config.urls.api}/public/confirm/${inquiry._id}?token=${token}`;
 
-  // Fire-and-forget authorization email — do not block response
-  queueInquiryEmail({
-    inquiry,
-    agency,
-    confirmUrl,
-  }).catch(() => {});
+  let emailSent = false;
+  try {
+    await queueInquiryEmail({
+      inquiry,
+      agency,
+      confirmUrl,
+    });
+    inquiry.emailSentAt = new Date();
+    await inquiry.save();
+    emailSent = true;
+  } catch (err) {
+    logger.error('Inquiry authorization email failed after send', {
+      inquiryId: inquiry._id.toString(),
+      message: err.message,
+    });
+  }
 
-  return { inquiry, confirmUrl };
+  return { inquiry, confirmUrl, emailSent };
 }
 
 /**

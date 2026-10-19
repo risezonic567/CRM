@@ -12,10 +12,10 @@ router.use(express.urlencoded({ extended: true }));
 router.get('/confirm/:inquiryId', publicController.showConfirm);
 router.post(
   '/confirm/:inquiryId',
+  publicController.requireConfirmToken,
   (req, res, next) => {
     optionalSupportDocumentUpload(req, res, (err) => {
       if (err) {
-        // Multer / fileFilter errors → friendly HTML via controller helper
         err.statusCode = err.statusCode || err.status || 400;
         err.isOperational = true;
         return publicController.renderConfirmError(req, res, next, err);

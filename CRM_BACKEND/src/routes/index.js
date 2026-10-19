@@ -5,6 +5,7 @@ import callRoutes from '../modules/call/call.routes.js';
 import inquiryRoutes from '../modules/inquiry/inquiry.routes.js';
 import pnrRoutes from '../modules/pnr/pnr.routes.js';
 import searchRoutes from '../modules/search/search.routes.js';
+import dashboardRoutes from '../modules/dashboard/dashboard.routes.js';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/calls', callRoutes);
 router.use('/inquiries', inquiryRoutes);
 router.use('/pnr', pnrRoutes);
 router.use('/search', searchRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 export default router;

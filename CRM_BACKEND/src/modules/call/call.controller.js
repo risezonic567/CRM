@@ -7,9 +7,11 @@ export async function create(req, res, next) {
     return success(res, {
       status: 201,
       message:
-        result.openWizard
-          ? 'Call logged — opening inquiry wizard'
-          : 'Call logged successfully',
+        result.openWizard === 'booking'
+          ? 'Call logged — opening booking wizard'
+          : result.openWizard === 'service'
+            ? 'Call logged — opening service authorize wizard'
+            : 'Call logged successfully',
       data: {
         call: result.call,
         inquiry: result.inquiry,

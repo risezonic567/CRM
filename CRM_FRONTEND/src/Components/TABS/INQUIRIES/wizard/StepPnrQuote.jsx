@@ -10,6 +10,7 @@ import {
   POPULAR_INQUIRY_CURRENCIES,
   currencyOptionLabel,
   filterInquiryCurrencies,
+  matchCurrencyFromQuery,
   normalizeInquiryCurrency,
 } from '../../../../constants/currencies';
 import PnrItineraryTable from './PnrItineraryTable';
@@ -123,7 +124,18 @@ const StepPnrQuote = () => {
           className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-600 focus:outline-none"
           placeholder="Search currency (e.g. GBP, India)"
           value={currencyQuery}
-          onChange={(e) => setCurrencyQuery(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value;
+            setCurrencyQuery(next);
+            const matched = matchCurrencyFromQuery(next);
+            if (matched) applyCurrency(matched);
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            const matched = matchCurrencyFromQuery(currencyQuery);
+            if (matched) applyCurrency(matched);
+          }}
           aria-label="Search currencies"
         />
         <select

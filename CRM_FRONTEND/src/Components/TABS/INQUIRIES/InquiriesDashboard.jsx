@@ -23,6 +23,7 @@ import { getErrorMessage } from '../../../utils/getErrorMessage';
 import StatusBadge from '../../shared/StatusBadge';
 import PaginationBar from '../../shared/PaginationBar';
 import InquiryWizard from './InquiryWizard';
+import ServiceWizard from './ServiceWizard';
 import InquiryDetailPage from './InquiryDetailPage';
 import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
 
@@ -54,7 +55,10 @@ const routeOrReason = (inq) => {
 
 const InquiriesDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const showWizard = searchParams.get('wizard') === '1';
+  const wizardMode = searchParams.get('wizard');
+  const showBookingWizard = wizardMode === '1';
+  const showServiceWizard = wizardMode === 'service';
+  const showWizard = showBookingWizard || showServiceWizard;
   const detailId =
     !showWizard && searchParams.get('inquiryId')
       ? searchParams.get('inquiryId')
@@ -144,7 +148,9 @@ const InquiriesDashboard = () => {
 
   return (
     <div className="flex flex-col gap-5 text-slate-900 font-sans">
-      {showWizard ? (
+      {showServiceWizard ? (
+        <ServiceWizard />
+      ) : showBookingWizard ? (
         <InquiryWizard />
       ) : detailId ? (
         <InquiryDetailPage inquiryId={detailId} onBack={closeDetail} />
@@ -268,8 +274,14 @@ const InquiriesDashboard = () => {
                   <tbody className="divide-y divide-slate-100">
                     {items.map((inq) => {
                       const custName =
-                        `${inq.customer?.firstName || ''} ${inq.customer?.lastName || ''}`.trim() ||
-                        'Unknown';
+                        [
+                          inq.customer?.firstName,
+                          inq.customer?.middleName,
+                          inq.customer?.lastName,
+                        ]
+                          .filter(Boolean)
+                          .join(' ')
+                          .trim() || 'Unknown';
                       const initials = getCustomerInitials(
                         inq.customer?.firstName,
                         inq.customer?.lastName
@@ -356,7 +368,10 @@ const InquiriesDashboard = () => {
                                   onClick={() =>
                                     setSearchParams({
                                       tab: 'inquiries',
-                                      wizard: '1',
+                                      wizard:
+                                        inq.kind === 'service'
+                                          ? 'service'
+                                          : '1',
                                       inquiryId: inq._id,
                                     })
                                   }

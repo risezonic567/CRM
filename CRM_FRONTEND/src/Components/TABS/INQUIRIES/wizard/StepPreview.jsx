@@ -22,13 +22,16 @@ import {
   inquiryApi,
   useSendInquiryMutation,
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquiryApi';
+import { useGetCompanyQuery } from '../../../../REDUX_FEATURES/REDUX_SLICES/User_api/userApi';
 import { selectAccessToken } from '../../../../REDUX_FEATURES/REDUX_SLICES/Auth_api/authSlice';
 import {
   connectSocket,
   disconnectSocket,
   subscribeInquiry,
+  unsubscribeInquiry,
   getSocket,
 } from '../../../../SERVICES/socket';
+import { axiosInstance } from '../../../../SERVICES/AxiosInstance';
 import { getErrorMessage } from '../../../../utils/getErrorMessage';
 import {
   buildAuthPurpose,
@@ -52,11 +55,16 @@ const StepPreview = ({ onDone }) => {
   const wizard = useSelector(selectWizard);
   const accessToken = useSelector(selectAccessToken);
   const [sendInquiry, { isLoading }] = useSendInquiryMutation();
+  const { data: companyRes } = useGetCompanyQuery();
   const [waiting, setWaiting] = useState(false);
   const [sentInquiry, setSentInquiry] = useState(null);
   /** null = all slots selected (Plan B / all_slots on send) */
   const [selectedDocKeys, setSelectedDocKeys] = useState(null);
   const authEditedRef = useRef(false);
+
+  const agencyName =
+    String(companyRes?.data?.agency?.name || '').trim() ||
+    'Airline Ticket Booking';
 
   const cost = Number(wizard.costPrice || 0);
   const markup = Number(wizard.markup || 0);
@@ -148,22 +156,24 @@ const StepPreview = ({ onDone }) => {
     () =>
       resolveAuthFills({
         authorizerName,
+        agencyName,
         currency,
         total: grandTotal,
         purpose,
       }),
-    [authorizerName, currency, grandTotal, purpose]
+    [authorizerName, agencyName, currency, grandTotal, purpose]
   );
 
   const defaultAuthText = useMemo(
     () =>
       buildAuthorizationText({
         authorizerName,
+        agencyName,
         currency,
         total: grandTotal,
         purpose,
       }),
-    [authorizerName, currency, grandTotal, purpose]
+    [authorizerName, agencyName, currency, grandTotal, purpose]
   );
 
   /** Prefer applied/saved fills so underlines survive agent edits. */
@@ -219,30 +229,59 @@ const StepPreview = ({ onDone }) => {
   useEffect(() => {
     if (!waiting || !sentInquiry?._id || !accessToken) return undefined;
 
-    const socket = connectSocket(accessToken);
-    subscribeInquiry(sentInquiry._id);
+    const inquiryId = String(sentInquiry._id);
+    let settled = false;
 
-    const onAuthorized = (payload) => {
-      if (payload.inquiryId !== String(sentInquiry._id)) return;
+    const finishAuthorized = (id) => {
+      if (settled) return;
+      settled = true;
       toast.success('Customer authorized the itinerary');
-      // Drop stale wizard/list cache so detail shows authorized + docs immediately
       dispatch(
         inquiryApi.util.invalidateTags([
-          { type: 'Inquiry', id: payload.inquiryId },
+          { type: 'Inquiry', id },
           'Inquiries',
         ])
       );
       setWaiting(false);
+      unsubscribeInquiry(inquiryId);
       disconnectSocket();
       dispatch(resetWizard());
-      setSearchParams({ tab: 'inquiries', inquiryId: payload.inquiryId });
+      setSearchParams({ tab: 'inquiries', inquiryId: id });
+    };
+
+    const socket = connectSocket(accessToken);
+    subscribeInquiry(inquiryId);
+
+    const onAuthorized = (payload) => {
+      if (String(payload?.inquiryId) !== inquiryId) return;
+      finishAuthorized(payload.inquiryId);
     };
 
     socket.on('inquiry:authorized', onAuthorized);
     socket.on('inquiry:confirmed', onAuthorized);
+
+    // Poll fallback if socket event was missed (subscribe race / reconnect)
+    const pollOnce = async () => {
+      if (settled) return;
+      try {
+        const res = await axiosInstance.get(`/inquiries/${inquiryId}`);
+        if (res.data?.data?.inquiry?.status === 'authorized') {
+          finishAuthorized(inquiryId);
+        }
+      } catch {
+        // ignore transient poll errors while waiting
+      }
+    };
+    const pollKick = setTimeout(pollOnce, 2000);
+    const pollTimer = setInterval(pollOnce, 4000);
+
     return () => {
+      settled = true;
+      clearTimeout(pollKick);
+      clearInterval(pollTimer);
       getSocket()?.off('inquiry:authorized', onAuthorized);
       getSocket()?.off('inquiry:confirmed', onAuthorized);
+      unsubscribeInquiry(inquiryId);
     };
   }, [waiting, sentInquiry, accessToken, dispatch, setSearchParams]);
 
@@ -378,7 +417,13 @@ const StepPreview = ({ onDone }) => {
               Customer
             </p>
             <p className="text-sm font-medium text-slate-900">
-              {wizard.customer.firstName} {wizard.customer.lastName}
+              {[
+                wizard.customer.firstName,
+                wizard.customer.middleName,
+                wizard.customer.lastName,
+              ]
+                .filter(Boolean)
+                .join(' ')}
             </p>
             <p className="mt-0.5 text-sm text-slate-600">
               {wizard.customer.email}

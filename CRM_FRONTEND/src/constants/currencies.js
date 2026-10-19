@@ -243,3 +243,19 @@ export function filterInquiryCurrencies(query) {
     return name.includes(q);
   });
 }
+
+/**
+ * When search yields an exact code or a single match, return that code so the
+ * select can update without forcing the agent to open the dropdown.
+ * Otherwise null (keep current selection).
+ */
+export function matchCurrencyFromQuery(query) {
+  const q = String(query || '')
+    .trim()
+    .toUpperCase();
+  if (!q) return null;
+  if (INQUIRY_CURRENCIES.includes(q)) return q;
+  const filtered = filterInquiryCurrencies(q);
+  if (filtered.length === 1) return filtered[0];
+  return null;
+}

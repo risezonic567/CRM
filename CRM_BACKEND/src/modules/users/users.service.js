@@ -107,19 +107,9 @@ export async function updateAgency(agencyId, payload) {
   const agency = await Agency.findById(agencyId);
   if (!agency) throw new AppError('Agency not found', 404);
 
-  const allowed = [
-    'name',
-    'logo',
-    'address',
-    'country',
-    'currency',
-    'gstNumber',
-    'iataNumber',
-    'defaultMarkup',
-    'merchantFeePercent',
-  ];
-  for (const key of allowed) {
-    if (payload[key] !== undefined) agency[key] = payload[key];
+  // Only legal name is editable via Company settings for now
+  if (payload.name !== undefined) {
+    agency.name = payload.name;
   }
   await agency.save();
   return agency;

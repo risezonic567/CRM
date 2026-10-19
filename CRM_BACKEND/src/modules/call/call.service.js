@@ -3,6 +3,7 @@ import { AppError } from '../../utils/apiResponse.js';
 import { generateInquiryRef } from '../../utils/generateInquiryRef.js';
 import { generateInvoiceNumber } from '../../utils/generateInvoiceNumber.js';
 import { calculatePricing } from '../../utils/calculatePricing.js';
+import { isServiceDisposition } from '../../utils/serviceDispositions.js';
 import { INQUIRY_STATUSES, ROLES } from '../../config/constants.js';
 
 const CALL_INQUIRY_POPULATE =
@@ -32,8 +33,12 @@ export async function createCall(user, payload) {
   });
 
   let inquiry = null;
+  let openWizard = false;
 
-  if (payload.disposition === 'new_booking') {
+  const isBooking = payload.disposition === 'new_booking';
+  const isService = isServiceDisposition(payload.disposition);
+
+  if (isBooking || isService) {
     try {
       const inquiryReference = await generateInquiryRef();
       const invoiceNumber = await generateInvoiceNumber();
@@ -43,17 +48,22 @@ export async function createCall(user, payload) {
         callId: call._id,
         agencyId: user.agencyId,
         assignedTo: user._id,
+        kind: isService ? 'service' : 'booking',
+        ...(isService ? { sourceDisposition: payload.disposition } : {}),
         status: INQUIRY_STATUSES.DRAFT,
         customer: {
           firstName: '',
+          middleName: '',
           lastName: '',
           phone: payload.phoneNumber || '',
           email: '',
         },
+        notes: payload.remarks || '',
       });
 
       call.inquiryId = inquiry._id;
       await call.save();
+      openWizard = isService ? 'service' : 'booking';
     } catch (err) {
       await Call.findByIdAndDelete(call._id);
       throw err;
@@ -63,7 +73,7 @@ export async function createCall(user, payload) {
   return {
     call,
     inquiry,
-    openWizard: payload.disposition === 'new_booking',
+    openWizard,
   };
 }
 
