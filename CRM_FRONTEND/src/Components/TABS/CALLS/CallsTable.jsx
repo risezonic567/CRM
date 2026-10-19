@@ -48,7 +48,7 @@ const resolveCaller = (call) => {
   const name = (call.callerName || '').trim() || fromInquiry;
   const phone = (call.phoneNumber || '').trim() || (cust?.phone || '').trim();
   return {
-    name: name || 'Anonymous / Unspecified',
+    name: name || 'Unspecified',
     phone: phone || '',
   };
 };
