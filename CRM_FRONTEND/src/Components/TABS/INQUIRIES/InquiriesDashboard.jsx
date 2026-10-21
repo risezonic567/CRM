@@ -11,6 +11,7 @@ import {
   Loader2,
   X,
   RefreshCw,
+  Ban,
 } from 'lucide-react';
 import {
   useListInquiriesQuery,
@@ -25,6 +26,7 @@ import PaginationBar from '../../shared/PaginationBar';
 import InquiryWizard from './InquiryWizard';
 import ServiceWizard from './ServiceWizard';
 import InquiryDetailPage from './InquiryDetailPage';
+import CloseInquiryModal from './CloseInquiryModal';
 import { CALL_DISPOSITIONS } from '../../../constants/dispositions';
 
 const PAGE_SIZE = 10;
@@ -67,6 +69,7 @@ const InquiriesDashboard = () => {
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [lookupActive, setLookupActive] = useState(false);
+  const [closeTarget, setCloseTarget] = useState(null);
   const { data, isFetching, refetch } = useListInquiriesQuery({
     page,
     limit: PAGE_SIZE,
@@ -380,6 +383,19 @@ const InquiriesDashboard = () => {
                                   <ArrowRight className="w-3 h-3" />
                                 </button>
                               )}
+                              {inq.status !== 'authorized' &&
+                                inq.status !== 'cancelled' && (
+                                  <button
+                                    type="button"
+                                    title={`Close ${inq.inquiryReference}`}
+                                    aria-label={`Close ${inq.inquiryReference}`}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 hover:border-rose-300 rounded text-[11px] font-semibold transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+                                    onClick={() => setCloseTarget(inq)}
+                                  >
+                                    <Ban className="w-3 h-3" />
+                                    Close
+                                  </button>
+                                )}
                               <button
                                 type="button"
                                 title={`View ${inq.inquiryReference}`}
@@ -439,6 +455,16 @@ const InquiriesDashboard = () => {
           )}
         </>
       )}
+
+      <CloseInquiryModal
+        open={Boolean(closeTarget)}
+        inquiry={closeTarget}
+        onClose={() => setCloseTarget(null)}
+        onClosed={() => {
+          setCloseTarget(null);
+          handleRefresh();
+        }}
+      />
     </div>
   );
 };

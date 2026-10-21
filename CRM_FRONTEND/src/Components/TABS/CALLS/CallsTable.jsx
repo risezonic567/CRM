@@ -141,6 +141,10 @@ const CallsTable = ({
                 markupVal != null && Number.isFinite(Number(markupVal));
               const canRecordMarkup = Boolean(onOpenMarkup && can('call.create'));
               const canOpen = Boolean(inquiryId && onOpenInquiry);
+              const remarksDisplay =
+                String(call.remarks || '').trim() ||
+                String(call.inquiryId?.closeReason || '').trim() ||
+                '';
 
               const openInquiry = () => {
                 if (canOpen) onOpenInquiry(inquiryId);
@@ -210,8 +214,11 @@ const CallsTable = ({
                   </td>
 
                   <td className="py-3 px-4">
-                    <div className="max-w-[240px] truncate text-slate-600" title={call.remarks || ''}>
-                      {call.remarks || '—'}
+                    <div
+                      className="max-w-[240px] truncate text-slate-600"
+                      title={remarksDisplay || undefined}
+                    >
+                      {remarksDisplay || '—'}
                     </div>
                   </td>
 

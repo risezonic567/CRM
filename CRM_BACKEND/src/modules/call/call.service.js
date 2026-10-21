@@ -7,7 +7,7 @@ import { isServiceDisposition } from '../../utils/serviceDispositions.js';
 import { INQUIRY_STATUSES, ROLES } from '../../config/constants.js';
 
 const CALL_INQUIRY_POPULATE =
-  'inquiryReference status customer.firstName customer.lastName customer.phone pricing.markup pricing.sellingPrice pricing.currency pricing.costPrice';
+  'inquiryReference status closeReason customer.firstName customer.lastName customer.phone pricing.markup pricing.sellingPrice pricing.currency pricing.costPrice';
 
 function splitCallerName(name) {
   const parts = String(name || '')

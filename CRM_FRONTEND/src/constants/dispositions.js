@@ -34,4 +34,5 @@ export const PASSENGER_TYPES = ['adult', 'child', 'infant', 'senior'];
 export const CLOSE_SOURCES = {
   WAITING_MODAL: 'waiting_modal',
   DETAIL_PAGE: 'detail_page',
+  INQUIRIES_LIST: 'inquiries_list',
 };

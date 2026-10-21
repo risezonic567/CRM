@@ -45,6 +45,7 @@ export const CABIN_CLASSES = Object.freeze([
 export const CLOSE_SOURCES = Object.freeze({
   WAITING_MODAL: 'waiting_modal',
   DETAIL_PAGE: 'detail_page',
+  INQUIRIES_LIST: 'inquiries_list',
 });
 
 /**
