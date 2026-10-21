@@ -3,6 +3,10 @@ import {
   DEFAULT_INQUIRY_CURRENCY,
   normalizeInquiryCurrency,
 } from '../../../constants/currencies';
+import {
+  DEFAULT_CUSTOMER_LOCALE,
+  normalizeCustomerLocale,
+} from '../../../constants/locales';
 
 const emptyCustomer = {
   firstName: '',
@@ -58,6 +62,7 @@ const initialState = {
     passengers: [],
     billing: { ...emptyBilling },
     notes: '',
+    customerLocale: DEFAULT_CUSTOMER_LOCALE,
     authorizationText: '',
     authorizationFills: null,
     // PNR decode (wizard step 1) — also mirrored on selectedOffer.raw
@@ -134,6 +139,7 @@ export function mapInquiryToWizard(inquiry) {
       expiryYear: inquiry.billing?.expiryYear || '',
     },
     notes: inquiry.notes || '',
+    customerLocale: normalizeCustomerLocale(inquiry.customerLocale),
     authorizationText: inquiry.authorizationText || '',
     authorizationFills: inquiry.authorizationFills || null,
     pnrRaw: pnrRawOffer?.pnrRaw || '',
@@ -174,6 +180,7 @@ export function buildDraftPayload(wizard) {
     passengers: wizard.passengers || [],
     billing: wizard.billing || {},
     notes: wizard.notes || '',
+    customerLocale: normalizeCustomerLocale(wizard.customerLocale),
     authorizationText: wizard.authorizationText || '',
     ...(wizard.authorizationFills
       ? { authorizationFills: wizard.authorizationFills }

@@ -2,8 +2,13 @@
   Airline Ticket Booking Terms & Conditions — confirm page (below I Authorize).
   Collapsed by default; Read more / Show less toggle.
 %>
+<%
+  var _termsTitle = typeof t === 'function' ? t('terms.title') : 'Terms & Conditions';
+  var _termsMore = typeof t === 'function' ? t('terms.readMore') : 'Read more';
+  var _termsLess = typeof t === 'function' ? t('terms.showLess') : 'Show less';
+%>
 <div class="terms-block" id="customerTerms">
-  <p class="terms-title">Terms &amp; Conditions</p>
+  <p class="terms-title"><%= _termsTitle %></p>
   <div class="terms-preview" id="termsPreview">
     <p>Tickets are Non-Refundable/Non-Transferable and name changes are not permitted.</p>
     <p>Date and routing changes will be subject to Airline Penalty and Fare Difference if any.</p>
@@ -113,8 +118,10 @@
       with any of the conditions, please do not proceed with authorization.
     </p>
   </div>
-  <button type="button" class="terms-toggle" id="termsToggle" aria-expanded="false">
-    Read more
+  <button type="button" class="terms-toggle" id="termsToggle" aria-expanded="false"
+    data-more="<%= _termsMore %>"
+    data-less="<%= _termsLess %>">
+    <%= _termsMore %>
   </button>
 </div>
 <script>
@@ -123,18 +130,20 @@
     var full = document.getElementById('termsFull');
     var toggle = document.getElementById('termsToggle');
     if (!preview || !full || !toggle) return;
+    var more = toggle.getAttribute('data-more') || 'Read more';
+    var less = toggle.getAttribute('data-less') || 'Show less';
     toggle.addEventListener('click', function () {
       var open = toggle.getAttribute('aria-expanded') === 'true';
       if (open) {
         full.hidden = true;
         preview.hidden = false;
         toggle.setAttribute('aria-expanded', 'false');
-        toggle.textContent = 'Read more';
+        toggle.textContent = more;
       } else {
         preview.hidden = true;
         full.hidden = false;
         toggle.setAttribute('aria-expanded', 'true');
-        toggle.textContent = 'Show less';
+        toggle.textContent = less;
       }
     });
   })();

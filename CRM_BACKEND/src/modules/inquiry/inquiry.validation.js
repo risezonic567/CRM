@@ -5,6 +5,8 @@ import {
   INQUIRY_STATUSES,
   CLOSE_SOURCES,
   INQUIRY_CURRENCIES,
+  CUSTOMER_LOCALES,
+  DEFAULT_CUSTOMER_LOCALE,
 } from '../../config/constants.js';
 
 const passengerSchema = Joi.object({
@@ -88,6 +90,9 @@ export const sendInquirySchema = Joi.object({
     cvv: Joi.string().trim().allow('').optional(),
   }).default({}),
   notes: Joi.string().allow('').default(''),
+  customerLocale: Joi.string()
+    .valid(...CUSTOMER_LOCALES)
+    .default(DEFAULT_CUSTOMER_LOCALE),
   authorizationText: Joi.string().trim().allow('').max(5000).default(''),
   authorizationFills: Joi.object({
     authorizerName: Joi.string().trim().allow('').default(''),
@@ -170,6 +175,7 @@ export const saveDraftSchema = Joi.object({
     cvv: Joi.string().trim().allow('').optional(),
   }),
   notes: Joi.string().allow('').default(''),
+  customerLocale: Joi.string().valid(...CUSTOMER_LOCALES),
   authorizationText: Joi.string().trim().allow('').max(5000),
   authorizationFills: Joi.object({
     authorizerName: Joi.string().trim().allow('').default(''),

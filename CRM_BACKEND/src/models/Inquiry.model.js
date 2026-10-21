@@ -5,6 +5,8 @@ import {
   CABIN_CLASSES,
   CLOSE_SOURCES,
   CALL_DISPOSITIONS,
+  CUSTOMER_LOCALES,
+  DEFAULT_CUSTOMER_LOCALE,
 } from '../config/constants.js';
 
 const passengerSchema = new mongoose.Schema(
@@ -58,6 +60,12 @@ const inquirySchema = new mongoose.Schema(
       lastName: { type: String, trim: true, default: '' },
       phone: { type: String, trim: true, default: '' },
       email: { type: String, trim: true, lowercase: true, default: '' },
+    },
+    /** PAX email + authorize page language. Agent CRM stays English. */
+    customerLocale: {
+      type: String,
+      enum: CUSTOMER_LOCALES,
+      default: DEFAULT_CUSTOMER_LOCALE,
     },
     travel: {
       type: {

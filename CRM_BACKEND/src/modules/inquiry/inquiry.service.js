@@ -9,8 +9,6 @@ import {
   buildAuthPurpose,
   buildAuthorizationText,
   extractAuthFillsFromText,
-  fillsFromInquiry,
-  renderAuthorizationHtml,
   resolveAuthFills,
 } from '../../utils/buildAuthorizationText.js';
 import { servicePurposeLabel } from '../../utils/serviceDispositions.js';
@@ -32,6 +30,11 @@ import {
   queueConfirmationEmail,
   renderTemplate,
 } from '../notification/notification.service.js';
+import {
+  normalizeCustomerLocale,
+  paxAuthorizationHtml,
+  paxTemplateLocals,
+} from '../../i18n/index.js';
 import { enrichAgreement } from '../../utils/enrichAgreement.js';
 import { getIO } from '../../socket/socket.js';
 import logger from '../../utils/logger.js';
@@ -350,6 +353,7 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
   inquiry.wizardStep = isService ? 3 : 5;
   inquiry.status = INQUIRY_STATUSES.PREVIEW_SENT;
   inquiry.publicTokenJti = jti;
+  inquiry.customerLocale = normalizeCustomerLocale(payload.customerLocale);
   inquiry.closeReason = '';
   inquiry.closeSource = null;
   inquiry.closedAt = undefined;
@@ -425,6 +429,9 @@ export async function saveDraft(user, inquiryId, payload) {
   }
   if (payload.notes !== undefined) {
     inquiry.notes = payload.notes;
+  }
+  if (payload.customerLocale !== undefined) {
+    inquiry.customerLocale = normalizeCustomerLocale(payload.customerLocale);
   }
   if (payload.authorizationText !== undefined) {
     inquiry.authorizationText = String(payload.authorizationText || '').trim();
@@ -558,11 +565,7 @@ export async function getConfirmationReceipt(user, inquiryId) {
   const agency = await Agency.findById(inquiry.agencyId);
   if (!agency) throw new AppError('Agency not found', 404);
 
-  const fills = fillsFromInquiry(inquiry, agency);
-  const authorizationHtml = renderAuthorizationHtml(
-    inquiry.authorizationText || '',
-    fills
-  );
+  const authorizationHtml = paxAuthorizationHtml(inquiry, agency);
 
   const html = await renderTemplate('confirmationEmail.ejs', {
     agency,
@@ -570,6 +573,7 @@ export async function getConfirmationReceipt(user, inquiryId) {
     grandTotal: inquiry.pricing.sellingPrice,
     currency: inquiry.pricing.currency,
     authorizationHtml,
+    ...paxTemplateLocals(inquiry),
   });
 
   const safeRef = String(inquiry.inquiryReference || inquiryId).replace(

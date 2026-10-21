@@ -17,6 +17,11 @@ import {
 } from '../../../../REDUX_FEATURES/REDUX_SLICES/Inquiry_api/inquirySlice';
 import { normalizeInquiryCurrency } from '../../../../constants/currencies';
 import {
+  CUSTOMER_LOCALES,
+  DEFAULT_CUSTOMER_LOCALE,
+  normalizeCustomerLocale,
+} from '../../../../constants/locales';
+import {
   inquiryApi,
   useSendInquiryMutation,
   useGetInquiryQuery,
@@ -318,6 +323,9 @@ const StepServicePreview = ({ onDone }) => {
           expiryYear: billing.expiryYear || '',
         },
         notes: wizard.notes || '',
+        customerLocale: normalizeCustomerLocale(
+          wizard.customerLocale || DEFAULT_CUSTOMER_LOCALE
+        ),
         authorizationText,
         authorizationFills,
         docRequest,
@@ -369,6 +377,34 @@ const StepServicePreview = ({ onDone }) => {
               {wizard.customer.email}
               {wizard.customer.phone ? ` · ${wizard.customer.phone}` : ''}
             </p>
+            <label className="mt-3 block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Customer email &amp; authorize language
+              </span>
+              <select
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500"
+                value={normalizeCustomerLocale(
+                  wizard.customerLocale || DEFAULT_CUSTOMER_LOCALE
+                )}
+                onChange={(e) =>
+                  dispatch(
+                    patchWizard({
+                      customerLocale: normalizeCustomerLocale(e.target.value),
+                    })
+                  )
+                }
+              >
+                {CUSTOMER_LOCALES.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-[11px] text-slate-500">
+                Agent CRM stays English. Customer sees this language on the
+                authorization email and page.
+              </span>
+            </label>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

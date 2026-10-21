@@ -9,19 +9,16 @@ import {
 } from '../notification/notification.service.js';
 import { parseClientMeta } from '../../utils/clientMeta.js';
 import {
-  fillsFromInquiry,
-  renderAuthorizationHtml,
-} from '../../utils/buildAuthorizationText.js';
+  paxAuthorizationHtml,
+  paxTemplateLocals,
+} from '../../i18n/index.js';
 import { buildDocSlots } from '../../utils/supportDocuments.js';
 
 function authorizationLocals(inquiry, agency) {
-  const fills = fillsFromInquiry(inquiry, agency);
   return {
-    authorizationHtml: renderAuthorizationHtml(
-      inquiry.authorizationText || '',
-      fills
-    ),
+    authorizationHtml: paxAuthorizationHtml(inquiry, agency),
     docSlots: buildDocSlots(inquiry),
+    ...paxTemplateLocals(inquiry),
   };
 }
 
@@ -31,7 +28,11 @@ export async function loadConfirmPage(inquiryId, token) {
   if (inquiry.status === INQUIRY_STATUSES.AUTHORIZED) {
     return {
       alreadyConfirmed: true,
-      html: await renderTemplate('thankYou.ejs', { inquiry, agency }),
+      html: await renderTemplate('thankYou.ejs', {
+        inquiry,
+        agency,
+        ...paxTemplateLocals(inquiry),
+      }),
     };
   }
 
@@ -76,7 +77,11 @@ export async function confirmInquiry(
   const { inquiry, agency, decoded } = await verifyAndLoad(inquiryId, token);
 
   if (inquiry.status === INQUIRY_STATUSES.AUTHORIZED) {
-    const html = await renderTemplate('thankYou.ejs', { inquiry, agency });
+    const html = await renderTemplate('thankYou.ejs', {
+      inquiry,
+      agency,
+      ...paxTemplateLocals(inquiry),
+    });
     return { html, alreadyConfirmed: true, savedDocuments: false };
   }
 
@@ -133,6 +138,7 @@ export async function confirmInquiry(
       const html = await renderTemplate('thankYou.ejs', {
         inquiry: current,
         agency,
+        ...paxTemplateLocals(current),
       });
       return { html, alreadyConfirmed: true, savedDocuments: false };
     }
@@ -158,6 +164,7 @@ export async function confirmInquiry(
   const html = await renderTemplate('thankYou.ejs', {
     inquiry: updated,
     agency,
+    ...paxTemplateLocals(updated),
   });
 
   const savedDocuments =

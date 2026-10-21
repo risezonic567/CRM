@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= typeof htmlLang !== 'undefined' ? htmlLang : 'en' %>">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="referrer" content="no-referrer" />
-  <title>Authorize Itinerary — <%= agency?.name || 'Airline Ticket Booking' %></title>
+  <% var _t = typeof t === 'function' ? t : function (k) { return k; }; %>
+  <title><%= _t('confirm.pageTitle', { agency: agency?.name || 'Airline Ticket Booking' }) %></title>
   <style>
     body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#0f172a; }
     .card { max-width:720px; margin:40px auto; background:#fff; border-radius:10px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
@@ -95,52 +96,52 @@
     var isService = inquiry.kind === 'service';
   %>
   <div class="card">
-    <h1><%= isService ? 'Authorize your service fee' : 'Authorize your itinerary' %></h1>
-    <p class="muted">Airline Ticket Booking · Customer Ticket &amp; Service Invoice</p>
-    <p class="muted">Invoice Number: <strong><%= inquiry.invoiceNumber || inquiry.inquiryReference %></strong></p>
+    <h1><%= isService ? _t('confirm.titleService') : _t('confirm.titleFlight') %></h1>
+    <p class="muted"><%= _t('confirm.subtitle') %></p>
+    <p class="muted"><%= _t('confirm.invoiceNumber') %> <strong><%= inquiry.invoiceNumber || inquiry.inquiryReference %></strong></p>
 
     <% if (typeof error === 'string' && error) { %>
       <p class="error"><%= error %></p>
     <% } %>
 
     <% if (isService) { %>
-    <h3>Service</h3>
+    <h3><%= _t('confirm.service') %></h3>
     <table class="info">
       <tr>
-        <td class="k">Service</td>
-        <td><%= (inquiry.authorizationFills && inquiry.authorizationFills.purpose) || inquiry.sourceDisposition || 'Travel service' %></td>
+        <td class="k"><%= _t('confirm.service') %></td>
+        <td><%= (inquiry.authorizationFills && inquiry.authorizationFills.purpose) || inquiry.sourceDisposition || _t('confirm.travelService') %></td>
       </tr>
     </table>
 
-    <h3>Pax details</h3>
+    <h3><%= _t('confirm.paxDetails') %></h3>
     <table class="info">
       <tr>
-        <td class="k">Name</td>
+        <td class="k"><%= _t('confirm.name') %></td>
         <td><%= [inquiry.customer?.firstName, inquiry.customer?.middleName, inquiry.customer?.lastName].filter(Boolean).join(' ') || '—' %></td>
       </tr>
-      <tr><td class="k">Email</td><td><%= inquiry.customer?.email || '—' %></td></tr>
-      <tr><td class="k">Phone</td><td><%= inquiry.customer?.phone || '—' %></td></tr>
+      <tr><td class="k"><%= _t('confirm.email') %></td><td><%= inquiry.customer?.email || '—' %></td></tr>
+      <tr><td class="k"><%= _t('confirm.phone') %></td><td><%= inquiry.customer?.phone || '—' %></td></tr>
     </table>
     <% } else { %>
-    <div class="row"><strong>Route:</strong> <%= inquiry.travel.from %> → <%= inquiry.travel.to %><%= inquiry.travel.returnDate ? ' (round trip)' : '' %></div>
-    <div class="row"><strong>Departure date:</strong> <%= fmtDateOnly(inquiry.travel.departureDate) %></div>
+    <div class="row"><strong><%= _t('confirm.route') %></strong> <%= inquiry.travel.from %> → <%= inquiry.travel.to %><%= inquiry.travel.returnDate ? ' ' + _t('confirm.roundTrip') : '' %></div>
+    <div class="row"><strong><%= _t('confirm.departureDate') %></strong> <%= fmtDateOnly(inquiry.travel.departureDate) %></div>
     <% if (inquiry.travel.returnDate) { %>
-      <div class="row"><strong>Return date:</strong> <%= fmtDateOnly(inquiry.travel.returnDate) %></div>
+      <div class="row"><strong><%= _t('confirm.returnDate') %></strong> <%= fmtDateOnly(inquiry.travel.returnDate) %></div>
     <% } %>
 
-    <h3>Flight details</h3>
+    <h3><%= _t('confirm.flightDetails') %></h3>
     <% if (pnrSegments.length) { %>
     <table class="segs">
       <thead>
         <tr>
           <th>#</th>
-          <th>Airline</th>
-          <th>Flight</th>
-          <th>Date</th>
-          <th>Route</th>
-          <th>Dep</th>
-          <th>Arr</th>
-          <th>Class</th>
+          <th><%= _t('confirm.airline') %></th>
+          <th><%= _t('confirm.flight') %></th>
+          <th><%= _t('confirm.date') %></th>
+          <th><%= _t('confirm.routeCol') %></th>
+          <th><%= _t('confirm.dep') %></th>
+          <th><%= _t('confirm.arr') %></th>
+          <th><%= _t('confirm.class') %></th>
         </tr>
       </thead>
       <tbody>
@@ -166,7 +167,7 @@
     <% } else { %>
     <table class="info">
       <tr>
-        <td class="k">Airline</td>
+        <td class="k"><%= _t('confirm.airline') %></td>
         <td>
           <%= outbound.airline?.name || offer.airline?.name || '—' %>
           <% if (outbound.flightNumber || offer.flightNumber) { %>
@@ -175,16 +176,16 @@
         </td>
       </tr>
       <tr>
-        <td class="k">From</td>
+        <td class="k"><%= _t('confirm.from') %></td>
         <td><%= inquiry.travel.from %> — <%= fmtWhen(outbound.departure?.at || offer.departure?.at) %></td>
       </tr>
       <tr>
-        <td class="k">To</td>
+        <td class="k"><%= _t('confirm.to') %></td>
         <td><%= inquiry.travel.to %> — <%= fmtWhen(outbound.arrival?.at || offer.arrival?.at) %></td>
       </tr>
       <% if (inbound) { %>
       <tr>
-        <td class="k">Return</td>
+        <td class="k"><%= _t('confirm.return') %></td>
         <td><%= inbound.airline?.name || '—' %> <%= inbound.flightNumber || '' %></td>
       </tr>
       <% } %>
@@ -193,16 +194,16 @@
 
     <%
       var paxList = inquiry.passengers || [];
-      var paxHeading = paxList.length === 1 ? 'Passenger' : 'Passengers';
+      var paxHeading = paxList.length === 1 ? _t('confirm.passenger') : _t('confirm.passengers');
     %>
     <h3><%= paxHeading %></h3>
     <table class="segs">
       <tr>
-        <th>Pax</th>
-        <th>First Name</th>
-        <th>Middle Name</th>
-        <th>Last Name</th>
-        <th>Type</th>
+        <th><%= _t('confirm.pax') %></th>
+        <th><%= _t('confirm.firstName') %></th>
+        <th><%= _t('confirm.middleName') %></th>
+        <th><%= _t('confirm.lastName') %></th>
+        <th><%= _t('confirm.type') %></th>
       </tr>
       <% paxList.forEach(function(p, idx) { %>
       <tr>
@@ -216,42 +217,42 @@
     </table>
     <% } %>
 
-    <h3>Billing Details</h3>
+    <h3><%= _t('confirm.billingDetails') %></h3>
     <table class="info">
-      <tr><td class="k">Cardholder Name</td><td><%= billing.cardholderName || '—' %></td></tr>
-      <tr><td class="k">Billing Phone Number</td><td><%= billing.phone || '—' %></td></tr>
-      <tr><td class="k">Billing Address</td><td><%= billing.address || '—' %></td></tr>
-      <tr><td class="k">City</td><td><%= billing.city || '—' %></td></tr>
-      <tr><td class="k">State</td><td><%= billing.state || '—' %></td></tr>
-      <tr><td class="k">Zip Code</td><td><%= billing.zip || '—' %></td></tr>
-      <tr><td class="k">Country</td><td><%= billing.country || '—' %></td></tr>
+      <tr><td class="k"><%= _t('confirm.cardholderName') %></td><td><%= billing.cardholderName || '—' %></td></tr>
+      <tr><td class="k"><%= _t('confirm.billingPhone') %></td><td><%= billing.phone || '—' %></td></tr>
+      <tr><td class="k"><%= _t('confirm.billingAddress') %></td><td><%= billing.address || '—' %></td></tr>
+      <tr><td class="k"><%= _t('confirm.city') %></td><td><%= billing.city || '—' %></td></tr>
+      <tr><td class="k"><%= _t('confirm.state') %></td><td><%= billing.state || '—' %></td></tr>
+      <tr><td class="k"><%= _t('confirm.zip') %></td><td><%= billing.zip || '—' %></td></tr>
+      <tr><td class="k"><%= _t('confirm.country') %></td><td><%= billing.country || '—' %></td></tr>
       <tr>
-        <td class="k">Card Details</td>
+        <td class="k"><%= _t('confirm.cardDetails') %></td>
         <td>
-          <%= billing.cardType || 'Card' %>
+          <%= billing.cardType || _t('confirm.card') %>
           <% if (billing.last4) { %> •••• <%= billing.last4 %><% } %>
           <% if (billing.expiryMonth && billing.expiryYear) { %>
-            · exp <%= billing.expiryMonth %>/<%= billing.expiryYear %>
+            · <%= _t('confirm.exp') %> <%= billing.expiryMonth %>/<%= billing.expiryYear %>
           <% } %>
         </td>
       </tr>
     </table>
 
     <div class="total">
-      Total Amount: <%= inquiry.pricing.currency %> <%= Number(inquiry.pricing.sellingPrice).toFixed(2) %>
+      <%= _t('confirm.totalAmount') %> <%= inquiry.pricing.currency %> <%= Number(inquiry.pricing.sellingPrice).toFixed(2) %>
     </div>
 
-    <h3>Authorization</h3>
+    <h3><%= _t('confirm.authorization') %></h3>
     <% if (authHtml) { %>
       <div class="auth-box"><%- authHtml %></div>
     <% } else if (authText) { %>
       <div class="auth-box"><%= authText %></div>
     <% } else { %>
-      <p class="muted">Authorization statement is attached to this inquiry.</p>
+      <p class="muted"><%= _t('confirm.authFallback') %></p>
     <% } %>
     <div class="sig">
       <div class="name"><%= signature %></div>
-      <div class="label">Customer signature (cardholder)</div>
+      <div class="label"><%= _t('confirm.signatureLabel') %></div>
     </div>
 
     <form id="authorizeForm" method="POST" action="/public/confirm/<%= inquiry._id %>" enctype="multipart/form-data">
@@ -259,26 +260,26 @@
 
       <% if (slots.length) { %>
       <div class="upload-box">
-        <h3>Supporting documents</h3>
+        <h3><%= _t('confirm.docsTitle') %></h3>
         <p>
-          Upload the document(s) your agent requested.
-          <strong>Required to authorize.</strong>
-          Accepted: PDF, JPG, PNG · max 5&nbsp;MB each. Photos are compressed before send.
+          <%= _t('confirm.docsHint') %>
+          <strong><%= _t('confirm.docsRequired') %></strong>
+          <%= _t('confirm.docsAccept') %>
         </p>
         <% slots.forEach(function(slot) { %>
           <div class="slot">
             <p class="slot-label">
               <% if (slot.docKind && slot.docKind !== 'passport') { %>
-                <%= slot.label || 'Document' %>
+                <%= slot.label || _t('confirm.document') %>
               <% } else { %>
-                <%= slot.role === 'cardholder' ? 'Cardholder' : 'Passenger' %> — <%= slot.label %>
+                <%= slot.role === 'cardholder' ? _t('confirm.cardholder') : _t('confirm.passengerRole') %> — <%= slot.label %>
               <% } %>
             </p>
             <p class="slot-meta">
               <%= (slot.docKind && slot.docKind !== 'document')
                     ? slot.docKind
-                    : (slot.docKind === 'document' ? 'Document' : 'Passport') %>
-              (required)
+                    : (slot.docKind === 'document' ? _t('confirm.document') : _t('confirm.passport')) %>
+              <%= _t('confirm.required') %>
             </p>
             <input
               type="file"
@@ -293,14 +294,14 @@
       </div>
       <% } %>
 
-      <button type="submit" id="authorizeBtn">I Authorize</button>
-      <p id="uploadStatus">Preparing documents…</p>
+      <button type="submit" id="authorizeBtn"><%= _t('confirm.authorizeBtn') %></button>
+      <p id="uploadStatus"><%= _t('confirm.preparing') %></p>
     </form>
     <p class="muted" style="margin-top:12px;text-align:center;font-size:12px;">
-      Clicking I Authorize records your authorization for this <%= isService ? 'service fee' : 'itinerary' %> and card on file.
+      <%= isService ? _t('confirm.footerNoteService') : _t('confirm.footerNoteFlight') %>
     </p>
 
-    <%- include('partials/gotoflyerTerms') %>
+    <%- include(typeof termsPartial === 'string' ? termsPartial : 'partials/gotoflyerTerms') %>
   </div>
   <script>
     (function () {
@@ -309,13 +310,23 @@
       var statusEl = document.getElementById('uploadStatus');
       if (!form || !btn) return;
 
+      var paxI18n = {
+        authorize: <%= JSON.stringify(_t('confirm.authorizeBtn')) %>,
+        pleaseWait: <%= JSON.stringify(_t('confirm.pleaseWait')) %>,
+        compressing: <%= JSON.stringify(_t('confirm.compressing')) %>,
+        submitting: <%= JSON.stringify(_t('confirm.submitting')) %>,
+        uploadMissing: <%= JSON.stringify(_t('confirm.uploadMissing', { label: '{{label}}' })) %>,
+        fileTooLarge: <%= JSON.stringify(_t('confirm.fileTooLarge', { name: '{{name}}' })) %>,
+        uploadFailed: <%= JSON.stringify(_t('confirm.uploadFailed')) %>
+      };
+
       var submitting = false;
       var MAX_BYTES = 5 * 1024 * 1024;
 
       function setBusy(on, msg) {
         submitting = on;
         btn.disabled = on;
-        btn.textContent = on ? 'Please wait…' : 'I Authorize';
+        btn.textContent = on ? paxI18n.pleaseWait : paxI18n.authorize;
         if (statusEl) {
           statusEl.style.display = on ? 'block' : 'none';
           if (msg) statusEl.textContent = msg;
@@ -354,16 +365,23 @@
                 labelEl.querySelector('.slot-label') &&
                 labelEl.querySelector('.slot-label').textContent) ||
               'required document';
-            alert('Please upload: ' + String(labelText).trim());
+            alert(
+              paxI18n.uploadMissing.replace(
+                '{{label}}',
+                String(labelText).trim()
+              )
+            );
             return;
           }
           if (f && f.size > MAX_BYTES) {
-            alert('Each file must be 5 MB or smaller: ' + (f.name || 'file'));
+            alert(
+              paxI18n.fileTooLarge.replace('{{name}}', f.name || 'file')
+            );
             return;
           }
         }
 
-        setBusy(true, 'Compressing photos…');
+        setBusy(true, paxI18n.compressing);
         try {
           var fd = new FormData();
           fd.append('token', form.querySelector('input[name=token]').value);
@@ -374,12 +392,14 @@
             if (!file) continue;
             var ready = await compressIfImage(file);
             if (ready.size > MAX_BYTES) {
-              throw new Error('File still too large after compress: ' + file.name);
+              throw new Error(
+                paxI18n.fileTooLarge.replace('{{name}}', file.name)
+              );
             }
             fd.append(input.name, ready, ready.name || file.name);
           }
 
-          setBusy(true, 'Submitting authorization…');
+          setBusy(true, paxI18n.submitting);
           var res = await fetch(form.action, {
             method: 'POST',
             body: fd,
@@ -391,10 +411,7 @@
           document.close();
         } catch (err) {
           setBusy(false);
-          alert(
-            (err && err.message) ||
-              'Upload failed. Check your connection and try again.'
-          );
+          alert((err && err.message) || paxI18n.uploadFailed);
         }
       });
     })();

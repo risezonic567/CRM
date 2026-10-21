@@ -1,0 +1,138 @@
+<%#
+  Términos y condiciones (ES) — página de autorización.
+%>
+<%
+  var _termsTitle = typeof t === 'function' ? t('terms.title') : 'Términos y condiciones';
+  var _termsMore = typeof t === 'function' ? t('terms.readMore') : 'Leer más';
+  var _termsLess = typeof t === 'function' ? t('terms.showLess') : 'Mostrar menos';
+%>
+<div class="terms-block" id="customerTerms">
+  <p class="terms-title"><%= _termsTitle %></p>
+  <div class="terms-preview" id="termsPreview">
+    <p>Los billetes no son reembolsables ni transferibles y no se permiten cambios de nombre.</p>
+    <p>Los cambios de fecha y ruta estarán sujetos a penalización de la aerolínea y diferencia de tarifa, si las hubiera.</p>
+    <p>Las tarifas no están garantizadas hasta la emisión del billete.</p>
+    <p>Para cualquier modificación, contacte a nuestro consultor de viajes en el 1-844-482-4806.</p>
+  </div>
+  <div class="terms-full" id="termsFull" hidden>
+    <p>Los billetes no son reembolsables ni transferibles y no se permiten cambios de nombre.</p>
+    <p>Los cambios de fecha y ruta estarán sujetos a penalización de la aerolínea y diferencia de tarifa, si las hubiera.</p>
+    <p>Las tarifas no están garantizadas hasta la emisión del billete.</p>
+    <p>Para cualquier modificación, contacte a nuestro consultor de viajes en el 1-844-482-4806.</p>
+    <p>
+      Se recomienda a todos los clientes verificar los documentos de viaje (visado de tránsito/entrada)
+      del país por el que transiten o al que entren. No seremos responsables si no dispone de la
+      documentación adecuada y se le deniega la entrada o el tránsito. Consulte a la embajada del
+      país o países que visita o por los que transita.
+    </p>
+    <p>Valoramos su negocio y esperamos atender sus necesidades de viaje en el futuro.</p>
+    <p>Para cualquier modificación u otra consulta, contacte a nuestro consultor de viajes en el 1-844-482-4806.</p>
+    <p>
+      Estos términos y condiciones (“condiciones de uso”) se aplican desde el momento en que accede y
+      utiliza Airline Ticket Booking: sus servicios, productos y contenidos. Es un acuerdo legal entre
+      usted y Airline Ticket Booking. Lea toda la información con atención, ya que acepta estos términos
+      al acceder o utilizar cualquier servicio, producto o contenido de Airline Ticket Booking.
+    </p>
+
+    <p class="terms-h">Nombre de los viajeros</p>
+    <p>
+      El nombre y apellido del viajero deben introducirse en la reserva exactamente como aparecen en
+      su identificación oficial (pasaporte, permiso de conducir u otra identificación aceptable según
+      el tipo de viaje). Una vez introducido, el nombre no se cambiará. Puede permitirse alguna
+      corrección tipográfica según las condiciones de la aerolínea, con cargos aplicables según su política.
+    </p>
+
+    <p class="terms-h">Política de tarifas</p>
+    <p>
+      Los billetes no están garantizados hasta su emisión. La tarifa puede cambiar según la aerolínea
+      o el proveedor incluso después de confirmar la reserva. Airline Ticket Booking le informará de
+      los cambios de tarifa sin asumir responsabilidad financiera u otra por dichos cambios del proveedor.
+    </p>
+    <p>
+      Airline Ticket Booking le informará de las nuevas tarifas. En ese momento podrá comprar o cancelar
+      el producto o servicio al nuevo coste. También puede cancelar sin coste si hay un aumento de tarifa
+      antes de la emisión y del cargo a su tarjeta.
+    </p>
+
+    <p class="terms-h">Política de pago</p>
+    <ul>
+      <li>Airline Ticket Booking acepta tarjetas de débito y de crédito</li>
+      <li>Los precios se muestran en US$</li>
+      <li>
+        Airline Ticket Booking puede dividir el cargo total en dos partes: impuestos y tarifa base.
+        El importe total combinado será el mismo que el autorizado y cotizado en la reserva.
+      </li>
+      <li>Las tarifas no incluyen tasas de equipaje de la aerolínea</li>
+      <li>
+        Los billetes solo están garantizados tras la emisión. No se garantizan al enviar el pago.
+        Si el pago con tarjeta falla, se lo notificaremos en un plazo de 24 horas.
+      </li>
+    </ul>
+
+    <p class="terms-h">Pagos con tarjetas internacionales y de terceros</p>
+    <p>
+      Si utiliza una tarjeta internacional de débito o crédito para comprar billetes para usted o
+      para otra persona, puede necesitar documentos específicos para procesar los billetes electrónicos.
+    </p>
+    <ul>
+      <li>Un «Formulario de autorización de tarjeta de crédito» completo</li>
+      <li>
+        Copia de identificación oficial con foto y firma (anverso y reverso)
+      </li>
+      <li>El precio del billete no está garantizado hasta la emisión.</li>
+    </ul>
+
+    <p class="terms-h">Rechazos de tarjeta</p>
+    <p>
+      Si la tarjeta es rechazada al procesar la transacción, se lo avisaremos por correo a su email
+      válido en un plazo de 24 a 48 horas. En ese caso no se procesará la transacción ni se
+      garantizarán la tarifa ni los datos de la reserva.
+    </p>
+
+    <p class="terms-h">Cancelaciones y cambios</p>
+    <p>
+      Para cancelaciones y cambios, acepta solicitarlos al menos 24 horas antes de la salida programada.
+      Todos los billetes de vuelo comprados con nosotros son 100% no reembolsables. Puede solicitar
+      reembolso o cambio si lo permiten las reglas de tarifa de la aerolínea, tras deducir penalizaciones
+      y diferencias de tarifa aplicables. Airline Ticket Booking puede cobrar una tarifa de cambio/reembolso
+      y no controla las penalizaciones de la aerolínea.
+    </p>
+    <p>
+      En viajes internacionales puede volar con más de una aerolínea. Cada una tiene sus propias reglas.
+      Si se aplican varias, prevalecen las más restrictivas para toda la reserva.
+    </p>
+    <p>
+      Gracias por su tiempo y por usar Airline Ticket Booking. Al usar el sitio, acepta estos
+      «Términos de uso». Si no está de acuerdo, no continúe con la autorización.
+    </p>
+  </div>
+  <button type="button" class="terms-toggle" id="termsToggle" aria-expanded="false"
+    data-more="<%= _termsMore %>"
+    data-less="<%= _termsLess %>">
+    <%= _termsMore %>
+  </button>
+</div>
+<script>
+  (function () {
+    var preview = document.getElementById('termsPreview');
+    var full = document.getElementById('termsFull');
+    var toggle = document.getElementById('termsToggle');
+    if (!preview || !full || !toggle) return;
+    var more = toggle.getAttribute('data-more') || 'Leer más';
+    var less = toggle.getAttribute('data-less') || 'Mostrar menos';
+    toggle.addEventListener('click', function () {
+      var open = toggle.getAttribute('aria-expanded') === 'true';
+      if (open) {
+        full.hidden = true;
+        preview.hidden = false;
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.textContent = more;
+      } else {
+        preview.hidden = true;
+        full.hidden = false;
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.textContent = less;
+      }
+    });
+  })();
+</script>

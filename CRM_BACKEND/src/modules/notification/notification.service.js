@@ -10,6 +10,12 @@ import {
   fillsFromInquiry,
   renderAuthorizationHtml,
 } from '../../utils/buildAuthorizationText.js';
+import {
+  paxAuthorizationHtml,
+  paxTemplateLocals,
+  resolveLocale,
+  t,
+} from '../../i18n/index.js';
 import { resolveSupportDocumentAbsolutePath } from '../../middlewares/authorizeUpload.middleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,13 +29,14 @@ export async function renderTemplate(name, data) {
 }
 
 function authorizeEmailSubject(inquiry, invoiceNo) {
+  const locale = resolveLocale(inquiry);
   if (inquiry.kind === 'service') {
-    return `Authorize service fee — Invoice No. ${invoiceNo}`;
+    return t('email.subjectService', locale, { invoice: invoiceNo });
   }
   const from = inquiry.travel?.from || '';
   const toRoute = inquiry.travel?.to || '';
   const route = from && toRoute ? ` · ${from} to ${toRoute}` : '';
-  return `Authorize your itinerary — Invoice No. ${invoiceNo}${route}`;
+  return t('email.subjectFlight', locale, { invoice: invoiceNo, route });
 }
 
 /**
@@ -42,11 +49,7 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
   const subject = authorizeEmailSubject(inquiry, invoiceNo);
 
   try {
-    const fills = fillsFromInquiry(inquiry, agency);
-    const authorizationHtml = renderAuthorizationHtml(
-      inquiry.authorizationText || '',
-      fills
-    );
+    const authorizationHtml = paxAuthorizationHtml(inquiry, agency);
     const html = await renderTemplate('inquiryEmail.ejs', {
       agency,
       inquiry,
@@ -54,6 +57,7 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
       grandTotal: inquiry.pricing.sellingPrice,
       currency: inquiry.pricing.currency,
       authorizationHtml,
+      ...paxTemplateLocals(inquiry),
     });
 
     const info = await sendMail({ to, subject, html });
@@ -87,6 +91,7 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
  * Uses supportDocsNotify.ejs — does not alter customer confirmationEmail.
  * Never throws to caller (authorize must not fail).
  * Skips when SUPPORT_DOCS_NOTIFY_EMAIL is empty or no readable files.
+ * Always English (agent/staff).
  */
 export async function queueSupportDocsNotifyEmail({ inquiry, agency, docs }) {
   const to = config.supportDocs.notifyEmail;
@@ -201,28 +206,31 @@ export async function queueSupportDocsNotifyEmail({ inquiry, agency, docs }) {
 
 /**
  * Authorization receipt email — agent resend / download packet only (not auto on authorize).
+ * Customer-facing → uses inquiry.customerLocale.
  */
 export async function queueConfirmationEmail({ inquiry, agency }) {
   const to = inquiry.customer.email;
   const invoiceNo =
     inquiry.invoiceNumber || inquiry.inquiryReference || '';
+  const locale = resolveLocale(inquiry);
   const subject =
     inquiry.kind === 'service'
-      ? `Authorized — Invoice No. ${invoiceNo} · service fee`
-      : `Authorized — Invoice No. ${invoiceNo} · ${inquiry.travel?.from || ''} to ${inquiry.travel?.to || ''}`;
+      ? t('email.subjectReceiptService', locale, { invoice: invoiceNo })
+      : t('email.subjectReceiptFlight', locale, {
+          invoice: invoiceNo,
+          from: inquiry.travel?.from || '',
+          to: inquiry.travel?.to || '',
+        });
 
   try {
-    const fills = fillsFromInquiry(inquiry, agency);
-    const authorizationHtml = renderAuthorizationHtml(
-      inquiry.authorizationText || '',
-      fills
-    );
+    const authorizationHtml = paxAuthorizationHtml(inquiry, agency);
     const html = await renderTemplate('confirmationEmail.ejs', {
       agency,
       inquiry,
       grandTotal: inquiry.pricing.sellingPrice,
       currency: inquiry.pricing.currency,
       authorizationHtml,
+      ...paxTemplateLocals(inquiry),
     });
 
     const info = await sendMail({ to, subject, html });

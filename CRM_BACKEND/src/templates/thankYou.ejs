@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= typeof htmlLang !== 'undefined' ? htmlLang : 'en' %>">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Thank You — <%= agency?.name || 'Airline Ticket Booking' %></title>
+  <title><%= typeof t === 'function' ? t('thankYou.pageTitle', { agency: agency?.name || 'Airline Ticket Booking' }) : ('Thank You — ' + (agency?.name || 'Airline Ticket Booking')) %></title>
   <style>
     body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#0f172a; }
     .card { max-width:520px; margin:60px auto; background:#fff; border-radius:10px; padding:36px; text-align:center; box-shadow:0 8px 24px rgba(15,23,42,.08); }
@@ -14,13 +14,14 @@
   </style>
 </head>
 <body>
+  <% var _t = typeof t === 'function' ? t : function (k) { return k; }; %>
   <div class="card">
     <div class="icon">✅</div>
-    <h1>Thank You!</h1>
-    <p>Your authorization has been received. Our team will follow up shortly.</p>
-    <p>No further action is required from you on this page.</p>
-    <div class="ref">Customer Ticket &amp; Service Invoice</div>
-    <div class="ref" style="margin-top:8px;font-size:14px;">Invoice Number: <%= inquiry.invoiceNumber || inquiry.inquiryReference %></div>
+    <h1><%= _t('thankYou.heading') %></h1>
+    <p><%= _t('thankYou.body') %></p>
+    <p><%= _t('thankYou.noAction') %></p>
+    <div class="ref"><%= _t('thankYou.invoiceHeading') %></div>
+    <div class="ref" style="margin-top:8px;font-size:14px;"><%= _t('thankYou.invoiceNumber') %> <%= inquiry.invoiceNumber || inquiry.inquiryReference %></div>
   </div>
 </body>
 </html>

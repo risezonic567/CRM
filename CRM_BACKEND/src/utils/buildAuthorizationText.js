@@ -1,9 +1,16 @@
 /**
  * Authorization paragraph helpers.
- * - Plain text stored on Inquiry.authorizationText
+ * - Plain text stored on Inquiry.authorizationText (English; agent CRM)
+ * - PAX es/it paragraphs: src/i18n/authParagraphs.js via paxAuthorizationPlain
  * - HTML with underlined fills rendered at display time (email / confirm / receipt)
  * Customer-facing amount is ONE total only.
  */
+
+import { renderAuthParagraph } from '../i18n/authParagraphs.js';
+import {
+  CUSTOMER_LOCALES,
+  DEFAULT_CUSTOMER_LOCALE,
+} from '../config/constants.js';
 
 export const AUTH_FILL_STYLE =
   'border-bottom:1px solid #0f172a;font-weight:600;padding:0 2px;white-space:nowrap;';
@@ -58,17 +65,14 @@ export { servicePurposeLabel as buildAuthPurposeFromDisposition } from './servic
 
 export function buildAuthorizationText(options = {}) {
   const f = resolveAuthFills(options);
-  return (
-    `I, ${f.authorizerName}, hereby authorize ${f.agencyName} to charge my card ` +
-    `for the amount of ${f.amountLabel} in connection with the purchase of travel services, ` +
-    `specifically the ${f.purpose}. I acknowledge and agree that this charge is non-refundable, ` +
-    `that bookings purchased are non-transferable, and that name changes are not permitted. ` +
-    `I further understand that any request to change the date, route, or time of travel may ` +
-    `result in additional penalties and fare differences. By signing below, I confirm that I am ` +
-    `willingly paying ${f.agencyName} for the travel services offered, which may include flights, ` +
-    `hotels, and car bookings in both the U.S. and European markets, and I authorize ${f.agencyName} ` +
-    `to process the stated amount using the card details I have provided.`
-  );
+  const raw = String(options.locale || '')
+    .trim()
+    .toLowerCase()
+    .slice(0, 2);
+  const locale = CUSTOMER_LOCALES.includes(raw)
+    ? raw
+    : DEFAULT_CUSTOMER_LOCALE;
+  return renderAuthParagraph(locale, f);
 }
 
 /**

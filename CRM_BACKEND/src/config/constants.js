@@ -49,6 +49,13 @@ export const CLOSE_SOURCES = Object.freeze({
 });
 
 /**
+ * Customer-facing (PAX) authorization email / confirm page locales.
+ * Agent CRM stays English. Keep in sync with CRM_FRONTEND/src/constants/locales.js
+ */
+export const CUSTOMER_LOCALES = Object.freeze(['en', 'es', 'it']);
+export const DEFAULT_CUSTOMER_LOCALE = 'en';
+
+/**
  * Inquiry pricing currencies — agent selects; amounts entered in that currency (no FX).
  * Keep in sync with CRM_FRONTEND/src/constants/currencies.js
  */

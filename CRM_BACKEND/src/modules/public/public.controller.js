@@ -3,9 +3,9 @@ import { AppError } from '../../utils/apiResponse.js';
 import { renderTemplate } from '../notification/notification.service.js';
 import { resolveClientIp } from '../../utils/clientMeta.js';
 import {
-  fillsFromInquiry,
-  renderAuthorizationHtml,
-} from '../../utils/buildAuthorizationText.js';
+  paxAuthorizationHtml,
+  paxTemplateLocals,
+} from '../../i18n/index.js';
 import {
   buildDocSlots,
   supportDocumentsFromUpload,
@@ -158,18 +158,14 @@ export async function renderConfirmError(req, res, next, err) {
       req.params.inquiryId,
       token
     );
-    const fills = fillsFromInquiry(inquiry, agency);
-    const authorizationHtml = renderAuthorizationHtml(
-      inquiry.authorizationText || '',
-      fills
-    );
     const html = await renderTemplate('confirmPage.ejs', {
       inquiry,
       agency,
       token,
       error: err.message || 'Unable to authorize',
-      authorizationHtml,
+      authorizationHtml: paxAuthorizationHtml(inquiry, agency),
       docSlots: buildDocSlots(inquiry),
+      ...paxTemplateLocals(inquiry),
     });
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(err.statusCode || 400).send(html);
