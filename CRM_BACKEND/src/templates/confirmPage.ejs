@@ -6,13 +6,15 @@
   <meta name="referrer" content="no-referrer" />
   <title>Authorize Itinerary — <%= agency?.name || 'Airline Ticket Booking' %></title>
   <style>
-    body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#0f172a; }
-    .card { max-width:720px; margin:40px auto; background:#fff; border-radius:10px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
-    h1 { font-size:22px; margin:0 0 8px; }
+    body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#0f172a; -webkit-text-size-adjust:100%; }
+    .card { max-width:720px; margin:40px auto; background:#fff; border-radius:10px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.08); box-sizing:border-box; }
+    h1 { font-size:22px; margin:0 0 8px; line-height:1.25; }
     h3 { font-size:14px; margin:20px 0 10px; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
     .muted { color:#64748b; font-size:14px; }
-    .total { font-size:22px; font-weight:bold; margin:16px 0; }
+    .total { font-size:22px; font-weight:bold; margin:16px 0; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; word-break:break-word; }
     .row { margin:8px 0; font-size:14px; }
+    .route-box { margin:12px 0 4px; padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; }
+    .route-box .row { margin:4px 0; }
     table.segs { width:100%; border-collapse:collapse; font-size:13px; margin:12px 0; }
     table.segs th { text-align:left; font-size:11px; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0; padding:8px 6px; background:#f8fafc; }
     table.segs td { border-bottom:1px solid #f1f5f9; padding:8px 6px; }
@@ -20,7 +22,7 @@
     table.info td { padding:6px 0; vertical-align:top; }
     table.info td.k { width:140px; color:#64748b; }
     .leg { margin:16px 0; padding:12px; background:#f8fafc; border-radius:8px; font-size:14px; }
-    .auth-box { margin:16px 0; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; line-height:1.65; color:#334155; }
+    .auth-box { margin:16px 0; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; line-height:1.65; color:#334155; overflow-wrap:anywhere; }
     .auth-fill { border-bottom:1px solid #0f172a; font-weight:600; padding:0 2px; white-space:nowrap; }
     .upload-box { margin:20px 0 0; padding:14px 16px; background:#fff; border:1px dashed #cbd5e1; border-radius:8px; }
     .upload-box > h3 { margin:0 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
@@ -29,11 +31,11 @@
     .slot:last-child { margin-bottom:0; }
     .slot-label { font-size:13px; font-weight:600; color:#0f172a; margin:0 0 2px; }
     .slot-meta { font-size:11px; color:#64748b; margin:0 0 8px; }
-    .slot input[type=file] { font-size:13px; width:100%; }
+    .slot input[type=file] { font-size:13px; width:100%; max-width:100%; }
     .sig { margin-top:14px; padding-top:12px; border-top:1px dashed #e2e8f0; text-align:center; }
-    .sig .name { font-family:system-ui, -apple-system, 'Segoe UI', sans-serif; font-style:normal; font-weight:600; font-size:18px; color:#0f172a; }
+    .sig .name { font-family:system-ui, -apple-system, 'Segoe UI', sans-serif; font-style:normal; font-weight:600; font-size:18px; color:#0f172a; word-break:break-word; }
     .sig .label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-top:4px; }
-    button#authorizeBtn { width:100%; border:0; background:#0f172a; color:#fff; padding:14px; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; margin-top:20px; }
+    button#authorizeBtn { width:100%; border:0; background:#0f172a; color:#fff; padding:14px; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; margin-top:20px; min-height:48px; -webkit-tap-highlight-color:transparent; }
     button#authorizeBtn:disabled { opacity:.55; cursor:not-allowed; }
     .error { color:#b91c1c; font-size:14px; margin-bottom:12px; }
     #uploadStatus { display:none; margin-top:10px; font-size:12px; color:#64748b; text-align:center; }
@@ -45,6 +47,92 @@
     .terms-block ul { margin:0 0 10px; padding-left:18px; }
     .terms-block li { margin:0 0 4px; }
     .terms-toggle { margin-top:10px; border:0; background:transparent; color:#0369a1; font-size:12px; font-weight:600; cursor:pointer; padding:0; text-decoration:underline; }
+    .nowrap-desk { white-space:nowrap; }
+
+    /* —— Mobile: flight + service share this page —— */
+    @media (max-width: 640px) {
+      body { background:#eef1f5; }
+      .card {
+        margin:0;
+        max-width:none;
+        border-radius:0;
+        padding:18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+        box-shadow:none;
+        min-height:100vh;
+      }
+      h1 { font-size:20px; }
+      h3 { margin:18px 0 10px; font-size:12px; }
+      .muted { font-size:13px; }
+      .total { font-size:18px; margin:14px 0; }
+      .auth-fill { white-space:normal; }
+      .nowrap-desk { white-space:normal; }
+
+      /* Billing / service info: label above value */
+      table.info, table.info tbody, table.info tr, table.info td {
+        display:block;
+        width:100%;
+      }
+      table.info tr {
+        margin:0 0 10px;
+        padding:0 0 10px;
+        border-bottom:1px solid #f1f5f9;
+      }
+      table.info tr:last-child { border-bottom:0; margin-bottom:0; padding-bottom:0; }
+      table.info td.k {
+        width:auto;
+        padding:0 0 2px;
+        font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:.03em;
+        color:#64748b;
+      }
+      table.info td:not(.k) {
+        padding:0;
+        font-size:14px;
+        color:#0f172a;
+        word-break:break-word;
+      }
+
+      /* Wide tables → stacked cards */
+      table.segs thead { display:none; }
+      table.segs, table.segs tbody { display:block; width:100%; }
+      table.segs tr {
+        display:block;
+        margin:0 0 12px;
+        padding:12px;
+        background:#f8fafc;
+        border:1px solid #e2e8f0;
+        border-radius:8px;
+      }
+      table.segs tr:last-child { margin-bottom:0; }
+      table.segs td {
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:12px;
+        border:0;
+        padding:5px 0;
+        font-size:13px;
+        word-break:break-word;
+      }
+      table.segs td::before {
+        content:attr(data-label);
+        flex:0 0 42%;
+        max-width:42%;
+        font-size:11px;
+        font-weight:600;
+        text-transform:uppercase;
+        letter-spacing:.03em;
+        color:#64748b;
+      }
+      table.segs td > * { text-align:right; }
+
+      .slot { padding:12px; }
+      .slot input[type=file] { font-size:16px; /* avoid iOS zoom */ }
+      button#authorizeBtn { margin-top:16px; padding:16px; font-size:16px; border-radius:10px; }
+      .terms-block { margin-top:20px; }
+      .sig .name { font-size:17px; }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
 </head>
@@ -122,15 +210,17 @@
       <tr><td class="k">Phone</td><td><%= inquiry.customer?.phone || '—' %></td></tr>
     </table>
     <% } else { %>
-    <div class="row"><strong>Route:</strong> <%= inquiry.travel.from %> → <%= inquiry.travel.to %><%= inquiry.travel.returnDate ? ' (round trip)' : '' %></div>
-    <div class="row"><strong>Departure date:</strong> <%= fmtDateOnly(inquiry.travel.departureDate) %></div>
-    <% if (inquiry.travel.returnDate) { %>
-      <div class="row"><strong>Return date:</strong> <%= fmtDateOnly(inquiry.travel.returnDate) %></div>
-    <% } %>
+    <div class="route-box">
+      <div class="row"><strong>Route:</strong> <%= inquiry.travel.from %> → <%= inquiry.travel.to %><%= inquiry.travel.returnDate ? ' (round trip)' : '' %></div>
+      <div class="row"><strong>Departure date:</strong> <%= fmtDateOnly(inquiry.travel.departureDate) %></div>
+      <% if (inquiry.travel.returnDate) { %>
+        <div class="row"><strong>Return date:</strong> <%= fmtDateOnly(inquiry.travel.returnDate) %></div>
+      <% } %>
+    </div>
 
     <h3>Flight details</h3>
     <% if (pnrSegments.length) { %>
-    <table class="segs">
+    <table class="segs segs-flights">
       <thead>
         <tr>
           <th>#</th>
@@ -146,19 +236,19 @@
       <tbody>
         <% pnrSegments.forEach(function(seg) { %>
         <tr>
-          <td><%= seg.lineNumber || '—' %></td>
-          <td><%= seg.airlineName || seg.airlineCode || '—' %></td>
-          <td><%= [seg.airlineCode, seg.flightNumber].filter(Boolean).join(' ') %></td>
-          <td style="white-space:nowrap;"><%= fmtDateOnly(seg.departureDate) %></td>
-          <td><%= seg.from %> → <%= seg.to %></td>
-          <td><%= seg.departureTime || '—' %></td>
-          <td>
+          <td data-label="#"><%= seg.lineNumber || '—' %></td>
+          <td data-label="Airline"><%= seg.airlineName || seg.airlineCode || '—' %></td>
+          <td data-label="Flight"><%= [seg.airlineCode, seg.flightNumber].filter(Boolean).join(' ') %></td>
+          <td data-label="Date" class="nowrap-desk"><%= fmtDateOnly(seg.departureDate) %></td>
+          <td data-label="Route"><%= seg.from %> → <%= seg.to %></td>
+          <td data-label="Dep"><%= seg.departureTime || '—' %></td>
+          <td data-label="Arr">
             <%= seg.arrivalTime || '—' %>
             <% if (seg.arrivalDate && seg.arrivalDate !== seg.departureDate) { %>
               <span class="muted"><%= fmtDateOnly(seg.arrivalDate) %></span>
             <% } %>
           </td>
-          <td><%= seg.bookingClass || '—' %></td>
+          <td data-label="Class"><%= seg.bookingClass || '—' %></td>
         </tr>
         <% }) %>
       </tbody>
@@ -196,23 +286,27 @@
       var paxHeading = paxList.length === 1 ? 'Passenger' : 'Passengers';
     %>
     <h3><%= paxHeading %></h3>
-    <table class="segs">
-      <tr>
-        <th>Pax</th>
-        <th>First Name</th>
-        <th>Middle Name</th>
-        <th>Last Name</th>
-        <th>Type</th>
-      </tr>
+    <table class="segs segs-pax">
+      <thead>
+        <tr>
+          <th>Pax</th>
+          <th>First Name</th>
+          <th>Middle Name</th>
+          <th>Last Name</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
       <% paxList.forEach(function(p, idx) { %>
       <tr>
-        <td><%= idx + 1 %></td>
-        <td><%= p.firstName || '—' %></td>
-        <td><%= p.middleName || '—' %></td>
-        <td><%= p.lastName || '—' %></td>
-        <td style="text-transform:capitalize;"><%= p.type || '—' %></td>
+        <td data-label="Pax"><%= idx + 1 %></td>
+        <td data-label="First Name"><%= p.firstName || '—' %></td>
+        <td data-label="Middle Name"><%= p.middleName || '—' %></td>
+        <td data-label="Last Name"><%= p.lastName || '—' %></td>
+        <td data-label="Type" style="text-transform:capitalize;"><%= p.type || '—' %></td>
       </tr>
       <% }) %>
+      </tbody>
     </table>
     <% } %>
 

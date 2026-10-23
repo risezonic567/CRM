@@ -33,7 +33,7 @@ const CallDispositionModal = ({ open, onClose }) => {
 
   const validate = () => {
     if (!values.disposition) return 'Please select a call disposition';
-    // Optional phone — but if entered, must be exactly 10 digits
+    // Optional phone — but if entered, must be 10 or 12 digits
     if (values.phoneNumber?.trim() && !isValidPhone10(values.phoneNumber)) {
       return PHONE_10_ERROR;
     }

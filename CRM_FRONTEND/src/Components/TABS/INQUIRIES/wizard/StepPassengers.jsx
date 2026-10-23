@@ -147,10 +147,10 @@ const StepPassengers = () => {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Calling phone * (10 digits)</label>
+                  <label className={labelClass}>Calling phone * (10 or 12 digits)</label>
                   <input
                     className={fieldClass}
-                    placeholder="10-digit phone"
+                    placeholder="10 or 12 digit phone"
                     value={p.phone}
                     onChange={(e) =>
                       setField(idx, 'phone', clampPhone10(e.target.value))
