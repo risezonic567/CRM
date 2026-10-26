@@ -42,6 +42,7 @@ export async function createCall(user, payload) {
     try {
       const inquiryReference = await generateInquiryRef();
       const invoiceNumber = await generateInvoiceNumber();
+      const { firstName, lastName } = splitCallerName(payload.callerName);
       inquiry = await Inquiry.create({
         inquiryReference,
         invoiceNumber,
@@ -52,9 +53,9 @@ export async function createCall(user, payload) {
         ...(isService ? { sourceDisposition: payload.disposition } : {}),
         status: INQUIRY_STATUSES.DRAFT,
         customer: {
-          firstName: '',
+          firstName,
           middleName: '',
-          lastName: '',
+          lastName,
           phone: payload.phoneNumber || '',
           email: '',
         },

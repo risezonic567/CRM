@@ -43,7 +43,7 @@ const CallDispositionFormBody = ({ values, onChange }) => {
             placeholder="5550199123"
             type="tel"
             inputMode="numeric"
-            maxLength={10}
+            maxLength={12}
             autoComplete="tel-national"
           />
         </div>

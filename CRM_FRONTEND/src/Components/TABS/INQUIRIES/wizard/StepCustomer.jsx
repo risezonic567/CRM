@@ -126,7 +126,7 @@ const StepCustomer = () => {
                 }
                 type="tel"
                 inputMode="numeric"
-                maxLength={10}
+                maxLength={12}
                 autoComplete="tel"
               />
             </div>

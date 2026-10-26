@@ -189,11 +189,23 @@ const inquirySlice = createSlice({
       state.filters = { ...state.filters, ...action.payload };
     },
     startWizard(state, action) {
-      const { inquiryId, phone = '' } = action.payload;
+      const {
+        inquiryId,
+        phone = '',
+        firstName = '',
+        middleName = '',
+        lastName = '',
+      } = action.payload;
       state.wizard = {
         ...initialState.wizard,
         inquiryId,
-        customer: { ...emptyCustomer, phone },
+        customer: {
+          ...emptyCustomer,
+          firstName: String(firstName || '').trim(),
+          middleName: String(middleName || '').trim(),
+          lastName: String(lastName || '').trim(),
+          phone,
+        },
       };
     },
     hydrateWizard(state, action) {

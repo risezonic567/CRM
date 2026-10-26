@@ -210,7 +210,7 @@ const StepBilling = ({ nextStep = 5, backStep = 3 } = {}) => {
                 }
                 type="tel"
                 inputMode="numeric"
-                maxLength={10}
+                maxLength={12}
                 autoComplete="tel"
               />
             </div>
