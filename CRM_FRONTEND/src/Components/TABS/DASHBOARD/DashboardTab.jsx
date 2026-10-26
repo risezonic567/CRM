@@ -45,7 +45,7 @@ const OUTCOME_COLORS = [
 
 const DashboardTab = ({ onSwitchTab }) => {
   const [open, setOpen] = useState(false);
-  const [range, setRange] = useState(() => resolveDashboardRange('weekly'));
+  const [range, setRange] = useState(() => resolveDashboardRange('all'));
 
   const { data: summaryRes, isFetching, isError } = useGetDashboardSummaryQuery(
     {

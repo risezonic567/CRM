@@ -10,7 +10,7 @@ import {
  * Calls onChange({ from, to, label, preset }) when range is ready.
  */
 export default function DashboardDateFilter({ value, onChange }) {
-  const preset = value?.preset || 'weekly';
+  const preset = value?.preset || 'all';
   const [customFrom, setCustomFrom] = useState(value?.from || '');
   const [customTo, setCustomTo] = useState(value?.to || '');
 
