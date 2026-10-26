@@ -32,7 +32,7 @@ const CallDispositionFormBody = ({ values, onChange }) => {
         <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
             <span>Phone Number</span>
-            <span className="text-[11px] font-normal text-slate-400">(optional · 10 digits)</span>
+            <span className="text-[11px] font-normal text-slate-400">(optional · 10 or 12 digits)</span>
           </label>
           <input
             className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-600 transition-colors font-mono"
@@ -43,7 +43,7 @@ const CallDispositionFormBody = ({ values, onChange }) => {
             placeholder="5550199123"
             type="tel"
             inputMode="numeric"
-            maxLength={10}
+            maxLength={12}
             autoComplete="tel-national"
           />
         </div>

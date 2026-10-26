@@ -47,3 +47,4 @@ export const TAB_REGISTRY = [
     ],
   },
 ];
+

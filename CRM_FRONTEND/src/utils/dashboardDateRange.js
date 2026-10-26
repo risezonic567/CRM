@@ -5,7 +5,11 @@
 
 const TZ = 'Asia/Kolkata';
 
+/** CRM go-live (IST) — All time dashboard starts here. */
+export const DASHBOARD_GO_LIVE = '2026-10-01';
+
 export const DASHBOARD_PRESETS = [
+  { id: 'all', label: 'All time' },
   { id: 'today', label: 'Today' },
   { id: 'weekly', label: 'Weekly' },
   { id: 'monthly', label: 'Monthly' },
@@ -33,6 +37,7 @@ function startOfMonthIST(yyyyMmDd) {
 }
 
 function formatRangeLabel(from, to, preset) {
+  if (preset === 'all') return 'All time';
   if (preset === 'today') return 'Today';
   if (preset === 'weekly') return 'Last 7 days';
   if (preset === 'monthly') {
@@ -48,11 +53,23 @@ function formatRangeLabel(from, to, preset) {
 }
 
 /**
- * @param {'today'|'weekly'|'monthly'|'custom'} preset
+ * @param {'all'|'today'|'weekly'|'monthly'|'custom'} preset
  * @param {{ from?: string, to?: string }} custom — YYYY-MM-DD when preset=custom
  */
 export function resolveDashboardRange(preset, custom = {}) {
   const today = istTodayKey();
+
+  if (preset === 'all') {
+    // Go-live → today (never after today; if clock before go-live, clamp)
+    const from = DASHBOARD_GO_LIVE;
+    const to = today < from ? from : today;
+    return {
+      from,
+      to,
+      label: formatRangeLabel(from, to, 'all'),
+      preset: 'all',
+    };
+  }
 
   if (preset === 'today') {
     return {

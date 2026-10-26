@@ -112,10 +112,10 @@ const StepCustomer = () => {
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
-              <label className={labelClass}>Phone * (10 digits)</label>
+              <label className={labelClass}>Phone * (10 or 12 digits)</label>
               <input
                 className={fieldClass}
-                placeholder="10-digit phone"
+                placeholder="10 or 12 digit phone"
                 value={c.phone}
                 onChange={(e) =>
                   dispatch(
@@ -126,7 +126,7 @@ const StepCustomer = () => {
                 }
                 type="tel"
                 inputMode="numeric"
-                maxLength={10}
+                maxLength={12}
                 autoComplete="tel"
               />
             </div>

@@ -12,7 +12,10 @@ const dateOrIso = Joi.string()
     return value;
   });
 
-/** Query: ISO datetime or YYYY-MM-DD. Max span 366 days. */
+/**
+ * Query: ISO datetime or YYYY-MM-DD.
+ * No max-span cap — All time (CRM go-live → today) must be allowed.
+ */
 export const dashboardSummaryQuerySchema = Joi.object({
   from: dateOrIso,
   to: dateOrIso,
@@ -29,10 +32,6 @@ export const dashboardSummaryQuerySchema = Joi.object({
   }
   if (toProbe < fromProbe) {
     return helpers.message('"to" must be on or after "from"');
-  }
-  const maxMs = 366 * 24 * 60 * 60 * 1000;
-  if (toProbe.getTime() - fromProbe.getTime() > maxMs) {
-    return helpers.message('Date range cannot exceed 366 days');
   }
   // Keep original strings for IST day-bound expansion in service
   return value;

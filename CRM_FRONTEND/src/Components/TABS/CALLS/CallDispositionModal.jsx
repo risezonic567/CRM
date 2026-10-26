@@ -20,6 +20,20 @@ const empty = {
   remarks: '',
 };
 
+/** Mirror BE splitCallerName — first token = firstName, rest = lastName. */
+function splitCallerName(name) {
+  const parts = String(name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!parts.length) return { firstName: '', lastName: '' };
+  if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
 /**
  * Add-only disposition modal — owns createCall API.
  */
@@ -33,7 +47,7 @@ const CallDispositionModal = ({ open, onClose }) => {
 
   const validate = () => {
     if (!values.disposition) return 'Please select a call disposition';
-    // Optional phone — but if entered, must be exactly 10 digits
+    // Optional phone — but if entered, must be 10 or 12 digits
     if (values.phoneNumber?.trim() && !isValidPhone10(values.phoneNumber)) {
       return PHONE_10_ERROR;
     }
@@ -59,25 +73,22 @@ const CallDispositionModal = ({ open, onClose }) => {
 
       const openWizard = data?.openWizard;
       const inquiryId = data?.inquiry?._id;
+      const { firstName, lastName } = splitCallerName(values.callerName);
+      const wizardSeed = {
+        inquiryId,
+        phone: values.phoneNumber || '',
+        firstName,
+        lastName,
+      };
       if (inquiryId && (openWizard === 'booking' || openWizard === true)) {
-        dispatch(
-          startWizard({
-            inquiryId,
-            phone: values.phoneNumber || '',
-          })
-        );
+        dispatch(startWizard(wizardSeed));
         setSearchParams({
           tab: 'inquiries',
           wizard: '1',
           inquiryId,
         });
       } else if (inquiryId && openWizard === 'service') {
-        dispatch(
-          startWizard({
-            inquiryId,
-            phone: values.phoneNumber || '',
-          })
-        );
+        dispatch(startWizard(wizardSeed));
         setSearchParams({
           tab: 'inquiries',
           wizard: 'service',

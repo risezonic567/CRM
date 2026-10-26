@@ -196,10 +196,10 @@ const StepBilling = ({ nextStep = 5, backStep = 3 } = {}) => {
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className={labelClass}>Billing phone * (10 digits)</label>
+              <label className={labelClass}>Billing phone * (10 or 12 digits)</label>
               <input
                 className={fieldClass}
-                placeholder="10-digit phone"
+                placeholder="10 or 12 digit phone"
                 value={b.phone || ''}
                 onChange={(e) =>
                   dispatch(
@@ -210,7 +210,7 @@ const StepBilling = ({ nextStep = 5, backStep = 3 } = {}) => {
                 }
                 type="tel"
                 inputMode="numeric"
-                maxLength={10}
+                maxLength={12}
                 autoComplete="tel"
               />
             </div>
