@@ -128,6 +128,9 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
     Array.isArray(offer.raw.segments)
       ? offer.raw.segments
       : [];
+  const isScreenshotItinerary =
+    offer?.raw?.source === 'screenshot' &&
+    Boolean(inq?.itineraryScreenshot?.relativePath);
   const currency = inq?.pricing?.currency || 'USD';
   const isConfirmed = inq?.status === 'authorized';
   const supportDocs = useMemo(() => listInquirySupportDocs(inq), [inq]);
@@ -421,10 +424,44 @@ const InquiryDetailPage = ({ inquiryId, onBack }) => {
                 <div className="mb-1 flex items-center gap-2 px-1">
                   <Plane className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-slate-900">
-                    {pnrSegments.length ? 'Itinerary' : 'Selected flight'}
+                    {isScreenshotItinerary
+                      ? 'Itinerary (screenshot)'
+                      : pnrSegments.length
+                        ? 'Itinerary'
+                        : 'Selected flight'}
                   </h3>
                 </div>
-                {pnrSegments.length ? (
+                {isScreenshotItinerary ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+                    <p className="text-sm text-slate-700">
+                      {inq.travel?.from} → {inq.travel?.to}
+                      {inq.travel?.returnDate ? ' · Round trip' : ''}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Customer sees the uploaded screenshot on email / authorize
+                      page (no segment table).
+                    </p>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-sky-700 hover:underline"
+                      onClick={async () => {
+                        try {
+                          const res = await axiosInstance.get(
+                            `/inquiries/${inq._id}/itinerary-screenshot`,
+                            { responseType: 'blob' }
+                          );
+                          const url = URL.createObjectURL(res.data);
+                          window.open(url, '_blank', 'noopener,noreferrer');
+                          setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                        } catch {
+                          toast.error('Could not open screenshot');
+                        }
+                      }}
+                    >
+                      View screenshot
+                    </button>
+                  </div>
+                ) : pnrSegments.length ? (
                   <div className="rounded-xl border border-slate-200 bg-white p-3">
                     <PnrItineraryTable segments={pnrSegments} />
                   </div>

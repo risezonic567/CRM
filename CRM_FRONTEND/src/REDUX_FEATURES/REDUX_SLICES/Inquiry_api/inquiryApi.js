@@ -98,6 +98,18 @@ export const inquiryApi = createApi({
         data: body,
       }),
     }),
+    uploadItineraryScreenshot: builder.mutation({
+      query: ({ id, file }) => {
+        const form = new FormData();
+        form.append('itineraryScreenshot', file);
+        return {
+          url: `/inquiries/${id}/itinerary-screenshot`,
+          method: 'POST',
+          data: form,
+        };
+      },
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Inquiry', id }],
+    }),
   }),
 });
 
@@ -113,4 +125,5 @@ export const {
   useResendConfirmationMutation,
   useDeleteInquiryMutation,
   useConvertPnrMutation,
+  useUploadItineraryScreenshotMutation,
 } = inquiryApi;

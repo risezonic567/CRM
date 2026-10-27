@@ -17,6 +17,7 @@ import {
   t,
 } from '../../i18n/index.js';
 import { resolveSupportDocumentAbsolutePath } from '../../middlewares/authorizeUpload.middleware.js';
+import { resolveItineraryScreenshotAbsolutePath } from '../../middlewares/itineraryScreenshot.middleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +40,37 @@ function authorizeEmailSubject(inquiry, invoiceNo) {
   return t('email.subjectFlight', locale, { invoice: invoiceNo, route });
 }
 
+function resolveScreenshotForEmail(inquiry) {
+  const isShot = inquiry?.selectedOffer?.raw?.source === 'screenshot';
+  const rel = inquiry?.itineraryScreenshot?.relativePath;
+  if (!isShot || !rel) {
+    return { showItineraryScreenshot: false, attachments: [] };
+  }
+  try {
+    const abs = resolveItineraryScreenshotAbsolutePath(rel);
+    if (!abs || !fs.existsSync(abs)) {
+      return { showItineraryScreenshot: false, attachments: [] };
+    }
+    return {
+      showItineraryScreenshot: true,
+      itineraryScreenshotSrc: 'cid:itineraryScreenshot',
+      attachments: [
+        {
+          filename:
+            inquiry.itineraryScreenshot.originalName ||
+            inquiry.itineraryScreenshot.storedName ||
+            'itinerary.jpg',
+          path: abs,
+          cid: 'itineraryScreenshot',
+          contentType: inquiry.itineraryScreenshot.mimeType || 'image/jpeg',
+        },
+      ],
+    };
+  } catch {
+    return { showItineraryScreenshot: false, attachments: [] };
+  }
+}
+
 /**
  * Fire-and-forget friendly — caller should not await for API latency.
  */
@@ -50,6 +82,7 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
 
   try {
     const authorizationHtml = paxAuthorizationHtml(inquiry, agency);
+    const shot = resolveScreenshotForEmail(inquiry);
     const html = await renderTemplate('inquiryEmail.ejs', {
       agency,
       inquiry,
@@ -57,10 +90,17 @@ export async function queueInquiryEmail({ inquiry, agency, confirmUrl }) {
       grandTotal: inquiry.pricing.sellingPrice,
       currency: inquiry.pricing.currency,
       authorizationHtml,
+      showItineraryScreenshot: shot.showItineraryScreenshot,
+      itineraryScreenshotSrc: shot.itineraryScreenshotSrc || null,
       ...paxTemplateLocals(inquiry),
     });
 
-    const info = await sendMail({ to, subject, html });
+    const info = await sendMail({
+      to,
+      subject,
+      html,
+      attachments: shot.attachments,
+    });
 
     await NotificationLog.create({
       type: 'email',
@@ -224,16 +264,24 @@ export async function queueConfirmationEmail({ inquiry, agency }) {
 
   try {
     const authorizationHtml = paxAuthorizationHtml(inquiry, agency);
+    const shot = resolveScreenshotForEmail(inquiry);
     const html = await renderTemplate('confirmationEmail.ejs', {
       agency,
       inquiry,
       grandTotal: inquiry.pricing.sellingPrice,
       currency: inquiry.pricing.currency,
       authorizationHtml,
+      showItineraryScreenshot: shot.showItineraryScreenshot,
+      itineraryScreenshotSrc: shot.itineraryScreenshotSrc || null,
       ...paxTemplateLocals(inquiry),
     });
 
-    const info = await sendMail({ to, subject, html });
+    const info = await sendMail({
+      to,
+      subject,
+      html,
+      attachments: shot.attachments,
+    });
 
     await NotificationLog.create({
       type: 'email',

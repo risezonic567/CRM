@@ -158,3 +158,34 @@ export async function remove(req, res, next) {
     return next(err);
   }
 }
+
+export async function uploadItineraryScreenshot(req, res, next) {
+  try {
+    const inquiry = await inquiryService.uploadItineraryScreenshot(
+      req.user,
+      req.params.id,
+      req.file
+    );
+    return success(res, {
+      message: 'Itinerary screenshot uploaded',
+      data: { inquiry },
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function viewItineraryScreenshot(req, res, next) {
+  try {
+    const { absolutePath, mimeType, downloadName } =
+      await inquiryService.getItineraryScreenshot(req.user, req.params.id);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${downloadName.replace(/"/g, '')}"`
+    );
+    return res.sendFile(absolutePath);
+  } catch (err) {
+    return next(err);
+  }
+}

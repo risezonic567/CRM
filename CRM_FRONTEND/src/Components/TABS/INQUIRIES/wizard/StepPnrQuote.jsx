@@ -25,6 +25,9 @@ const StepPnrQuote = () => {
   const wizard = useSelector(selectWizard);
   const segments = wizard.pnrSegments || wizard.selectedOffer?.raw?.segments || [];
   const summary = wizard.pnrTripSummary || wizard.selectedOffer?.raw?.tripSummary;
+  const isScreenshot =
+    wizard.itineraryEntryMode === 'screenshot' ||
+    wizard.selectedOffer?.raw?.source === 'screenshot';
 
   const [supplier, setSupplier] = useState(String(wizard.costPrice ?? ''));
   const [markup, setMarkup] = useState(String(wizard.markup ?? 0));
@@ -61,8 +64,12 @@ const StepPnrQuote = () => {
   };
 
   const handleContinue = () => {
-    if (!segments.length) {
+    if (!isScreenshot && !segments.length) {
       toast.error('No itinerary — go back and enter or decode flights first');
+      return;
+    }
+    if (isScreenshot && !wizard.itineraryScreenshot?.relativePath) {
+      toast.error('Upload an itinerary screenshot first');
       return;
     }
     const costPrice = Number(supplier);
@@ -115,7 +122,14 @@ const StepPnrQuote = () => {
         </p>
       )}
 
-      <PnrItineraryTable segments={segments} />
+      {isScreenshot ? (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+          Itinerary screenshot attached — customer will see the image instead of
+          a flight table. Enter supplier price and markup below.
+        </div>
+      ) : (
+        <PnrItineraryTable segments={segments} />
+      )}
 
       <div className="flex max-w-sm flex-col gap-1.5 text-xs">
         <span className="font-semibold text-slate-700">Currency *</span>

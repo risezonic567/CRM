@@ -10,6 +10,10 @@ router.use(publicRateLimiter);
 router.use(express.urlencoded({ extended: true }));
 
 router.get('/confirm/:inquiryId', publicController.showConfirm);
+router.get(
+  '/confirm/:inquiryId/itinerary-screenshot',
+  publicController.showItineraryScreenshot
+);
 router.post(
   '/confirm/:inquiryId',
   publicController.requireConfirmToken,

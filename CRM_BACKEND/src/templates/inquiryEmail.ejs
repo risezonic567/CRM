@@ -108,7 +108,15 @@
       <% } else { %>
       <h3 style="margin:0 0 12px;"><%= _t('email.flightDetails') %></h3>
 
-      <% if (pnrSegments.length) { %>
+      <% if (typeof showItineraryScreenshot !== 'undefined' && showItineraryScreenshot && itineraryScreenshotSrc) { %>
+      <div style="margin:0 0 12px;">
+        <img
+          src="<%= itineraryScreenshotSrc %>"
+          alt="<%= _t('email.flightDetails') %>"
+          style="display:block;max-width:100%;height:auto;border:1px solid #e2e8f0;border-radius:8px;"
+        />
+      </div>
+      <% } else if (pnrSegments.length) { %>
       <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;border-collapse:collapse;">
         <tr style="background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;">
           <td style="border-bottom:1px solid #e2e8f0;padding:8px 6px;">#</td>

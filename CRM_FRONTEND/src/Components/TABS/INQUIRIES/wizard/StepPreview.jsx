@@ -78,8 +78,12 @@ const StepPreview = ({ onDone }) => {
 
   const segments =
     wizard.pnrSegments || wizard.selectedOffer?.raw?.segments || [];
+  const isScreenshot =
+    wizard.itineraryEntryMode === 'screenshot' ||
+    wizard.selectedOffer?.raw?.source === 'screenshot';
   const isPnr =
-    wizard.selectedOffer?.raw?.source === 'pnr' || segments.length > 0;
+    !isScreenshot &&
+    (wizard.selectedOffer?.raw?.source === 'pnr' || segments.length > 0);
   const billing = wizard.billing || {};
 
   const authorizerName = useMemo(() => {
@@ -478,7 +482,12 @@ const StepPreview = ({ onDone }) => {
               {wizard.travel.from} → {wizard.travel.to}
               {wizard.travel.returnDate ? ' · Round trip' : ' · One way'}
             </p>
-            {isPnr ? (
+            {isScreenshot ? (
+              <p className="text-sm text-slate-600">
+                Screenshot itinerary — customer email and authorize page show the
+                uploaded image instead of a flight table.
+              </p>
+            ) : isPnr ? (
               <PnrItineraryTable segments={segments} />
             ) : (
               <p className="text-sm text-slate-700">

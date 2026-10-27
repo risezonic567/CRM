@@ -60,6 +60,24 @@ export async function showConfirm(req, res, next) {
   }
 }
 
+/** Itinerary screenshot for confirm page (cookie or ?token=). */
+export async function showItineraryScreenshot(req, res, next) {
+  try {
+    setPublicSecurityHeaders(res);
+    const token = resolvePublicToken(req);
+    const { absolutePath, mimeType } =
+      await publicService.loadItineraryScreenshot(
+        req.params.inquiryId,
+        token
+      );
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.sendFile(absolutePath);
+  } catch (err) {
+    return renderError(res, err, next);
+  }
+}
+
 /**
  * Runs before multer — token from query or confirm cookie only (multipart body not parsed yet).
  */

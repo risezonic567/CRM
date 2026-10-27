@@ -90,6 +90,19 @@ const inquirySchema = new mongoose.Schema(
       },
     },
     selectedOffer: { type: mongoose.Schema.Types.Mixed, default: null },
+    /**
+     * Optional itinerary screenshot (third entry mode).
+     * Shown on PAX email / confirm instead of segment table when present
+     * and selectedOffer.raw.source === 'screenshot'.
+     */
+    itineraryScreenshot: {
+      originalName: { type: String, default: '' },
+      storedName: { type: String, default: '' },
+      mimeType: { type: String, default: '' },
+      size: { type: Number, default: 0 },
+      relativePath: { type: String, default: '' },
+      uploadedAt: { type: Date },
+    },
     pricing: {
       costPrice: { type: Number, default: 0 },
       markup: { type: Number, default: 0 },

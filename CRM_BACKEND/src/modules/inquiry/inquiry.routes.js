@@ -11,6 +11,7 @@ import { validate } from '../../middlewares/validate.middleware.js';
 import { authenticate } from '../../middlewares/auth.middleware.js';
 import { authorize, blockViewerWrites } from '../../middlewares/role.middleware.js';
 import { ROLES } from '../../config/constants.js';
+import { itineraryScreenshotUpload } from '../../middlewares/itineraryScreenshot.middleware.js';
 
 const router = Router();
 
@@ -27,6 +28,15 @@ router.get(
   inquiryController.viewSupportDocument
 );
 router.get('/:id/support-document', inquiryController.downloadSupportDocument);
+router.get(
+  '/:id/itinerary-screenshot',
+  inquiryController.viewItineraryScreenshot
+);
+router.post(
+  '/:id/itinerary-screenshot',
+  itineraryScreenshotUpload,
+  inquiryController.uploadItineraryScreenshot
+);
 router.get('/:id', inquiryController.getById);
 router.patch('/:id/draft', validate(saveDraftSchema), inquiryController.saveDraft);
 router.post('/:id/send', validate(sendInquirySchema), inquiryController.send);

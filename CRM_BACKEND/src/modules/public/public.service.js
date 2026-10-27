@@ -13,12 +13,52 @@ import {
   paxTemplateLocals,
 } from '../../i18n/index.js';
 import { buildDocSlots } from '../../utils/supportDocuments.js';
+import {
+  resolveItineraryScreenshotAbsolutePath,
+} from '../../middlewares/itineraryScreenshot.middleware.js';
+import fs from 'fs';
+
+function hasScreenshotItinerary(inquiry) {
+  return (
+    inquiry?.selectedOffer?.raw?.source === 'screenshot' &&
+    Boolean(inquiry?.itineraryScreenshot?.relativePath)
+  );
+}
 
 function authorizationLocals(inquiry, agency) {
+  const showScreenshot = hasScreenshotItinerary(inquiry);
   return {
     authorizationHtml: paxAuthorizationHtml(inquiry, agency),
     docSlots: buildDocSlots(inquiry),
+    showItineraryScreenshot: showScreenshot,
+    /** Cookie-auth path after ?token= redirect (same confirm cookie path). */
+    itineraryScreenshotUrl: showScreenshot
+      ? `/public/confirm/${inquiry._id}/itinerary-screenshot`
+      : null,
     ...paxTemplateLocals(inquiry),
+  };
+}
+
+/** Public stream of itinerary screenshot after token verify. */
+export async function loadItineraryScreenshot(inquiryId, token) {
+  const { inquiry } = await verifyAndLoad(inquiryId, token);
+  if (
+    inquiry.status !== INQUIRY_STATUSES.PREVIEW_SENT &&
+    inquiry.status !== INQUIRY_STATUSES.AUTHORIZED
+  ) {
+    throw new AppError('Itinerary image is not available', 400);
+  }
+  const shot = inquiry.itineraryScreenshot;
+  if (!shot?.relativePath) {
+    throw new AppError('No itinerary screenshot', 404);
+  }
+  const abs = resolveItineraryScreenshotAbsolutePath(shot.relativePath);
+  if (!abs || !fs.existsSync(abs)) {
+    throw new AppError('Screenshot file removed', 410);
+  }
+  return {
+    absolutePath: abs,
+    mimeType: shot.mimeType || 'image/jpeg',
   };
 }
 

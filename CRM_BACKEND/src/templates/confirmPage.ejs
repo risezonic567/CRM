@@ -220,7 +220,15 @@
     </div>
 
     <h3><%= _t('confirm.flightDetails') %></h3>
-    <% if (pnrSegments.length) { %>
+    <% if (typeof showItineraryScreenshot !== 'undefined' && showItineraryScreenshot && itineraryScreenshotUrl) { %>
+    <div style="margin:12px 0;">
+      <img
+        src="<%= itineraryScreenshotUrl %>"
+        alt="<%= _t('confirm.flightDetails') %>"
+        style="display:block;max-width:100%;height:auto;border:1px solid #e2e8f0;border-radius:8px;"
+      />
+    </div>
+    <% } else if (pnrSegments.length) { %>
     <table class="segs segs-flights">
       <thead>
         <tr>

@@ -17,6 +17,7 @@ import {
 import StepCustomer from './wizard/StepCustomer';
 import StepPnrSearch from './wizard/StepPnrSearch';
 import StepManualFlight from './wizard/StepManualFlight';
+import StepScreenshotItinerary from './wizard/StepScreenshotItinerary';
 import StepPnrQuote from './wizard/StepPnrQuote';
 import StepPassengers from './wizard/StepPassengers';
 import StepBilling from './wizard/StepBilling';
@@ -155,12 +156,12 @@ const InquiryWizard = () => {
         {step === 0 && <StepCustomer />}
         {step === 1 && (
           <div className="flex flex-col gap-4">
-            <div className="inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+            <div className="inline-flex w-fit flex-wrap rounded-lg border border-slate-200 bg-slate-50 p-0.5">
               <button
                 type="button"
                 onClick={() => dispatch(patchWizard({ itineraryEntryMode: 'pnr' }))}
                 className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                  wizard.itineraryEntryMode !== 'manual'
+                  wizard.itineraryEntryMode === 'pnr'
                     ? 'bg-white text-slate-900 shadow-sm'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
@@ -169,7 +170,9 @@ const InquiryWizard = () => {
               </button>
               <button
                 type="button"
-                onClick={() => dispatch(patchWizard({ itineraryEntryMode: 'manual' }))}
+                onClick={() =>
+                  dispatch(patchWizard({ itineraryEntryMode: 'manual' }))
+                }
                 className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
                   wizard.itineraryEntryMode === 'manual'
                     ? 'bg-white text-slate-900 shadow-sm'
@@ -178,9 +181,24 @@ const InquiryWizard = () => {
               >
                 Manual entry
               </button>
+              <button
+                type="button"
+                onClick={() =>
+                  dispatch(patchWizard({ itineraryEntryMode: 'screenshot' }))
+                }
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  wizard.itineraryEntryMode === 'screenshot'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Screenshot
+              </button>
             </div>
             {wizard.itineraryEntryMode === 'manual' ? (
               <StepManualFlight />
+            ) : wizard.itineraryEntryMode === 'screenshot' ? (
+              <StepScreenshotItinerary />
             ) : (
               <StepPnrSearch />
             )}

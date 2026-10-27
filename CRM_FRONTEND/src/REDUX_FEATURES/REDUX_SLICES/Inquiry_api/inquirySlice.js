@@ -70,8 +70,10 @@ const initialState = {
     pnrSegments: [],
     pnrTripSummary: null,
     pnrWarnings: [],
-    /** This branch is manual-entry only */
+    /** pnr | manual | screenshot */
     itineraryEntryMode: 'manual',
+    /** Meta from POST /inquiries/:id/itinerary-screenshot */
+    itineraryScreenshot: null,
   },
 };
 
@@ -95,6 +97,12 @@ export function mapInquiryToWizard(inquiry) {
     Array.isArray(raw?.segments)
       ? raw
       : null;
+  const entryMode =
+    raw?.source === 'pnr'
+      ? 'pnr'
+      : raw?.source === 'screenshot'
+        ? 'screenshot'
+        : 'manual';
   return {
     inquiryId: inquiry._id,
     step: typeof inquiry.wizardStep === 'number' ? inquiry.wizardStep : 0,
@@ -150,7 +158,10 @@ export function mapInquiryToWizard(inquiry) {
     pnrWarnings: Array.isArray(segmentRawOffer?.warnings)
       ? segmentRawOffer.warnings
       : [],
-    itineraryEntryMode: raw?.source === 'pnr' ? 'pnr' : 'manual',
+    itineraryEntryMode: entryMode,
+    itineraryScreenshot: inquiry.itineraryScreenshot?.relativePath
+      ? inquiry.itineraryScreenshot
+      : null,
   };
 }
 

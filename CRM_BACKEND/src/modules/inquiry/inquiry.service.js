@@ -14,6 +14,11 @@ import {
 import { servicePurposeLabel } from '../../utils/serviceDispositions.js';
 import { resolveSupportDocumentAbsolutePath } from '../../middlewares/authorizeUpload.middleware.js';
 import {
+  itineraryScreenshotMetaFromFile,
+  assertItineraryScreenshotMagic,
+  resolveItineraryScreenshotAbsolutePath,
+} from '../../middlewares/itineraryScreenshot.middleware.js';
+import {
   findSupportDocument,
   attachSupportDocAvailability,
   resolveDocRequest,
@@ -247,6 +252,20 @@ export async function sendInquiryToCustomer(user, inquiryId, payload) {
     }
     if (!Array.isArray(payload.passengers) || payload.passengers.length < 1) {
       throw new AppError('At least one passenger is required for booking inquiries', 400);
+    }
+    const isScreenshot =
+      payload.selectedOffer?.raw?.source === 'screenshot' ||
+      inquiry.selectedOffer?.raw?.source === 'screenshot';
+    if (isScreenshot) {
+      const shot =
+        inquiry.itineraryScreenshot?.relativePath ||
+        payload.itineraryScreenshot?.relativePath;
+      if (!shot) {
+        throw new AppError(
+          'Itinerary screenshot is required for screenshot mode',
+          400
+        );
+      }
     }
   }
 
@@ -567,12 +586,35 @@ export async function getConfirmationReceipt(user, inquiryId) {
 
   const authorizationHtml = paxAuthorizationHtml(inquiry, agency);
 
+  let showItineraryScreenshot = false;
+  let itineraryScreenshotSrc = null;
+  if (
+    inquiry.selectedOffer?.raw?.source === 'screenshot' &&
+    inquiry.itineraryScreenshot?.relativePath
+  ) {
+    try {
+      const abs = resolveItineraryScreenshotAbsolutePath(
+        inquiry.itineraryScreenshot.relativePath
+      );
+      if (abs && fs.existsSync(abs)) {
+        const buf = fs.readFileSync(abs);
+        const mime = inquiry.itineraryScreenshot.mimeType || 'image/jpeg';
+        itineraryScreenshotSrc = `data:${mime};base64,${buf.toString('base64')}`;
+        showItineraryScreenshot = true;
+      }
+    } catch {
+      /* omit image from receipt */
+    }
+  }
+
   const html = await renderTemplate('confirmationEmail.ejs', {
     agency,
     inquiry,
     grandTotal: inquiry.pricing.sellingPrice,
     currency: inquiry.pricing.currency,
     authorizationHtml,
+    showItineraryScreenshot,
+    itineraryScreenshotSrc,
     ...paxTemplateLocals(inquiry),
   });
 
@@ -583,6 +625,59 @@ export async function getConfirmationReceipt(user, inquiryId) {
   const filename = `Authorized-${safeRef}.html`;
 
   return { html, filename };
+}
+
+/**
+ * Agent uploads itinerary screenshot (draft only). Replaces prior file if any.
+ */
+export async function uploadItineraryScreenshot(user, inquiryId, file) {
+  const inquiry = await findInquiryForUser(user, inquiryId);
+  if (inquiry.status !== INQUIRY_STATUSES.DRAFT) {
+    throw new AppError('Screenshot can only be uploaded on draft inquiries', 400);
+  }
+  if (!file) throw new AppError('Screenshot file is required', 400);
+
+  assertItineraryScreenshotMagic(file);
+  const meta = itineraryScreenshotMetaFromFile(file);
+  if (!meta?.relativePath) {
+    throw new AppError('Upload failed', 400);
+  }
+
+  // Remove previous file if path differs
+  const prev = inquiry.itineraryScreenshot?.relativePath;
+  if (prev && prev !== meta.relativePath) {
+    try {
+      const oldAbs = resolveItineraryScreenshotAbsolutePath(prev);
+      if (oldAbs && fs.existsSync(oldAbs)) fs.unlinkSync(oldAbs);
+    } catch {
+      /* ignore cleanup errors */
+    }
+  }
+
+  inquiry.itineraryScreenshot = meta;
+  await inquiry.save();
+  return inquiry;
+}
+
+/** Agent inline view of itinerary screenshot. */
+export async function getItineraryScreenshot(user, inquiryId) {
+  const inquiry = await findInquiryForUser(user, inquiryId);
+  const shot = inquiry.itineraryScreenshot;
+  if (!shot?.relativePath) {
+    throw new AppError('No itinerary screenshot on this inquiry', 404);
+  }
+  const abs = resolveItineraryScreenshotAbsolutePath(shot.relativePath);
+  if (!abs || !fs.existsSync(abs)) {
+    throw new AppError('Screenshot file removed', 410);
+  }
+  const safeName = String(shot.originalName || shot.storedName || 'itinerary.jpg')
+    .replace(/[^\w.\- ()]+/g, '_')
+    .slice(0, 180);
+  return {
+    absolutePath: abs,
+    mimeType: shot.mimeType || 'image/jpeg',
+    downloadName: safeName,
+  };
 }
 
 /**
